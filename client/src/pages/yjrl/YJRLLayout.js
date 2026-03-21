@@ -46,10 +46,10 @@ const YJRLLayout = ({ children }) => {
           {/* Logo */}
           <Link to="/" className="yjrl-logo">
             <div className="yjrl-logo-badge">
-              <span style={{ fontSize: '1.2rem' }}>🏉</span>
+              <img src="/images/logo.png" alt="Yeppoon Seagulls JRL" />
             </div>
             <div className="yjrl-logo-text">
-              <strong>Yeppoon JRL</strong>
+              <strong>Yeppoon Seagulls</strong>
               <span>Junior Rugby League</span>
             </div>
           </Link>
@@ -245,7 +245,7 @@ const YJRLLayout = ({ children }) => {
               </Link>
               <p style={{ marginTop: '1rem' }}>
                 Building champions on and off the field. Proudly serving the Capricorn Coast community since 1965.
-                Home of the mighty Yeppoon Bulls.
+                Home of the mighty Yeppoon Seagulls.
               </p>
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
                 {['facebook', 'instagram', 'youtube'].map(s => (

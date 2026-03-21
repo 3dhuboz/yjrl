@@ -3,17 +3,20 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════
-   YEPPOON JUNIOR RUGBY LEAGUE — Global Styles
+   YEPPOON SEAGULLS JUNIOR RUGBY LEAGUE — Global Styles
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --yjrl-navy: #0c1d35;
-  --yjrl-navy-light: #1a3a5c;
-  --yjrl-gold: #f0a500;
-  --yjrl-gold-light: #fbbf24;
-  --yjrl-red: #c41e3a;
-  --yjrl-dark: #060f1c;
-  --yjrl-cream: #fef9f0;
+  --yjrl-blue: #1a3cb0;
+  --yjrl-blue-dark: #0f2570;
+  --yjrl-yellow: #ffe100;
+  --yjrl-yellow-soft: #fff066;
+  --yjrl-dark: #060c24;
+  /* Legacy aliases */
+  --yjrl-navy: var(--yjrl-blue-dark);
+  --yjrl-navy-light: var(--yjrl-blue);
+  --yjrl-gold: var(--yjrl-yellow);
+  --yjrl-gold-light: var(--yjrl-yellow-soft);
 }
 
 * {
@@ -30,48 +33,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; }
 
-button {
-  font-family: inherit;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--yjrl-dark); }
+::-webkit-scrollbar-thumb { background: var(--yjrl-blue); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--yjrl-yellow); }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+::selection { background: rgba(255, 225, 0, 0.3); color: white; }
 
-::-webkit-scrollbar-track {
-  background: var(--yjrl-dark);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--yjrl-navy-light);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--yjrl-gold);
-}
-
-/* Selection */
-::selection {
-  background: rgba(240, 165, 0, 0.3);
-  color: white;
-}
-
-/* Loading screen */
 .loading-screen {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   background: var(--yjrl-dark);
-  color: var(--yjrl-gold);
+  color: var(--yjrl-yellow);
   font-size: 1.1rem;
   font-weight: 600;
 }

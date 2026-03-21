@@ -13,7 +13,7 @@ import './yjrl.css';
 const POSITIONS = ['Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row', 'Interchange'];
 
 const DEMO_TEAM = {
-  _id: 't1', name: 'Yeppoon Bulls U14', ageGroup: 'U14', wins: 4, losses: 1, draws: 0,
+  _id: 't1', name: 'Yeppoon Seagulls U14', ageGroup: 'U14', wins: 4, losses: 1, draws: 0,
   trainingDay: 'Tuesday & Thursday', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval'
 };
 
@@ -27,7 +27,7 @@ const DEMO_PLAYERS = [
 ];
 
 const DEMO_UPCOMING = [
-  { _id: 'f1', round: 5, homeTeamName: 'Yeppoon Bulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval' },
+  { _id: 'f1', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval' },
 ];
 
 const AttendanceRate = ({ records }) => {

@@ -69,7 +69,7 @@ const YJRLRegister = () => {
           Registration Submitted!
         </h1>
         <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
-          Welcome to the Yeppoon Bulls, <strong style={{ color: 'var(--yjrl-text)' }}>{form.firstName}</strong>!
+          Welcome to the Yeppoon Seagulls, <strong style={{ color: 'var(--yjrl-text)' }}>{form.firstName}</strong>!
           Your registration has been received and a confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{form.guardianEmail}</strong>.
         </p>
         <div style={{ background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left' }}>

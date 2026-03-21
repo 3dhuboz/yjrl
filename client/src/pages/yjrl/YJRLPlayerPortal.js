@@ -30,12 +30,12 @@ const DEMO_PLAYER = {
     { date: new Date(Date.now() - 4 * 86400000), type: 'training', attended: false },
     { date: new Date(Date.now() - 1 * 86400000), type: 'training', attended: true },
   ],
-  teamId: { name: 'Yeppoon Bulls U14', trainingDay: 'Tuesday & Thursday', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval', coachName: 'Mike Thompson' }
+  teamId: { name: 'Yeppoon Seagulls U14', trainingDay: 'Tuesday & Thursday', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval', coachName: 'Mike Thompson' }
 };
 
 const DEMO_UPCOMING = [
-  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Bulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval' },
-  { _id: 'f2', ageGroup: 'U14', round: 6, homeTeamName: 'Gladstone Warriors', awayTeamName: 'Yeppoon Bulls', date: new Date(Date.now() + 13 * 86400000), time: '2:00 PM', venue: 'Gladstone City Oval' },
+  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval' },
+  { _id: 'f2', ageGroup: 'U14', round: 6, homeTeamName: 'Gladstone Warriors', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 13 * 86400000), time: '2:00 PM', venue: 'Gladstone City Oval' },
 ];
 
 const ALL_ACHIEVEMENTS = [
@@ -171,7 +171,7 @@ const YJRLPlayerPortal = () => {
                   <strong style={{ color: 'var(--yjrl-gold)' }}>#{p.jerseyNumber}</strong> · {p.position}
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--yjrl-muted)' }}>
-                  <strong style={{ color: 'var(--yjrl-text)' }}>{p.ageGroup}</strong> · {p.teamId?.name || 'Yeppoon Bulls'}
+                  <strong style={{ color: 'var(--yjrl-text)' }}>{p.ageGroup}</strong> · {p.teamId?.name || 'Yeppoon Seagulls'}
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--yjrl-muted)' }}>
                   <strong style={{ color: '#f0a500' }}>{xp}</strong> XP · Level {Math.floor(xp / 50) + 1}

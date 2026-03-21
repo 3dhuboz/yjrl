@@ -13,7 +13,7 @@ import './yjrl.css';
 const SEASON = new Date().getFullYear().toString();
 
 const EMPTY_TEAM = { name: '', ageGroup: 'U14', division: '', season: SEASON, coachName: '', managerName: '', trainingDay: '', trainingTime: '', trainingVenue: 'Nev Skuse Oval' };
-const EMPTY_FIXTURE = { ageGroup: 'U14', round: 1, homeTeamName: 'Yeppoon Bulls', awayTeamName: '', date: '', time: '', venue: 'Nev Skuse Oval', status: 'scheduled', isHomeGame: true, season: SEASON };
+const EMPTY_FIXTURE = { ageGroup: 'U14', round: 1, homeTeamName: 'Yeppoon Seagulls', awayTeamName: '', date: '', time: '', venue: 'Nev Skuse Oval', status: 'scheduled', isHomeGame: true, season: SEASON };
 const EMPTY_NEWS = { title: '', content: '', excerpt: '', category: 'news', published: false, featured: false };
 
 const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
@@ -21,9 +21,9 @@ const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', '
 // Demo overview stats
 const DEMO_STATS = { teamCount: 14, playerCount: 280, fixtureCount: 42, upcomingCount: 8 };
 const DEMO_TEAMS = [
-  { _id: 't1', ageGroup: 'U14', name: 'Yeppoon Bulls U14', coachName: 'Mike Thompson', wins: 4, losses: 1, draws: 0, players: [] },
-  { _id: 't2', ageGroup: 'U12', name: 'Yeppoon Bulls U12', coachName: 'Sarah Johnson', wins: 3, losses: 2, draws: 0, players: [] },
-  { _id: 't3', ageGroup: 'U16', name: 'Yeppoon Bulls U16', coachName: 'Dave Williams', wins: 5, losses: 0, draws: 0, players: [] },
+  { _id: 't1', ageGroup: 'U14', name: 'Yeppoon Seagulls U14', coachName: 'Mike Thompson', wins: 4, losses: 1, draws: 0, players: [] },
+  { _id: 't2', ageGroup: 'U12', name: 'Yeppoon Seagulls U12', coachName: 'Sarah Johnson', wins: 3, losses: 2, draws: 0, players: [] },
+  { _id: 't3', ageGroup: 'U16', name: 'Yeppoon Seagulls U16', coachName: 'Dave Williams', wins: 5, losses: 0, draws: 0, players: [] },
 ];
 const DEMO_NEWS = [
   { _id: 'n1', title: 'Season 2026 Registration Open', category: 'news', published: true, featured: true, views: 241, publishDate: new Date('2026-01-15') },
@@ -359,7 +359,7 @@ const YJRLAdminPortal = () => {
             <div className="yjrl-modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 {[
-                  ['Team Name', 'name', 'text', 'e.g. Yeppoon Bulls U14'],
+                  ['Team Name', 'name', 'text', 'e.g. Yeppoon Seagulls U14'],
                   ['Age Group', 'ageGroup', 'select', AGE_GROUPS],
                   ['Division', 'division', 'text', 'e.g. A Grade'],
                   ['Coach Name', 'coachName', 'text', ''],

@@ -21,8 +21,8 @@ const DEFAULT_NEWS = [
     publishDate: new Date('2026-01-15'), image: ''
   },
   {
-    _id: '2', title: 'Bulls Claim Grand Final Victory — U14s Champions!', category: 'results',
-    excerpt: 'What a performance! The Yeppoon Bulls U14s fought back from a 10-point deficit in the second half to claim the 2025 Grand Final 24-16 against Rockhampton Tigers.',
+    _id: '2', title: 'Seagulls Claim Grand Final Victory — U14s Champions!', category: 'results',
+    excerpt: 'What a performance! The Yeppoon Seagulls U14s fought back from a 10-point deficit in the second half to claim the 2025 Grand Final 24-16 against Rockhampton Tigers.',
     publishDate: new Date('2025-09-20'), image: ''
   },
   {
@@ -33,13 +33,13 @@ const DEFAULT_NEWS = [
 ];
 
 const DEFAULT_FIXTURES = [
-  { _id: 'f1', ageGroup: 'U14', homeTeamName: 'Yeppoon Bulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 7 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
-  { _id: 'f2', ageGroup: 'U12', homeTeamName: 'Capricorn Cobras', awayTeamName: 'Yeppoon Bulls', date: new Date(Date.now() + 7 * 86400000), time: '11:30 AM', venue: 'Gangwon Park', status: 'scheduled' },
-  { _id: 'f3', ageGroup: 'U16', homeTeamName: 'Yeppoon Bulls', awayTeamName: 'Gladstone Warriors', date: new Date(Date.now() - 7 * 86400000), time: '2:00 PM', venue: 'Nev Skuse Oval', status: 'completed', homeScore: 26, awayScore: 14 },
+  { _id: 'f1', ageGroup: 'U14', homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 7 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
+  { _id: 'f2', ageGroup: 'U12', homeTeamName: 'Capricorn Cobras', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 7 * 86400000), time: '11:30 AM', venue: 'Gangwon Park', status: 'scheduled' },
+  { _id: 'f3', ageGroup: 'U16', homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Gladstone Warriors', date: new Date(Date.now() - 7 * 86400000), time: '2:00 PM', venue: 'Nev Skuse Oval', status: 'completed', homeScore: 26, awayScore: 14 },
 ];
 
 const DEFAULT_TEAMS = AGE_GROUPS.map((ag, i) => ({
-  _id: String(i + 1), ageGroup: ag, name: `Yeppoon Bulls ${ag}`, isActive: true,
+  _id: String(i + 1), ageGroup: ag, name: `Yeppoon Seagulls ${ag}`, isActive: true,
   wins: Math.floor(Math.random() * 8), losses: Math.floor(Math.random() * 5), draws: 0,
   coachName: ['Mike Thompson', 'Sarah Johnson', 'Dave Williams', 'Lisa Chen', 'Brad Smith'][i % 5]
 }));
@@ -97,19 +97,20 @@ const YJRLHome = () => {
     <YJRLLayout>
       {/* ═══ HERO ═══ */}
       <section className="yjrl-hero">
+        <div className="yjrl-hero-bg" style={{ backgroundImage: 'url(/images/hero.jpg)' }} />
         <div className="yjrl-hero-grid" />
         <div className="yjrl-hero-content">
           <div>
             <div className="yjrl-hero-badge">
-              <span>🏉</span> 2026 Season
+              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> 2026 Season — Go Seagulls!
             </div>
             <h1>
               Yeppoon<br />
-              <span>Junior Rugby</span>
-              League
+              <span>Seagulls</span>
+              Junior Rugby League
             </h1>
             <p>
-              Where Capricorn Coast champions are made. From Mini Mod to Opens — join the community that builds players,
+              Where Capricorn Coast champions are made. From Mini Mod to Opens — join the Seagulls family that builds players,
               leaders, and lifelong mates on and off the field.
             </p>
             <div className="yjrl-hero-actions">
@@ -288,15 +289,15 @@ const YJRLHome = () => {
               <div key={team._id} className="yjrl-card" style={{ padding: '1.25rem', textAlign: 'center', cursor: 'pointer' }}>
                 <div style={{
                   width: 52, height: 52, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--yjrl-gold), #d4840a)',
+                  background: 'linear-gradient(135deg, var(--yjrl-yellow), #e6cb00)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 0.75rem', fontSize: '1.3rem', fontWeight: 900, color: 'var(--yjrl-navy)'
+                  margin: '0 auto 0.75rem', fontSize: '1.3rem', fontWeight: 900, color: 'var(--yjrl-blue-dark)'
                 }}>
                   {team.ageGroup.replace('U', '').replace('Womens', 'W').replace('Mens', 'M')}
                 </div>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.25rem' }}>{team.ageGroup}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)', marginBottom: '0.75rem' }}>
-                  {team.coachName ? `Coach: ${team.coachName}` : 'Yeppoon Bulls'}
+                  {team.coachName ? `Coach: ${team.coachName}` : 'Yeppoon Seagulls'}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', fontSize: '0.75rem' }}>
                   <span style={{ color: '#4ade80', fontWeight: 700 }}>{team.wins}W</span>
@@ -372,12 +373,12 @@ const YJRLHome = () => {
           pointerEvents: 'none'
         }} />
         <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 2 }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏉</div>
+          <img src="/images/logo.png" alt="Yeppoon Seagulls" style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: '1rem' }} />
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 1rem', lineHeight: 1.1 }}>
             Ready to <span style={{ color: 'var(--yjrl-gold)' }}>Play?</span>
           </h2>
           <p style={{ fontSize: '1.1rem', color: 'var(--yjrl-muted)', lineHeight: 1.7, margin: '0 0 2.5rem', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-            Join the Yeppoon Bulls family. All ages and skill levels welcome — from your first game of Mini Mod to chasing a QRL premiership.
+            Join the Yeppoon Seagulls family. All ages and skill levels welcome — from your first game of Mini Mod to chasing a QRL premiership.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">

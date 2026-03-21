@@ -14,7 +14,7 @@ const DEMO_CHILDREN = [
   {
     _id: 'p1', firstName: 'Jordan', lastName: 'Smith', ageGroup: 'U14', jerseyNumber: 7, position: 'Halfback',
     registrationStatus: 'active',
-    teamId: { name: 'Yeppoon Bulls U14', coachName: 'Mike Thompson', trainingDay: 'Tue & Thu', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval' },
+    teamId: { name: 'Yeppoon Seagulls U14', coachName: 'Mike Thompson', trainingDay: 'Tue & Thu', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval' },
     stats: [{ season: '2026', gamesPlayed: 8, tries: 6, tackles: 47 }],
     attendanceRecords: [
       ...Array(6).fill({ type: 'training', attended: true }),
@@ -24,16 +24,16 @@ const DEMO_CHILDREN = [
   {
     _id: 'p2', firstName: 'Emma', lastName: 'Smith', ageGroup: 'U10', jerseyNumber: 4, position: 'Centre',
     registrationStatus: 'active',
-    teamId: { name: 'Yeppoon Bulls U10', coachName: 'Sarah Johnson', trainingDay: 'Wednesday', trainingTime: '4:30 PM', trainingVenue: 'Nev Skuse Oval' },
+    teamId: { name: 'Yeppoon Seagulls U10', coachName: 'Sarah Johnson', trainingDay: 'Wednesday', trainingTime: '4:30 PM', trainingVenue: 'Nev Skuse Oval' },
     stats: [{ season: '2026', gamesPlayed: 7, tries: 3, tackles: 18 }],
     attendanceRecords: Array(7).fill({ type: 'training', attended: true })
   }
 ];
 
 const DEMO_UPCOMING = [
-  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Bulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
-  { _id: 'f2', ageGroup: 'U10', round: 5, homeTeamName: 'Yeppoon Bulls', awayTeamName: 'Emu Park Eagles', date: new Date(Date.now() + 6 * 86400000), time: '11:30 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
-  { _id: 'f3', ageGroup: 'U14', round: 6, homeTeamName: 'Gladstone Warriors', awayTeamName: 'Yeppoon Bulls', date: new Date(Date.now() + 13 * 86400000), time: '2:00 PM', venue: 'Gladstone City Oval', status: 'scheduled' },
+  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
+  { _id: 'f2', ageGroup: 'U10', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Emu Park Eagles', date: new Date(Date.now() + 6 * 86400000), time: '11:30 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
+  { _id: 'f3', ageGroup: 'U14', round: 6, homeTeamName: 'Gladstone Warriors', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 13 * 86400000), time: '2:00 PM', venue: 'Gladstone City Oval', status: 'scheduled' },
 ];
 
 const DEMO_EVENTS = [
