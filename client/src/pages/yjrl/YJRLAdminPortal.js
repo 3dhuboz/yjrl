@@ -52,9 +52,9 @@ const YJRLAdminPortal = () => {
       api.get(`/yjrl/teams?season=${SEASON}`).catch(() => ({ data: [] })),
       api.get('/news/all').catch(() => ({ data: [] })),
     ]).then(([sRes, tRes, nRes]) => {
-      if (sRes.data) setStats(sRes.data);
-      if (tRes.data.length) setTeams(tRes.data);
-      if (nRes.data.length) setNews(nRes.data);
+      if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
+      if (Array.isArray(tRes.data) && tRes.data.length) setTeams(tRes.data);
+      if (Array.isArray(nRes.data) && nRes.data.length) setNews(nRes.data);
     }).finally(() => setLoading(false));
   }, []);
 

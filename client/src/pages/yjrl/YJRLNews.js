@@ -81,7 +81,7 @@ const YJRLNews = () => {
     if (id) return;
     setLoading(true);
     api.get('/news?published=true').then(res => {
-      if (res.data.length) setArticles(res.data);
+      if (Array.isArray(res.data) && res.data.length) setArticles(res.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 

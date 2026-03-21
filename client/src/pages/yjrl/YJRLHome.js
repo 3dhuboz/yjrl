@@ -83,10 +83,10 @@ const YJRLHome = () => {
       api.get('/teams').catch(() => ({ data: [] })),
       api.get('/stats/overview').catch(() => ({ data: null }))
     ]).then(([nRes, fRes, tRes, sRes]) => {
-      if (nRes.data.length) setNews(nRes.data);
-      if (fRes.data.length) setFixtures(fRes.data);
-      if (tRes.data.length) setTeams(tRes.data);
-      if (sRes.data) setStats(sRes.data);
+      if (Array.isArray(nRes.data) && nRes.data.length) setNews(nRes.data);
+      if (Array.isArray(fRes.data) && fRes.data.length) setFixtures(fRes.data);
+      if (Array.isArray(tRes.data) && tRes.data.length) setTeams(tRes.data);
+      if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
     }).finally(() => setLoading(false));
   }, []);
 

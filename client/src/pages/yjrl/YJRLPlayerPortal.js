@@ -108,9 +108,9 @@ const YJRLPlayerPortal = () => {
       api.get('/achievements').catch(() => ({ data: [] })),
       api.get('/fixtures?upcoming=true&limit=5').catch(() => ({ data: [] }))
     ]).then(([pRes, aRes, fRes]) => {
-      setPlayer(pRes.data || DEMO_PLAYER);
-      if (aRes.data.length) setAchievements(aRes.data);
-      if (fRes.data.length) setUpcoming(fRes.data);
+      setPlayer((pRes.data && typeof pRes.data === 'object' && pRes.data._id) ? pRes.data : DEMO_PLAYER);
+      if (Array.isArray(aRes.data) && aRes.data.length) setAchievements(aRes.data);
+      if (Array.isArray(fRes.data) && fRes.data.length) setUpcoming(fRes.data);
     }).finally(() => setLoading(false));
   }, [user]);
 

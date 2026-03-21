@@ -53,8 +53,8 @@ const YJRLFixtures = () => {
       api.get(`/yjrl/fixtures?season=${SEASON}`).catch(() => ({ data: [] })),
       api.get(`/yjrl/ladder?season=${SEASON}`).catch(() => ({ data: [] }))
     ]).then(([fRes, lRes]) => {
-      if (fRes.data.length) setFixtures(fRes.data);
-      if (lRes.data.length) setLadder(lRes.data);
+      if (Array.isArray(fRes.data) && fRes.data.length) setFixtures(fRes.data);
+      if (Array.isArray(lRes.data) && lRes.data.length) setLadder(lRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
