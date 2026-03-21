@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import InstallPrompt from './components/InstallPrompt';
 import YJRLHome from './pages/yjrl/YJRLHome';
 import YJRLFixtures from './pages/yjrl/YJRLFixtures';
 import YJRLNews from './pages/yjrl/YJRLNews';
@@ -166,11 +167,12 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
+        <InstallPrompt />
         <Toaster
           position="top-right"
           toastOptions={{
             duration: 4000,
-            style: { background: '#1a3a5c', color: '#f8fafc', borderRadius: '8px', border: '1px solid rgba(240,165,0,0.2)' }
+            style: { background: '#0f2570', color: '#f8fafc', borderRadius: '8px', border: '1px solid rgba(255,225,0,0.2)' }
           }}
         />
       </Router>

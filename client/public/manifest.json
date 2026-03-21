@@ -1,0 +1,53 @@
+{
+  "short_name": "Yeppoon JRL",
+  "name": "Yeppoon Seagulls Junior Rugby League",
+  "description": "The official digital hub for Yeppoon Seagulls JRL — fixtures, results, player portals, registration, and more.",
+  "icons": [
+    {
+      "src": "/images/icon-192.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1a3cb0",
+  "background_color": "#060c24",
+  "categories": ["sports"],
+  "lang": "en-AU",
+  "shortcuts": [
+    {
+      "name": "Fixtures & Results",
+      "short_name": "Fixtures",
+      "url": "/fixtures",
+      "icons": [{ "src": "/images/icon-192.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Player Portal",
+      "short_name": "My Stats",
+      "url": "/portal/player",
+      "icons": [{ "src": "/images/icon-192.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Register",
+      "short_name": "Join",
+      "url": "/register",
+      "icons": [{ "src": "/images/icon-192.svg", "sizes": "any" }]
+    }
+  ]
+}

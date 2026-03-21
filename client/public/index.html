@@ -2,17 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0c1d35" />
-  <meta name="description" content="Yeppoon Junior Rugby League — Where Capricorn Coast Champions Are Made. Player portals, fixtures, results, and more." />
-  <meta name="keywords" content="Yeppoon, Junior Rugby League, QRL, Capricorn Coast, rugby league, juniors, bulls" />
-  <meta property="og:title" content="Yeppoon Junior Rugby League" />
-  <meta property="og:description" content="Where Capricorn Coast Champions Are Made. Join the mighty Yeppoon Bulls." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1a3cb0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Yeppoon JRL" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/images/icon-192.png" />
+
+  <!-- SEO & Social -->
+  <meta name="description" content="Yeppoon Seagulls Junior Rugby League — Where Capricorn Coast Champions Are Made. Player portals, fixtures, results, registration, and more." />
+  <meta name="keywords" content="Yeppoon, Seagulls, Junior Rugby League, QRL, Capricorn Coast, rugby league, juniors, registration" />
+  <meta property="og:title" content="Yeppoon Seagulls Junior Rugby League" />
+  <meta property="og:description" content="Where Capricorn Coast Champions Are Made. Join the mighty Yeppoon Seagulls." />
   <meta property="og:type" content="website" />
+  <meta property="og:image" content="/images/logo.png" />
+  <meta property="og:site_name" content="Yeppoon Seagulls JRL" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Yeppoon Seagulls Junior Rugby League" />
+  <meta name="twitter:description" content="Where Capricorn Coast Champions Are Made." />
+  <meta name="twitter:image" content="/images/logo.png" />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon-192.png" />
+  <link rel="shortcut icon" href="/images/icon-192.png" />
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <title>Yeppoon Junior Rugby League</title>
+
+  <!-- Mobile-specific: prevent tap highlight, smooth scrolling -->
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body { overscroll-behavior-y: none; }
+    /* Safe area padding for notched devices */
+    .yjrl-nav { padding-left: max(1.5rem, env(safe-area-inset-left)); padding-right: max(1.5rem, env(safe-area-inset-right)); }
+    .yjrl-footer { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+    /* PWA splash screen background */
+    @media (display-mode: standalone) {
+      body { background: #060c24; }
+    }
+  </style>
+
+  <title>Yeppoon Seagulls JRL</title>
 </head>
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
