@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEPPOON JUNIOR RUGBY LEAGUE — Global Styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --yjrl-navy: #0c1d35;
+  --yjrl-navy-light: #1a3a5c;
+  --yjrl-gold: #f0a500;
+  --yjrl-gold-light: #fbbf24;
+  --yjrl-red: #c41e3a;
+  --yjrl-dark: #060f1c;
+  --yjrl-cream: #fef9f0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--yjrl-dark);
+  color: #e8edf5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--yjrl-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--yjrl-navy-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--yjrl-gold);
+}
+
+/* Selection */
+::selection {
+  background: rgba(240, 165, 0, 0.3);
+  color: white;
+}
+
+/* Loading screen */
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--yjrl-dark);
+  color: var(--yjrl-gold);
+  font-size: 1.1rem;
+  font-weight: 600;
+}

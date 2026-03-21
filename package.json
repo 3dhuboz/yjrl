@@ -1,0 +1,27 @@
+{
+  "name": "yeppoon-junior-rugby-league",
+  "version": "1.0.0",
+  "description": "Yeppoon Junior Rugby League — digital club hub with player portals, fixtures, gamification, and more",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "postinstall": "cd client && npm install && cd ../server && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3dhuboz/YJRL.git"
+  },
+  "author": "Penny Wise I.T",
+  "license": "MIT"
+}
