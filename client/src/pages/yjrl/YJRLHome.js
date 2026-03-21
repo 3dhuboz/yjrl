@@ -61,7 +61,7 @@ const Countdown = ({ date }) => {
       {[['Days', d], ['Hrs', h], ['Min', m], ['Sec', s]].map(([label, val]) => (
         <div key={label} style={{ textAlign: 'center', background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '8px', padding: '0.6rem 0.75rem', minWidth: 60 }}>
           <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--yjrl-gold)', lineHeight: 1 }}>{String(val).padStart(2, '0')}</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--yjrl-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.2rem' }}>{label}</div>
+          <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.2rem' }}>{label}</div>
         </div>
       ))}
     </div>
@@ -117,7 +117,7 @@ const YJRLHome = () => {
               <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">
                 Join the Club <ArrowRight size={18} />
               </Link>
-              <Link to="/fixtures" className="yjrl-btn yjrl-btn-secondary yjrl-btn-lg">
+              <Link to="/fixtures" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
                 View Fixtures
               </Link>
             </div>
@@ -151,22 +151,22 @@ const YJRLHome = () => {
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--yjrl-gold)', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center', marginBottom: '1.25rem' }}>
                   Next Game
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--yjrl-muted)', textAlign: 'center', marginBottom: '0.5rem' }}>{nextGame.ageGroup}</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--yjrl-text)', textAlign: 'center', marginBottom: '1.5rem' }}>
-                  {nextGame.homeTeamName} <span style={{ color: 'var(--yjrl-gold)' }}>vs</span> {nextGame.awayTeamName}
+                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: '0.5rem' }}>{nextGame.ageGroup}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', textAlign: 'center', marginBottom: '1.5rem' }}>
+                  {nextGame.homeTeamName} <span style={{ color: '#fbbf24' }}>vs</span> {nextGame.awayTeamName}
                 </div>
                 <Countdown date={nextGame.date} />
                 <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--yjrl-muted)', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', justifyContent: 'center' }}>
                     <Calendar size={14} />
                     {new Date(nextGame.date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}
                     {nextGame.time && ` at ${nextGame.time}`}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--yjrl-muted)', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', justifyContent: 'center' }}>
                     <MapPin size={14} /> {nextGame.venue}
                   </div>
                 </div>
-                <Link to="/fixtures" className="yjrl-btn yjrl-btn-secondary" style={{ marginTop: '1.5rem', width: '100%', justifyContent: 'center' }}>
+                <Link to="/fixtures" className="yjrl-btn" style={{ marginTop: '1.5rem', width: '100%', justifyContent: 'center', background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
                   Full Schedule <ChevronRight size={15} />
                 </Link>
               </div>
@@ -177,7 +177,7 @@ const YJRLHome = () => {
               }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Season 2026 Underway</div>
-                <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                   Check the full fixture schedule and follow your team all season long.
                 </div>
                 <Link to="/fixtures" className="yjrl-btn yjrl-btn-primary">View All Fixtures</Link>
@@ -195,15 +195,15 @@ const YJRLHome = () => {
             {recentResults.map(f => (
               <div key={f._id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', whiteSpace: 'nowrap' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--yjrl-gold)', fontWeight: 700 }}>{f.ageGroup}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{f.homeTeamName}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'white' }}>{f.homeTeamName}</span>
                 <span style={{
-                  background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.2)',
+                  background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.3)',
                   borderRadius: '4px', padding: '0.15rem 0.5rem',
-                  fontSize: '0.9rem', fontWeight: 900, color: 'var(--yjrl-gold)'
+                  fontSize: '0.9rem', fontWeight: 900, color: '#fbbf24'
                 }}>
                   {f.homeScore ?? '–'} – {f.awayScore ?? '–'}
                 </span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{f.awayTeamName}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'white' }}>{f.awayTeamName}</span>
               </div>
             ))}
             <Link to="/fixtures" style={{ fontSize: '0.75rem', color: 'var(--yjrl-gold)', textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
@@ -375,16 +375,16 @@ const YJRLHome = () => {
         <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 2 }}>
           <img src="/images/logo.png" alt="Yeppoon Seagulls" style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: '1rem' }} />
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 1rem', lineHeight: 1.1 }}>
-            Ready to <span style={{ color: 'var(--yjrl-gold)' }}>Play?</span>
+            Ready to <span style={{ color: '#fbbf24' }}>Play?</span>
           </h2>
-          <p style={{ fontSize: '1.1rem', color: 'var(--yjrl-muted)', lineHeight: 1.7, margin: '0 0 2.5rem', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+          <p style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, margin: '0 0 2.5rem', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
             Join the Yeppoon Seagulls family. All ages and skill levels welcome — from your first game of Mini Mod to chasing a QRL premiership.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">
               Register Now <ArrowRight size={18} />
             </Link>
-            <a href="mailto:info@yepponjrl.com.au" className="yjrl-btn yjrl-btn-secondary yjrl-btn-lg">
+            <a href="mailto:info@yepponjrl.com.au" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
               Contact Us
             </a>
           </div>
@@ -394,7 +394,7 @@ const YJRLHome = () => {
               ['📞', '(07) 4939 XXXX'],
               ['✉️', 'info@yepponjrl.com.au']
             ].map(([icon, text]) => (
-              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', color: 'var(--yjrl-muted)' }}>
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.65)' }}>
                 <span>{icon}</span> {text}
               </div>
             ))}
