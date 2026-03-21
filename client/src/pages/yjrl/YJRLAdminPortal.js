@@ -121,7 +121,7 @@ const YJRLAdminPortal = () => {
   return (
     <YJRLLayout>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, var(--yjrl-dark), var(--yjrl-navy))', padding: '3rem 1.5rem 0', borderBottom: '1px solid var(--yjrl-border)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3rem 1.5rem 0', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           {!isAdmin && (
             <div style={{ background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '10px', padding: '0.875rem 1.25rem', marginBottom: '1.5rem' }}>
@@ -137,7 +137,7 @@ const YJRLAdminPortal = () => {
                 <h1 style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>Club Admin</h1>
                 <span className="yjrl-role-badge admin">Admin</span>
               </div>
-              <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.875rem' }}>Yeppoon Junior Rugby League · {SEASON} Season</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>Yeppoon Junior Rugby League · {SEASON} Season</div>
             </div>
           </div>
           <div className="yjrl-tabs">

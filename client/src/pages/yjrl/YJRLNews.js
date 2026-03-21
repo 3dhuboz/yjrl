@@ -94,15 +94,15 @@ const YJRLNews = () => {
   return (
     <YJRLLayout>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, var(--yjrl-dark), var(--yjrl-navy))', padding: '3.5rem 1.5rem 2rem', borderBottom: '1px solid var(--yjrl-border)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3.5rem 1.5rem 2rem', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--yjrl-gold)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem' }}>
             Club Updates
           </div>
-          <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.5rem' }}>
+          <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.5rem', color: 'white' }}>
             News & Stories
           </h1>
-          <p style={{ color: 'var(--yjrl-muted)', fontSize: '1rem', margin: 0 }}>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', margin: 0 }}>
             Results, events, player news, and everything happening at Yeppoon JRL.
           </p>
         </div>
@@ -129,26 +129,26 @@ const YJRLNews = () => {
         {featured && (
           <Link to={`/news/${featured._id}`} style={{ textDecoration: 'none', display: 'block', marginBottom: '2rem' }}>
             <div style={{
-              background: 'linear-gradient(135deg, var(--yjrl-navy), var(--yjrl-navy-light))',
-              border: '1px solid rgba(240,165,0,0.25)', borderRadius: '16px', overflow: 'hidden',
+              background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white',
+              border: '1px solid rgba(251,191,36,0.25)', borderRadius: '16px', overflow: 'hidden',
               display: 'grid', gridTemplateColumns: '1fr 2fr', transition: 'all 0.2s'
             }} className="yjrl-card">
-              <div style={{ background: 'linear-gradient(135deg, var(--yjrl-navy-light), #0d2847)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6rem', padding: '2rem', minHeight: 200 }}>
+              <div style={{ background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6rem', padding: '2rem', minHeight: 200 }}>
                 {CATEGORY_EMOJI[featured.category] || '📰'}
               </div>
               <div style={{ padding: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.7rem', background: 'rgba(240,165,0,0.2)', color: 'var(--yjrl-gold)', padding: '0.2rem 0.6rem', borderRadius: '100px', fontWeight: 700 }}>FEATURED</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--yjrl-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{featured.category}</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(251,191,36,0.2)', color: '#fbbf24', padding: '0.2rem 0.6rem', borderRadius: '100px', fontWeight: 700 }}>FEATURED</span>
+                  <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{featured.category}</span>
                 </div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: '0 0 0.75rem', lineHeight: 1.2 }}>{featured.title}</h2>
-                <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.7, margin: '0 0 1rem', fontSize: '0.95rem' }}>{featured.excerpt}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: '0 0 0.75rem', lineHeight: 1.2, color: 'white' }}>{featured.title}</h2>
+                <p style={{ color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, margin: '0 0 1rem', fontSize: '0.95rem' }}>{featured.excerpt}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <Clock size={12} />
                     {new Date(featured.publishDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--yjrl-gold)', fontWeight: 600 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#fbbf24', fontWeight: 600 }}>
                     Read more <ChevronRight size={14} />
                   </span>
                 </div>

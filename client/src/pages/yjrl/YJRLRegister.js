@@ -100,15 +100,15 @@ const YJRLRegister = () => {
   return (
     <YJRLLayout>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, var(--yjrl-dark), var(--yjrl-navy))', padding: '3rem 1.5rem 2rem', borderBottom: '1px solid var(--yjrl-border)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3rem 1.5rem 2rem', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--yjrl-muted)', textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1rem' }}>
             <ArrowLeft size={14} /> Back to Home
           </Link>
-          <h1 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.5rem' }}>
+          <h1 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.5rem', color: 'white' }}>
             Join the Club
           </h1>
-          <p style={{ color: 'var(--yjrl-muted)', fontSize: '0.95rem', margin: 0 }}>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', margin: 0 }}>
             Register for the {new Date().getFullYear()} Yeppoon Junior Rugby League season.
           </p>
 

@@ -129,7 +129,7 @@ const YJRLPlayerPortal = () => {
   return (
     <YJRLLayout>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, var(--yjrl-dark), var(--yjrl-navy))', padding: '3rem 1.5rem 0', borderBottom: '1px solid var(--yjrl-border)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3rem 1.5rem 0', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           {!user && (
             <div style={{ background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '10px', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>

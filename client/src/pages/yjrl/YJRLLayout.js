@@ -80,12 +80,12 @@ const YJRLLayout = ({ children }) => {
                   position: 'absolute',
                   top: 'calc(100% + 8px)',
                   right: 0,
-                  background: '#0c1222',
-                  border: '1px solid rgba(240,165,0,0.2)',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '0.5rem',
                   minWidth: '180px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
                   zIndex: 999
                 }}>
                   {PORTAL_ITEMS.filter(p => p.roles.includes('all') || (isAdmin && p.roles.includes('admin'))).map(item => (
@@ -99,11 +99,11 @@ const YJRLLayout = ({ children }) => {
                         gap: '0.5rem',
                         padding: '0.6rem 0.75rem',
                         borderRadius: '7px',
-                        color: isActive(item.to) ? 'var(--yjrl-gold)' : 'var(--yjrl-muted)',
+                        color: isActive(item.to) ? '#1d4ed8' : '#64748b',
                         textDecoration: 'none',
                         fontSize: '0.875rem',
-                        fontWeight: 500,
-                        background: isActive(item.to) ? 'rgba(240,165,0,0.1)' : 'transparent',
+                        fontWeight: isActive(item.to) ? 600 : 500,
+                        background: isActive(item.to) ? 'rgba(29,78,216,0.06)' : 'transparent',
                         transition: 'all 0.15s'
                       }}
                     >
@@ -132,8 +132,8 @@ const YJRLLayout = ({ children }) => {
             ) : (
               <>
                 <li>
-                  <Link to="/login">
-                    <LogIn size={14} style={{ marginRight: 4 }} />Sign In
+                  <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}>
+                    <LogIn size={14} />Sign In
                   </Link>
                 </li>
                 <li>

@@ -89,7 +89,7 @@ const YJRLParentPortal = () => {
   return (
     <YJRLLayout>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, var(--yjrl-dark), var(--yjrl-navy))', padding: '3rem 1.5rem 0', borderBottom: '1px solid var(--yjrl-border)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3rem 1.5rem 0', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           {!user && (
             <div style={{ background: 'rgba(192,132,252,0.08)', border: '1px solid rgba(192,132,252,0.2)', borderRadius: '10px', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -108,7 +108,7 @@ const YJRLParentPortal = () => {
                 <h1 style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>Parent Portal</h1>
                 <span className="yjrl-role-badge parent">Parent</span>
               </div>
-              <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.875rem' }}>{children.length} registered player{children.length !== 1 ? 's' : ''} in your family</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{children.length} registered player{children.length !== 1 ? 's' : ''} in your family</div>
             </div>
 
             {/* Child switcher */}
