@@ -189,7 +189,7 @@ const YJRLHome = () => {
 
       {/* ═══ LATEST RESULTS TICKER ═══ */}
       {recentResults.length > 0 && (
-        <div style={{ background: 'var(--yjrl-navy)', borderTop: '1px solid var(--yjrl-border)', borderBottom: '1px solid var(--yjrl-border)', padding: '0.875rem 0', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--yjrl-blue-deeper)', borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid var(--yjrl-border)', padding: '0.875rem 0', overflow: 'hidden' }}>
           <div style={{ display: 'flex', gap: '3rem', padding: '0 1.5rem', overflowX: 'auto', maxWidth: 1280, margin: '0 auto', alignItems: 'center' }}>
             <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--yjrl-gold)', whiteSpace: 'nowrap' }}>Latest Results</span>
             {recentResults.map(f => (
@@ -214,14 +214,14 @@ const YJRLHome = () => {
       )}
 
       {/* ═══ STATS STRIP ═══ */}
-      <section style={{ background: 'linear-gradient(135deg, var(--yjrl-navy), var(--yjrl-navy-light))', padding: '3rem 1.5rem' }}>
+      <section style={{ background: '#f0f9ff', padding: '3rem 1.5rem' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div className="yjrl-grid-4">
             {[
-              { icon: Users, value: `${stats.teamCount}+`, label: 'Active Teams', color: '#60a5fa' },
-              { icon: Zap, value: `${stats.playerCount}+`, label: 'Registered Players', color: 'var(--yjrl-gold)' },
-              { icon: Trophy, value: '12', label: 'Premierships', color: '#4ade80' },
-              { icon: Heart, value: '60+', label: 'Years of Community', color: '#f472b6' },
+              { icon: Users, value: `${stats.teamCount}+`, label: 'Active Teams', color: '#0ea5e9' },
+              { icon: Zap, value: `${stats.playerCount}+`, label: 'Registered Players', color: '#1d4ed8' },
+              { icon: Trophy, value: '12', label: 'Premierships', color: '#ca8a04' },
+              { icon: Heart, value: '60+', label: 'Years of Community', color: '#0ea5e9' },
             ].map((item, i) => (
               <div key={i} className="yjrl-stat-card">
                 <div className="yjrl-stat-icon" style={{ color: item.color }}>
@@ -276,7 +276,7 @@ const YJRLHome = () => {
       </section>
 
       {/* ═══ TEAMS GRID ═══ */}
-      <section className="yjrl-section" style={{ background: 'linear-gradient(180deg, var(--yjrl-dark) 0%, var(--yjrl-navy) 100%)' }}>
+      <section className="yjrl-section" style={{ background: 'white' }}>
         <div className="yjrl-section-inner">
           <div className="yjrl-section-header">
             <div className="yjrl-section-label">2026 Season</div>
@@ -335,7 +335,7 @@ const YJRLHome = () => {
               },
               {
                 icon: '🏆', title: 'Club Admin', desc: 'Full club management — registrations, financials, volunteer coordination, sponsor management, and club-wide communications.',
-                to: '/portal/admin', color: 'var(--yjrl-gold)', badge: 'Admin'
+                to: '/portal/admin', color: '#ca8a04', badge: 'Admin'
               },
             ].map((portal) => (
               <Link key={portal.to} to={portal.to} style={{ textDecoration: 'none' }}>
@@ -362,7 +362,7 @@ const YJRLHome = () => {
 
       {/* ═══ JOIN CTA ═══ */}
       <section style={{
-        background: 'linear-gradient(135deg, var(--yjrl-navy) 0%, #0d2847 100%)',
+        background: 'linear-gradient(135deg, var(--yjrl-blue-deeper) 0%, var(--yjrl-blue) 100%)',
         padding: '5rem 1.5rem',
         position: 'relative',
         overflow: 'hidden'
