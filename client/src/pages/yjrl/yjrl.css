@@ -1,37 +1,38 @@
 /* ═══════════════════════════════════════════════════════════════════
    YEPPOON SEAGULLS JUNIOR RUGBY LEAGUE — Custom Styles
-   Theme: Royal Blue #1a3cb0 | Yellow #ffe100 | White
+   Theme: Coastal Blue #2563eb | Soft Amber #fbbf24 | Slate
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --yjrl-blue: #1a3cb0;
-  --yjrl-blue-dark: #0f2570;
-  --yjrl-blue-deeper: #0a1a50;
-  --yjrl-yellow: #ffe100;
-  --yjrl-yellow-soft: #fff066;
+  --yjrl-blue: #2563eb;
+  --yjrl-blue-dark: #1d4ed8;
+  --yjrl-blue-deeper: #1e3a8a;
+  --yjrl-yellow: #fbbf24;
+  --yjrl-yellow-soft: #fcd34d;
+  --yjrl-amber: #d97706;
   --yjrl-white: #ffffff;
-  --yjrl-dark: #060c24;
-  --yjrl-cream: #f8f9ff;
-  --yjrl-text: #e8edf5;
-  --yjrl-muted: #8fa3cc;
-  --yjrl-border: rgba(255, 225, 0, 0.15);
-  --yjrl-card-bg: rgba(26, 60, 176, 0.15);
+  --yjrl-dark: #0c1222;
+  --yjrl-cream: #f8fafc;
+  --yjrl-text: #e2e8f0;
+  --yjrl-muted: #94a3b8;
+  --yjrl-border: rgba(251, 191, 36, 0.12);
+  --yjrl-card-bg: rgba(37, 99, 235, 0.08);
   --yjrl-radius: 12px;
-  --yjrl-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --yjrl-glow: 0 0 30px rgba(255, 225, 0, 0.2);
+  --yjrl-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --yjrl-glow: 0 0 25px rgba(251, 191, 36, 0.12);
   /* Legacy aliases */
   --yjrl-navy: var(--yjrl-blue-dark);
   --yjrl-navy-light: var(--yjrl-blue);
   --yjrl-gold: var(--yjrl-yellow);
   --yjrl-gold-light: var(--yjrl-yellow-soft);
-  --yjrl-red: #c41e3a;
+  --yjrl-red: #dc2626;
 }
 
 /* ── Base ── */
 .yjrl-page { min-height: 100vh; background: var(--yjrl-dark); color: var(--yjrl-text); font-family: 'Inter', sans-serif; }
 
 /* ── Navbar ── */
-.yjrl-nav { position: sticky; top: 0; z-index: 100; background: rgba(6, 12, 36, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--yjrl-border); padding: 0 1.5rem; }
+.yjrl-nav { position: sticky; top: 0; z-index: 100; background: rgba(12, 18, 34, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--yjrl-border); padding: 0 1.5rem; }
 .yjrl-nav-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 68px; }
 .yjrl-logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
 .yjrl-logo-badge { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: var(--yjrl-glow); }
@@ -42,14 +43,14 @@
 .yjrl-nav-links { display: flex; align-items: center; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
 .yjrl-nav-links a, .yjrl-nav-links button { color: var(--yjrl-muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; padding: 0.4rem 0.75rem; border-radius: 6px; border: none; background: none; cursor: pointer; transition: all 0.2s; }
 .yjrl-nav-links a:hover, .yjrl-nav-links button:hover, .yjrl-nav-links a.active { color: var(--yjrl-yellow); background: rgba(255, 225, 0, 0.1); }
-.yjrl-nav-cta { background: linear-gradient(135deg, var(--yjrl-yellow), #e6cb00) !important; color: var(--yjrl-blue-dark) !important; font-weight: 700 !important; padding: 0.5rem 1.25rem !important; }
+.yjrl-nav-cta { background: linear-gradient(135deg, #fbbf24, #d97706) !important; color: #1e3a8a !important; font-weight: 700 !important; padding: 0.5rem 1.25rem !important; }
 .yjrl-nav-cta:hover { opacity: 0.9; }
 .yjrl-mobile-menu-btn { display: none; background: none; border: none; color: var(--yjrl-yellow); cursor: pointer; padding: 0.5rem; }
 
 /* ── Hero ── */
-.yjrl-hero { position: relative; overflow: hidden; background: linear-gradient(165deg, var(--yjrl-blue-dark) 0%, var(--yjrl-blue) 40%, #2550d0 100%); min-height: 92vh; display: flex; align-items: center; }
-.yjrl-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 75% 30%, rgba(255, 225, 0, 0.12) 0%, transparent 45%), radial-gradient(circle at 20% 80%, rgba(26, 60, 176, 0.4) 0%, transparent 50%); pointer-events: none; }
-.yjrl-hero-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 225, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 225, 0, 0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
+.yjrl-hero { position: relative; overflow: hidden; background: linear-gradient(165deg, #0c1222 0%, #1e3a8a 40%, #2563eb 100%); min-height: 92vh; display: flex; align-items: center; }
+.yjrl-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 75% 30%, rgba(251, 191, 36, 0.06) 0%, transparent 45%), radial-gradient(circle at 20% 80%, rgba(30, 58, 138, 0.3) 0%, transparent 50%); pointer-events: none; }
+.yjrl-hero-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
 .yjrl-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center 30%; opacity: 0.25; pointer-events: none; }
 .yjrl-hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to right, rgba(10, 26, 80, 0.92) 0%, rgba(10, 26, 80, 0.6) 50%, rgba(10, 26, 80, 0.3) 100%); }
 .yjrl-hero-content { position: relative; z-index: 2; max-width: 1280px; margin: 0 auto; padding: 5rem 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
@@ -65,8 +66,8 @@
 
 /* ── Buttons ── */
 .yjrl-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
-.yjrl-btn-primary { background: linear-gradient(135deg, var(--yjrl-yellow), #e6cb00); color: var(--yjrl-blue-dark); box-shadow: 0 4px 15px rgba(255, 225, 0, 0.3); }
-.yjrl-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255, 225, 0, 0.45); }
+.yjrl-btn-primary { background: linear-gradient(135deg, #fbbf24, #d97706); color: var(--yjrl-blue-dark); box-shadow: 0 4px 15px rgba(255, 225, 0, 0.3); }
+.yjrl-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(251, 191, 36, 0.3); }
 .yjrl-btn-secondary { background: transparent; color: var(--yjrl-text); border: 1px solid rgba(255, 255, 255, 0.2); }
 .yjrl-btn-secondary:hover { border-color: var(--yjrl-yellow); color: var(--yjrl-yellow); background: rgba(255, 225, 0, 0.08); }
 .yjrl-btn-danger { background: linear-gradient(135deg, #dc2626, #9b1630); color: white; }
@@ -155,7 +156,7 @@
 .yjrl-label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--yjrl-muted); margin-bottom: 0.4rem; }
 .yjrl-form-group { margin-bottom: 1.25rem; }
 .yjrl-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-.yjrl-modal { background: #0f1d50; border: 1px solid var(--yjrl-border); border-radius: 16px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6); }
+.yjrl-modal { background: #0f172a; border: 1px solid var(--yjrl-border); border-radius: 16px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6); }
 .yjrl-modal-header { padding: 1.5rem; border-bottom: 1px solid var(--yjrl-border); display: flex; align-items: center; justify-content: space-between; }
 .yjrl-modal-title { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
 .yjrl-modal-body { padding: 1.5rem; }

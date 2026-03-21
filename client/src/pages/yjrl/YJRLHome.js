@@ -289,7 +289,7 @@ const YJRLHome = () => {
               <div key={team._id} className="yjrl-card" style={{ padding: '1.25rem', textAlign: 'center', cursor: 'pointer' }}>
                 <div style={{
                   width: 52, height: 52, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--yjrl-yellow), #e6cb00)',
+                  background: 'linear-gradient(135deg, #fbbf24, #d97706)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 0.75rem', fontSize: '1.3rem', fontWeight: 900, color: 'var(--yjrl-blue-dark)'
                 }}>

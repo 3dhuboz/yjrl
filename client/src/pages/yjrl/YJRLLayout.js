@@ -80,7 +80,7 @@ const YJRLLayout = ({ children }) => {
                   position: 'absolute',
                   top: 'calc(100% + 8px)',
                   right: 0,
-                  background: '#0c1d35',
+                  background: '#0c1222',
                   border: '1px solid rgba(240,165,0,0.2)',
                   borderRadius: '10px',
                   padding: '0.5rem',

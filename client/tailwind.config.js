@@ -4,13 +4,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'yjrl-blue': '#1a3cb0',
-        'yjrl-blue-dark': '#0f2570',
-        'yjrl-blue-deeper': '#0a1a50',
-        'yjrl-yellow': '#ffe100',
-        'yjrl-yellow-soft': '#fff066',
-        'yjrl-dark': '#060c24',
-        'yjrl-cream': '#f8f9ff',
+        'yjrl-blue': '#2563eb',
+        'yjrl-blue-dark': '#1d4ed8',
+        'yjrl-blue-deeper': '#1e3a8a',
+        'yjrl-yellow': '#fbbf24',
+        'yjrl-yellow-soft': '#fcd34d',
+        'yjrl-amber': '#d97706',
+        'yjrl-dark': '#0c1222',
+        'yjrl-cream': '#f8fafc',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

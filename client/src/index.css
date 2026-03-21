@@ -7,11 +7,11 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --yjrl-blue: #1a3cb0;
-  --yjrl-blue-dark: #0f2570;
-  --yjrl-yellow: #ffe100;
-  --yjrl-yellow-soft: #fff066;
-  --yjrl-dark: #060c24;
+  --yjrl-blue: #2563eb;
+  --yjrl-blue-dark: #1d4ed8;
+  --yjrl-yellow: #fbbf24;
+  --yjrl-yellow-soft: #fcd34d;
+  --yjrl-dark: #0c1222;
   /* Legacy aliases */
   --yjrl-navy: var(--yjrl-blue-dark);
   --yjrl-navy-light: var(--yjrl-blue);

@@ -26,8 +26,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#1a3cb0",
-  "background_color": "#060c24",
+  "theme_color": "#2563eb",
+  "background_color": "#0c1222",
   "categories": ["sports"],
   "lang": "en-AU",
   "shortcuts": [
