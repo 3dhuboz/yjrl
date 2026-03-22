@@ -134,7 +134,7 @@ const YJRLParentPortal = () => {
             )}
           </div>
 
-          <div className="yjrl-tabs">
+          <div className="yjrl-tabs yjrl-tabs-dark">
             {[['overview', 'Overview'], ['schedule', 'Schedule'], ['events', 'Events & RSVP'], ['chat', '💬 Parents Chat'], ['onboarding', 'Getting Started']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}

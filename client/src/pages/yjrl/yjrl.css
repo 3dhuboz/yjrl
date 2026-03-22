@@ -206,6 +206,12 @@
 .yjrl-tab:hover { color: var(--yjrl-text); }
 .yjrl-tab.active { color: var(--yjrl-blue); border-bottom-color: var(--yjrl-blue); }
 
+/* Tabs on dark backgrounds (portal headers) */
+.yjrl-tabs-dark { border-bottom-color: rgba(255,255,255,0.15); }
+.yjrl-tabs-dark .yjrl-tab { color: rgba(255,255,255,0.55); }
+.yjrl-tabs-dark .yjrl-tab:hover { color: rgba(255,255,255,0.9); }
+.yjrl-tabs-dark .yjrl-tab.active { color: white; border-bottom-color: #fbbf24; }
+
 .yjrl-input { width: 100%; padding: 0.65rem 1rem; background: white; border: 1px solid var(--yjrl-border); border-radius: 8px; color: var(--yjrl-text); font-size: 0.9rem; font-family: inherit; transition: border-color 0.2s; box-sizing: border-box; }
 .yjrl-input:focus { outline: none; border-color: var(--yjrl-sky); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
 .yjrl-label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--yjrl-muted); margin-bottom: 0.4rem; }

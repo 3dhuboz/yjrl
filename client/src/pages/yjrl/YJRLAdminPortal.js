@@ -140,7 +140,7 @@ const YJRLAdminPortal = () => {
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>Yeppoon Junior Rugby League · {SEASON} Season</div>
             </div>
           </div>
-          <div className="yjrl-tabs">
+          <div className="yjrl-tabs yjrl-tabs-dark">
             {[['overview', 'Overview'], ['teams', 'Teams'], ['fixtures', 'Fixtures'], ['news', 'News'], ['players', 'Players'], ['moderation', '🛡️ Chat Moderation']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}

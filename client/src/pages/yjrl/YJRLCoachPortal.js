@@ -113,7 +113,7 @@ const YJRLCoachPortal = () => {
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{team.name} · {team.wins}W {team.losses}L {team.draws}D</div>
             </div>
           </div>
-          <div className="yjrl-tabs">
+          <div className="yjrl-tabs yjrl-tabs-dark">
             {[['roster', 'Roster'], ['attendance', 'Attendance'], ['lineup', 'Lineup'], ['notes', 'Dev Notes'], ['chat', '💬 Coaches Chat']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}
