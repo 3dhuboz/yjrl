@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import YJRLLayout from './YJRLLayout';
+import YJRLChat from './YJRLChat';
 import './yjrl.css';
 
 const POSITIONS = ['Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row', 'Interchange'];
@@ -113,7 +114,7 @@ const YJRLCoachPortal = () => {
             </div>
           </div>
           <div className="yjrl-tabs">
-            {[['roster', 'Roster'], ['attendance', 'Attendance'], ['lineup', 'Lineup'], ['notes', 'Dev Notes']].map(([k, l]) => (
+            {[['roster', 'Roster'], ['attendance', 'Attendance'], ['lineup', 'Lineup'], ['notes', 'Dev Notes'], ['chat', '💬 Coaches Chat']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -342,6 +343,23 @@ const YJRLCoachPortal = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {/* ── COACHES CHAT ── */}
+        {tab === 'chat' && (
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                📋 Coaching staff discussion — all age groups
+              </div>
+            </div>
+            <YJRLChat
+              theme="coach"
+              roomName="Coaches Room"
+              teamName="All Yeppoon JRL Coaches"
+              userName={user?.firstName || 'Coach'}
+              onlineCount={3}
+            />
           </div>
         )}
       </div>

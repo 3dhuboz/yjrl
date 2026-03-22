@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import YJRLLayout from './YJRLLayout';
+import YJRLChat from './YJRLChat';
 import './yjrl.css';
 
 const RARITY_COLORS = { common: '#94a3b8', rare: '#60a5fa', epic: '#c084fc', legendary: '#f0a500' };
@@ -209,7 +210,7 @@ const YJRLPlayerPortal = () => {
 
           {/* Tabs */}
           <div className="yjrl-tabs">
-            {[['overview', 'Overview'], ['stats', 'Stats'], ['badges', 'My Badges'], ['schedule', 'Schedule'], ['attendance', 'Attendance']].map(([k, l]) => (
+            {[['overview', 'Overview'], ['stats', 'Stats'], ['badges', 'My Badges'], ['chat', '💬 Team Chat'], ['schedule', 'Schedule'], ['attendance', 'Attendance']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -532,6 +533,23 @@ const YJRLPlayerPortal = () => {
                 </table>
               )}
             </div>
+          </div>
+        )}
+        {/* ── TEAM CHAT ── */}
+        {tab === 'chat' && (
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.8rem', color: '#64748b', background: '#f0f7ff', border: '1px solid #dbeafe', borderRadius: '10px', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                🦅 Chat with your {p.teamId?.name || 'team'} teammates!
+              </div>
+            </div>
+            <YJRLChat
+              theme="player"
+              roomName="Team Chat"
+              teamName={p.teamId?.name || 'Yeppoon Seagulls'}
+              userName={p.firstName || 'Player'}
+              onlineCount={5}
+            />
           </div>
         )}
       </div>

@@ -141,7 +141,7 @@ const YJRLAdminPortal = () => {
             </div>
           </div>
           <div className="yjrl-tabs">
-            {[['overview', 'Overview'], ['teams', 'Teams'], ['fixtures', 'Fixtures'], ['news', 'News'], ['players', 'Players']].map(([k, l]) => (
+            {[['overview', 'Overview'], ['teams', 'Teams'], ['fixtures', 'Fixtures'], ['news', 'News'], ['players', 'Players'], ['moderation', '🛡️ Chat Moderation']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -343,6 +343,118 @@ const YJRLAdminPortal = () => {
               <Users size={40} style={{ marginBottom: '1rem', opacity: 0.4 }} />
               <p>Player management — view all registrations, update details, award achievements, and track participation.</p>
               <p style={{ fontSize: '0.85rem' }}>Sync with PlayHQ for automatic registration data.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── CHAT MODERATION ── */}
+        {tab === 'moderation' && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              {[
+                { label: 'Active Chat Rooms', value: '6', icon: '💬', color: '#3b82f6' },
+                { label: 'Messages Today', value: '47', icon: '📨', color: '#10b981' },
+                { label: 'Flagged Messages', value: '0', icon: '🚩', color: '#f59e0b' },
+                { label: 'Active Users', value: '23', icon: '👥', color: '#8b5cf6' },
+              ].map((s, i) => (
+                <div key={i} className="yjrl-card" style={{ padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '1.2rem' }}>{s.icon}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>{s.label}</span>
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.color }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="yjrl-card">
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title"><Shield size={16} /> Chat Rooms</div>
+              </div>
+              <table className="yjrl-table">
+                <thead>
+                  <tr>
+                    <th>Room</th>
+                    <th>Type</th>
+                    <th>Members</th>
+                    <th>Messages (24h)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { room: 'U14 Team Chat', type: 'Players', members: 18, msgs: 12, status: 'active' },
+                    { room: 'U12 Team Chat', type: 'Players', members: 15, msgs: 8, status: 'active' },
+                    { room: 'U10 Team Chat', type: 'Players', members: 14, msgs: 15, status: 'active' },
+                    { room: 'U14 Parents', type: 'Parents', members: 24, msgs: 6, status: 'active' },
+                    { room: 'U12 Parents', type: 'Parents', members: 20, msgs: 4, status: 'active' },
+                    { room: 'Coaches Room', type: 'Coaches', members: 8, msgs: 2, status: 'active' },
+                  ].map((r, i) => (
+                    <tr key={i}>
+                      <td style={{ fontWeight: 600 }}>{r.room}</td>
+                      <td>
+                        <span style={{
+                          fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '100px', fontWeight: 600,
+                          background: r.type === 'Players' ? '#dbeafe' : r.type === 'Parents' ? '#fef3c7' : '#d1fae5',
+                          color: r.type === 'Players' ? '#1d4ed8' : r.type === 'Parents' ? '#92400e' : '#065f46'
+                        }}>{r.type}</span>
+                      </td>
+                      <td>{r.members}</td>
+                      <td>{r.msgs}</td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: '#10b981' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} /> Active
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="yjrl-card" style={{ marginTop: '1.5rem' }}>
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title">🚩 Flagged Messages</div>
+              </div>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                <CheckCircle size={32} style={{ marginBottom: '0.5rem', color: '#10b981' }} />
+                <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>All Clear</div>
+                <div>No flagged messages. The auto-filter catches inappropriate content before it reaches the chat.</div>
+              </div>
+            </div>
+
+            <div className="yjrl-card" style={{ marginTop: '1.5rem' }}>
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title">⚙️ Chat Settings</div>
+              </div>
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { label: 'Auto-filter inappropriate language', desc: 'Blocks profanity and bullying language automatically', enabled: true },
+                  { label: 'Player chat hours (7am – 8pm)', desc: 'Restricts when junior players can send messages', enabled: true },
+                  { label: 'Link sharing disabled for players', desc: 'Prevents players from sharing external links', enabled: true },
+                  { label: 'Image sharing', desc: 'Allow image uploads in chat (moderated)', enabled: false },
+                ].map((setting, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.15rem' }}>{setting.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{setting.desc}</div>
+                    </div>
+                    <div style={{
+                      width: 44, height: 24, borderRadius: '100px', cursor: 'pointer',
+                      background: setting.enabled ? '#1d4ed8' : '#cbd5e1',
+                      position: 'relative', transition: 'background 0.2s'
+                    }}>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%', background: 'white',
+                        position: 'absolute', top: 3,
+                        left: setting.enabled ? 23 : 3,
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

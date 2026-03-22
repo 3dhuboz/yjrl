@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import YJRLLayout from './YJRLLayout';
+import YJRLChat from './YJRLChat';
 import './yjrl.css';
 
 const DEMO_CHILDREN = [
@@ -134,7 +135,7 @@ const YJRLParentPortal = () => {
           </div>
 
           <div className="yjrl-tabs">
-            {[['overview', 'Overview'], ['schedule', 'Schedule'], ['events', 'Events & RSVP'], ['onboarding', 'Getting Started']].map(([k, l]) => (
+            {[['overview', 'Overview'], ['schedule', 'Schedule'], ['events', 'Events & RSVP'], ['chat', '💬 Parents Chat'], ['onboarding', 'Getting Started']].map(([k, l]) => (
               <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -413,6 +414,23 @@ const YJRLParentPortal = () => {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+        {/* ── PARENTS CHAT ── */}
+        {tab === 'chat' && (
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                👨‍👩‍👧‍👦 Connect with other {child?.teamId?.name || 'team'} parents
+              </div>
+            </div>
+            <YJRLChat
+              theme="parent"
+              roomName="Parents Group"
+              teamName={child?.teamId?.name || 'Yeppoon Seagulls'}
+              userName={user?.firstName || 'Parent'}
+              onlineCount={6}
+            />
           </div>
         )}
       </div>
