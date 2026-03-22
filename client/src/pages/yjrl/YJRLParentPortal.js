@@ -122,9 +122,9 @@ const YJRLParentPortal = () => {
                     style={{
                       padding: '0.4rem 0.9rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
                       cursor: 'pointer', border: '1px solid',
-                      borderColor: selectedChild === i ? 'var(--yjrl-gold)' : 'rgba(255,255,255,0.15)',
-                      background: selectedChild === i ? 'rgba(240,165,0,0.12)' : 'transparent',
-                      color: selectedChild === i ? 'var(--yjrl-gold)' : 'var(--yjrl-muted)'
+                      borderColor: selectedChild === i ? '#fbbf24' : 'rgba(255,255,255,0.15)',
+                      background: selectedChild === i ? 'rgba(251,191,36,0.15)' : 'transparent',
+                      color: selectedChild === i ? '#fbbf24' : 'rgba(255,255,255,0.6)'
                     }}
                   >
                     {c.firstName}

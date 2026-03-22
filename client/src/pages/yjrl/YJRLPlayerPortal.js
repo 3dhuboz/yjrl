@@ -60,7 +60,7 @@ const PATHWAY_LEVELS = [
 
 const XPBar = ({ current, max }) => (
   <div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--yjrl-muted)', marginBottom: '0.4rem' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem' }}>
       <span>{current} XP</span><span>{max} XP to next level</span>
     </div>
     <div className="yjrl-xp-bar"><div className="yjrl-xp-fill" style={{ width: `${Math.min((current / max) * 100, 100)}%` }} /></div>
@@ -134,7 +134,7 @@ const YJRLPlayerPortal = () => {
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           {!user && (
             <div style={{ background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '10px', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--yjrl-gold)' }}>
+              <span style={{ fontSize: '0.875rem', color: '#fbbf24' }}>
                 <LogIn size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                 You're viewing a demo profile. Sign in to see your real stats, badges and schedule.
               </span>
@@ -168,14 +168,14 @@ const YJRLPlayerPortal = () => {
                 )}
               </div>
               <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--yjrl-muted)' }}>
-                  <strong style={{ color: 'var(--yjrl-gold)' }}>#{p.jerseyNumber}</strong> · {p.position}
+                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
+                  <strong style={{ color: '#fbbf24' }}>#{p.jerseyNumber}</strong> · {p.position}
                 </span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--yjrl-muted)' }}>
-                  <strong style={{ color: 'var(--yjrl-text)' }}>{p.ageGroup}</strong> · {p.teamId?.name || 'Yeppoon Seagulls'}
+                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
+                  <strong style={{ color: 'white' }}>{p.ageGroup}</strong> · {p.teamId?.name || 'Yeppoon Seagulls'}
                 </span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--yjrl-muted)' }}>
-                  <strong style={{ color: '#f0a500' }}>{xp}</strong> XP · Level {Math.floor(xp / 50) + 1}
+                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
+                  <strong style={{ color: '#fbbf24' }}>{xp}</strong> XP · Level {Math.floor(xp / 50) + 1}
                 </span>
               </div>
               <div style={{ marginTop: '0.75rem', maxWidth: 320 }}>
@@ -184,7 +184,7 @@ const YJRLPlayerPortal = () => {
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Pathway</div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Pathway</div>
               <div style={{ display: 'flex', align: 'center', gap: '0.3rem' }}>
                 {PATHWAY_LEVELS.map((lvl, idx) => (
                   <div
