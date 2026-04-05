@@ -334,7 +334,7 @@ const YJRLBroadcast = () => {
 
       const tracks = pc.getSenders().map(s => ({
         location: 'local', mid: s.track?.kind === 'video' ? '0' : '1',
-        trackName: s.track?.kind || 'unknown'
+        trackName: s.track?.kind === 'video' ? 'camera' : 'mic'
       }));
       await api.post(`/livestream/calls/sessions/${sessionId}/tracks/new`, { tracks });
 

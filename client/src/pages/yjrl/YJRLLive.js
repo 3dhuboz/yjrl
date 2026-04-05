@@ -89,10 +89,11 @@ const YJRLLive = () => {
           sdp: offer.sdp
         });
 
-        if (res.data?.sdp) {
+        const answerSdp = res.data?.sessionDescription?.sdp || res.data?.sdp;
+        if (answerSdp) {
           await pc.setRemoteDescription(new RTCSessionDescription({
             type: 'answer',
-            sdp: res.data.sdp
+            sdp: answerSdp
           }));
           setConnected(true);
         }
