@@ -11,7 +11,7 @@ FROM_EMAIL = "noreply@yepponjrl.com.au"
 [[d1_databases]]
 binding = "DB"
 database_name = "yjrl-db"
-database_id = "placeholder-create-via-dashboard"
+database_id = "690424d2-5985-4576-9d4c-62e643ae5ed3"
 
 # R2 Storage
 [[r2_buckets]]
