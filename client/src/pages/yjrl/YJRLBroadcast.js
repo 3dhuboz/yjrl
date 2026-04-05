@@ -44,10 +44,19 @@ const YJRLBroadcast = () => {
   const animFrameRef = useRef(null);
   const scrollXRef = useRef(0);
   const sponsorImagesRef = useRef({});
+  const clubLogoRef = useRef(null);
   const fileInputRef = useRef(null);
   const uploadTargetRef = useRef(null);
 
   const hasAccess = user && ALLOWED_ROLES.includes(user.role);
+
+  // Load club logo for watermark
+  useEffect(() => {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { clubLogoRef.current = img; };
+    img.src = '/images/logo.png';
+  }, []);
 
   // Load sponsor logos as Image objects for canvas drawing
   const loadSponsorImage = useCallback((id, url) => {
@@ -145,16 +154,24 @@ const YJRLBroadcast = () => {
 
     const fontSize = Math.max(12, w * 0.025);
 
-    // ── Top-left: Club name (static) ──
+    // ── Top-left: Club logo + name (static) ──
     ctx.save();
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = 0.7;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
+    const logoSize = fontSize * 1.8;
+    const logoX = fontSize * 0.5;
+    const logoY = fontSize * 0.4;
+    let textX = logoX;
+    if (clubLogoRef.current) {
+      ctx.drawImage(clubLogoRef.current, logoX, logoY, logoSize, logoSize);
+      textX = logoX + logoSize + fontSize * 0.4;
+    }
     ctx.font = `bold ${fontSize * 1.2}px Inter, sans-serif`;
     ctx.fillStyle = 'white';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 4;
-    ctx.fillText('YEPPOON SEAGULLS', fontSize * 0.6, fontSize * 0.5);
+    ctx.fillText('YEPPOON SEAGULLS', textX, logoY + (logoSize - fontSize * 1.2) / 2);
     ctx.restore();
 
     // ── Bottom: Scrolling sponsor ticker bar ──
