@@ -3,7 +3,8 @@ import {
   Users, Trophy, Calendar, Newspaper, Plus, Edit, Trash2, Save,
   BarChart3, Shield, Bell, Settings, DollarSign, X, CheckCircle,
   Search, Download, RefreshCw, Eye, Award, UserPlus, ChevronDown,
-  AlertTriangle, FileText, TrendingUp, MapPin, Clock, Lock
+  AlertTriangle, FileText, TrendingUp, MapPin, Clock, Lock,
+  Star, ShoppingBag, Gift, Ticket, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -19,6 +20,12 @@ const EMPTY_TEAM = { name:'', ageGroup:'U14', division:'', season:SEASON, coachN
 const EMPTY_FIXTURE = { ageGroup:'U14', round:1, homeTeamName:'Yeppoon Seagulls', awayTeamName:'', date:'', time:'', venue:'Nev Skuse Oval', status:'scheduled', isHomeGame:true, season:SEASON };
 const EMPTY_NEWS = { title:'', content:'', excerpt:'', category:'news', published:false, featured:false };
 const EMPTY_USER = { firstName:'', lastName:'', email:'', password:'', role:'coach', phone:'' };
+const EMPTY_SPONSOR = { name:'', logo:'', website:'', description:'', tier:'bronze', contactName:'', contactEmail:'', contactPhone:'', sortOrder:0 };
+const EMPTY_MERCH = { name:'', description:'', price:0, image:'', category:'apparel', sizes:[], inStock:true, externalUrl:'', sortOrder:0 };
+const EMPTY_RAFFLE = { title:'', description:'', image:'', prizeDescription:'', ticketPrice:0, externalUrl:'', drawDate:'', status:'active' };
+const EMPTY_CARNIVAL = { title:'', description:'', image:'', date:'', endDate:'', time:'', venue:'', address:'', ageGroups:[], maxTeams:'', entryFee:0, externalUrl:'', contactName:'', contactEmail:'', status:'open' };
+const SPONSOR_TIERS = ['platinum','gold','silver','bronze','community'];
+const MERCH_CATEGORIES = ['apparel','accessories','equipment','other'];
 
 // Reusable Modal component
 const Modal = ({ title, onClose, width, children, footer }) => (
@@ -105,6 +112,31 @@ const YJRLAdminPortal = () => {
   const [auditLog, setAuditLog] = useState([]);
   const [chatRooms, setChatRooms] = useState([]);
 
+  // Sponsors
+  const [sponsors, setSponsors] = useState([]);
+  const [sponsorModal, setSponsorModal] = useState(false);
+  const [sponsorForm, setSponsorForm] = useState(EMPTY_SPONSOR);
+  const [editingSponsor, setEditingSponsor] = useState(null);
+
+  // Merch
+  const [merch, setMerch] = useState([]);
+  const [merchModal, setMerchModal] = useState(false);
+  const [merchForm, setMerchForm] = useState(EMPTY_MERCH);
+  const [editingMerch, setEditingMerch] = useState(null);
+
+  // Raffles
+  const [raffles, setRaffles] = useState([]);
+  const [raffleModal, setRaffleModal] = useState(false);
+  const [raffleForm, setRaffleForm] = useState(EMPTY_RAFFLE);
+  const [editingRaffle, setEditingRaffle] = useState(null);
+
+  // Carnivals
+  const [carnivals, setCarnivals] = useState([]);
+  const [carnivalModal, setCarnivalModal] = useState(false);
+  const [carnivalForm, setCarnivalForm] = useState(EMPTY_CARNIVAL);
+  const [editingCarnival, setEditingCarnival] = useState(null);
+  const [carnivalRegs, setCarnivalRegs] = useState(null); // viewing registrations
+
   const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
 
   // ─── DATA LOADING ──────────────────────────────────────────────────────────
@@ -183,6 +215,15 @@ const YJRLAdminPortal = () => {
   useEffect(() => { if (tab === 'news' && isAdmin) loadNews(); }, [tab, isAdmin, loadNews]);
   useEffect(() => { if (tab === 'registrations' && isAdmin) loadRegistrations(); }, [tab, isAdmin, loadRegistrations]);
   useEffect(() => { if (tab === 'settings' && isAdmin) loadSettings(); }, [tab, isAdmin, loadSettings]);
+
+  const loadSponsors = useCallback(() => { api.get('/yjrl/club/sponsors').then(r => setSponsors(Array.isArray(r.data) ? r.data : [])).catch(() => {}); }, []);
+  const loadMerch = useCallback(() => { api.get('/yjrl/club/merch').then(r => setMerch(Array.isArray(r.data) ? r.data : [])).catch(() => {}); }, []);
+  const loadRaffles = useCallback(() => { api.get('/yjrl/club/raffles').then(r => setRaffles(Array.isArray(r.data) ? r.data : [])).catch(() => {}); }, []);
+  const loadCarnivals = useCallback(() => { api.get('/yjrl/club/carnivals').then(r => setCarnivals(Array.isArray(r.data) ? r.data : [])).catch(() => {}); }, []);
+  useEffect(() => { if (tab === 'sponsors' && isAdmin) loadSponsors(); }, [tab, isAdmin, loadSponsors]);
+  useEffect(() => { if (tab === 'merch' && isAdmin) loadMerch(); }, [tab, isAdmin, loadMerch]);
+  useEffect(() => { if (tab === 'raffles' && isAdmin) loadRaffles(); }, [tab, isAdmin, loadRaffles]);
+  useEffect(() => { if (tab === 'carnivals' && isAdmin) loadCarnivals(); }, [tab, isAdmin, loadCarnivals]);
 
   if (!user) return <Navigate to="/login" />;
   if (!isAdmin) return <Navigate to="/portal/player" />;
@@ -346,6 +387,53 @@ const YJRLAdminPortal = () => {
     try { await api.delete(`/admin/chat/${id}`); setFlaggedMessages(prev => prev.filter(m => m.id !== id)); toast.success('Message deleted'); } catch { toast.error('Failed'); }
   };
 
+  // Sponsor CRUD
+  const saveSponsor = async () => {
+    try {
+      if (editingSponsor) { await api.put(`/yjrl/club/sponsors/${editingSponsor}`, sponsorForm); toast.success('Sponsor updated'); }
+      else { await api.post('/yjrl/club/sponsors', sponsorForm); toast.success('Sponsor added'); }
+      loadSponsors();
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); return; }
+    setSponsorModal(false); setSponsorForm(EMPTY_SPONSOR); setEditingSponsor(null);
+  };
+  const deleteSponsor = async (id) => { if (!window.confirm('Remove sponsor?')) return; try { await api.delete(`/yjrl/club/sponsors/${id}`); loadSponsors(); toast.success('Removed'); } catch { toast.error('Failed'); } };
+
+  // Merch CRUD
+  const saveMerchItem = async () => {
+    try {
+      if (editingMerch) { await api.put(`/yjrl/club/merch/${editingMerch}`, merchForm); toast.success('Item updated'); }
+      else { await api.post('/yjrl/club/merch', merchForm); toast.success('Item added'); }
+      loadMerch();
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); return; }
+    setMerchModal(false); setMerchForm(EMPTY_MERCH); setEditingMerch(null);
+  };
+  const deleteMerchItem = async (id) => { if (!window.confirm('Remove item?')) return; try { await api.delete(`/yjrl/club/merch/${id}`); loadMerch(); toast.success('Removed'); } catch { toast.error('Failed'); } };
+
+  // Raffle CRUD
+  const saveRaffle = async () => {
+    try {
+      if (editingRaffle) { await api.put(`/yjrl/club/raffles/${editingRaffle}`, raffleForm); toast.success('Raffle updated'); }
+      else { await api.post('/yjrl/club/raffles', raffleForm); toast.success('Raffle created'); }
+      loadRaffles();
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); return; }
+    setRaffleModal(false); setRaffleForm(EMPTY_RAFFLE); setEditingRaffle(null);
+  };
+  const deleteRaffle = async (id) => { if (!window.confirm('Remove raffle?')) return; try { await api.delete(`/yjrl/club/raffles/${id}`); loadRaffles(); toast.success('Removed'); } catch { toast.error('Failed'); } };
+
+  // Carnival CRUD
+  const saveCarnival = async () => {
+    try {
+      if (editingCarnival) { await api.put(`/yjrl/club/carnivals/${editingCarnival}`, carnivalForm); toast.success('Carnival updated'); }
+      else { await api.post('/yjrl/club/carnivals', carnivalForm); toast.success('Carnival created'); }
+      loadCarnivals();
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); return; }
+    setCarnivalModal(false); setCarnivalForm(EMPTY_CARNIVAL); setEditingCarnival(null);
+  };
+  const deleteCarnival = async (id) => { if (!window.confirm('Remove carnival?')) return; try { await api.delete(`/yjrl/club/carnivals/${id}`); loadCarnivals(); toast.success('Removed'); } catch { toast.error('Failed'); } };
+  const viewCarnivalRegs = async (id) => {
+    try { const res = await api.get(`/yjrl/club/carnivals/${id}`); setCarnivalRegs(res.data); } catch { toast.error('Failed'); }
+  };
+
   // ─── HELPERS ───────────────────────────────────────────────────────────────
 
   const filteredPlayers = players.filter(p => {
@@ -366,7 +454,9 @@ const YJRLAdminPortal = () => {
 
   const TABS = [
     ['dashboard','Dashboard'],['users','Users'],['players','Players'],['teams','Teams'],
-    ['fixtures','Fixtures'],['news','News'],['registrations','Registrations'],['settings','Settings']
+    ['fixtures','Fixtures'],['news','News'],['registrations','Registrations'],
+    ['sponsors','Sponsors'],['merch','Store'],['raffles','Raffles'],['carnivals','Carnivals'],
+    ['settings','Settings']
   ];
 
   return (
@@ -873,6 +963,149 @@ const YJRLAdminPortal = () => {
             </div>
           </div>
         )}
+        {/* ═══════════════ SPONSORS ═══════════════ */}
+        {tab === 'sponsors' && (
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
+              <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:800, textTransform:'uppercase' }}>Sponsors ({sponsors.length})</h2>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={() => { setSponsorForm(EMPTY_SPONSOR); setEditingSponsor(null); setSponsorModal(true); }}><Plus size={15} /> Add Sponsor</button>
+            </div>
+            <div className="yjrl-card">
+              <table className="yjrl-table">
+                <thead><tr><th>Name</th><th>Tier</th><th>Website</th><th>Contact</th><th></th></tr></thead>
+                <tbody>
+                  {sponsors.map(s => (
+                    <tr key={s.id}>
+                      <td style={{ fontWeight:600 }}>{s.logo ? <img src={s.logo} alt="" style={{ width:24, height:24, borderRadius:4, objectFit:'contain', marginRight:8, verticalAlign:'middle' }} /> : null}{s.name}</td>
+                      <td><span style={{ fontSize:'0.7rem', padding:'0.15rem 0.5rem', borderRadius:'100px', fontWeight:700, textTransform:'capitalize',
+                        background: s.tier === 'platinum' ? '#f3f4f6' : s.tier === 'gold' ? 'rgba(251,191,36,0.15)' : s.tier === 'silver' ? 'rgba(148,163,184,0.15)' : s.tier === 'bronze' ? 'rgba(205,127,50,0.15)' : 'rgba(96,165,250,0.15)',
+                        color: s.tier === 'gold' ? '#b45309' : s.tier === 'platinum' ? '#374151' : s.tier === 'bronze' ? '#92400e' : '#3b82f6'
+                      }}>{s.tier}</span></td>
+                      <td style={{ fontSize:'0.8rem', color:'var(--yjrl-muted)' }}>{s.website ? <a href={s.website} target="_blank" rel="noopener noreferrer" style={{ color:'#60a5fa' }}>{s.website.replace(/https?:\/\//, '').slice(0,30)}</a> : '—'}</td>
+                      <td style={{ fontSize:'0.8rem', color:'var(--yjrl-muted)' }}>{s.contact_name || '—'}</td>
+                      <td>
+                        <div style={{ display:'flex', gap:'0.3rem' }}>
+                          <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setEditingSponsor(s.id); setSponsorForm({ name:s.name, logo:s.logo, website:s.website, description:s.description, tier:s.tier, contactName:s.contact_name, contactEmail:s.contact_email, contactPhone:s.contact_phone, sortOrder:s.sort_order||0 }); setSponsorModal(true); }}><Edit size={12} /></button>
+                          <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => deleteSponsor(s.id)}><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {sponsors.length === 0 && <div style={{ padding:'3rem', textAlign:'center', color:'var(--yjrl-muted)' }}>No sponsors yet. Add your first sponsor!</div>}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ MERCH STORE ═══════════════ */}
+        {tab === 'merch' && (
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
+              <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:800, textTransform:'uppercase' }}>Store Items ({merch.length})</h2>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={() => { setMerchForm(EMPTY_MERCH); setEditingMerch(null); setMerchModal(true); }}><Plus size={15} /> Add Item</button>
+            </div>
+            <div className="yjrl-card">
+              <table className="yjrl-table">
+                <thead><tr><th>Item</th><th>Category</th><th>Price</th><th>Sizes</th><th>Stock</th><th>Link</th><th></th></tr></thead>
+                <tbody>
+                  {merch.map(m => (
+                    <tr key={m.id || m._id}>
+                      <td style={{ fontWeight:600 }}>{m.name}</td>
+                      <td style={{ textTransform:'capitalize', fontSize:'0.8rem' }}>{m.category}</td>
+                      <td style={{ fontWeight:700, color:'#10b981' }}>${m.price}</td>
+                      <td style={{ fontSize:'0.75rem', color:'var(--yjrl-muted)' }}>{(m.sizes || []).join(', ') || '—'}</td>
+                      <td>{m.inStock || m.in_stock ? <span style={{ color:'#10b981', fontWeight:600, fontSize:'0.8rem' }}>In Stock</span> : <span style={{ color:'#f87171', fontWeight:600, fontSize:'0.8rem' }}>Out</span>}</td>
+                      <td style={{ fontSize:'0.75rem' }}>{(m.externalUrl || m.external_url) ? <a href={m.externalUrl || m.external_url} target="_blank" rel="noopener noreferrer" style={{ color:'#60a5fa' }}>Link</a> : '—'}</td>
+                      <td>
+                        <div style={{ display:'flex', gap:'0.3rem' }}>
+                          <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setEditingMerch(m.id || m._id); setMerchForm({ name:m.name, description:m.description, price:m.price, image:m.image, category:m.category, sizes:m.sizes||[], inStock:!!(m.inStock||m.in_stock), externalUrl:m.externalUrl||m.external_url||'', sortOrder:m.sort_order||0 }); setMerchModal(true); }}><Edit size={12} /></button>
+                          <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => deleteMerchItem(m.id || m._id)}><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {merch.length === 0 && <div style={{ padding:'3rem', textAlign:'center', color:'var(--yjrl-muted)' }}>No store items yet. Add your first product!</div>}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ RAFFLES ═══════════════ */}
+        {tab === 'raffles' && (
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
+              <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:800, textTransform:'uppercase' }}>Raffles ({raffles.length})</h2>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={() => { setRaffleForm(EMPTY_RAFFLE); setEditingRaffle(null); setRaffleModal(true); }}><Plus size={15} /> Create Raffle</button>
+            </div>
+            <div className="yjrl-card">
+              <table className="yjrl-table">
+                <thead><tr><th>Title</th><th>Prize</th><th>Ticket $</th><th>Draw Date</th><th>Status</th><th>Winner</th><th></th></tr></thead>
+                <tbody>
+                  {raffles.map(r => (
+                    <tr key={r.id || r._id}>
+                      <td style={{ fontWeight:600 }}>{r.title}</td>
+                      <td style={{ fontSize:'0.8rem', maxWidth:200, color:'var(--yjrl-muted)' }}>{r.prizeDescription || r.prize_description || '—'}</td>
+                      <td style={{ fontWeight:700 }}>${r.ticketPrice || r.ticket_price || 0}</td>
+                      <td style={{ fontSize:'0.8rem', color:'var(--yjrl-muted)' }}>{(r.drawDate || r.draw_date) ? new Date(r.drawDate || r.draw_date).toLocaleDateString('en-AU') : '—'}</td>
+                      <td><span style={{ fontSize:'0.7rem', padding:'0.15rem 0.5rem', borderRadius:'100px', fontWeight:600, textTransform:'capitalize',
+                        background: r.status === 'active' ? 'rgba(16,185,129,0.1)' : r.status === 'drawn' ? 'rgba(245,158,11,0.1)' : 'rgba(148,163,184,0.1)',
+                        color: r.status === 'active' ? '#10b981' : r.status === 'drawn' ? '#f59e0b' : '#94a3b8'
+                      }}>{r.status}</span></td>
+                      <td style={{ fontWeight:600, color:'var(--yjrl-gold)' }}>{r.winnerName || r.winner_name || '—'}</td>
+                      <td>
+                        <div style={{ display:'flex', gap:'0.3rem' }}>
+                          <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setEditingRaffle(r.id || r._id); setRaffleForm({ title:r.title, description:r.description, image:r.image, prizeDescription:r.prizeDescription||r.prize_description||'', ticketPrice:r.ticketPrice||r.ticket_price||0, externalUrl:r.externalUrl||r.external_url||'', drawDate:r.drawDate||r.draw_date||'', status:r.status, winnerName:r.winnerName||r.winner_name||'' }); setRaffleModal(true); }}><Edit size={12} /></button>
+                          <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => deleteRaffle(r.id || r._id)}><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {raffles.length === 0 && <div style={{ padding:'3rem', textAlign:'center', color:'var(--yjrl-muted)' }}>No raffles yet. Create your first raffle!</div>}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ CARNIVALS ═══════════════ */}
+        {tab === 'carnivals' && (
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
+              <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:800, textTransform:'uppercase' }}>Carnivals ({carnivals.length})</h2>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={() => { setCarnivalForm(EMPTY_CARNIVAL); setEditingCarnival(null); setCarnivalModal(true); }}><Plus size={15} /> Create Carnival</button>
+            </div>
+            <div className="yjrl-card">
+              <table className="yjrl-table">
+                <thead><tr><th>Title</th><th>Date</th><th>Venue</th><th>Fee</th><th>Teams</th><th>Regs</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {carnivals.map(car => (
+                    <tr key={car.id || car._id}>
+                      <td style={{ fontWeight:600 }}>{car.title}</td>
+                      <td style={{ fontSize:'0.8rem', color:'var(--yjrl-muted)' }}>{new Date(car.date).toLocaleDateString('en-AU')}</td>
+                      <td style={{ fontSize:'0.8rem', color:'var(--yjrl-muted)' }}>{car.venue || '—'}</td>
+                      <td style={{ fontWeight:700 }}>{(car.entryFee || car.entry_fee) > 0 ? `$${car.entryFee || car.entry_fee}` : 'Free'}</td>
+                      <td style={{ color:'var(--yjrl-muted)' }}>{car.maxTeams || car.max_teams || '—'}</td>
+                      <td style={{ fontWeight:700, color:'#60a5fa', cursor:'pointer' }} onClick={() => viewCarnivalRegs(car.id || car._id)}>{car.registrationCount ?? 0}</td>
+                      <td><span style={{ fontSize:'0.7rem', padding:'0.15rem 0.5rem', borderRadius:'100px', fontWeight:600, textTransform:'capitalize',
+                        background: car.status === 'open' ? 'rgba(16,185,129,0.1)' : car.status === 'closed' ? 'rgba(245,158,11,0.1)' : 'rgba(148,163,184,0.1)',
+                        color: car.status === 'open' ? '#10b981' : car.status === 'closed' ? '#f59e0b' : '#94a3b8'
+                      }}>{car.status}</span></td>
+                      <td>
+                        <div style={{ display:'flex', gap:'0.3rem' }}>
+                          <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setEditingCarnival(car.id || car._id); setCarnivalForm({ title:car.title, description:car.description, image:car.image||'', date:car.date, endDate:car.endDate||car.end_date||'', time:car.time||'', venue:car.venue||'', address:car.address||'', ageGroups:car.ageGroups||[], maxTeams:car.maxTeams||car.max_teams||'', entryFee:car.entryFee||car.entry_fee||0, externalUrl:car.externalUrl||car.external_url||'', contactName:car.contactName||car.contact_name||'', contactEmail:car.contactEmail||car.contact_email||'', status:car.status }); setCarnivalModal(true); }}><Edit size={12} /></button>
+                          <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => deleteCarnival(car.id || car._id)}><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {carnivals.length === 0 && <div style={{ padding:'3rem', textAlign:'center', color:'var(--yjrl-muted)' }}>No carnivals yet. Create your first tournament!</div>}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ═══════════════ MODALS ═══════════════ */}
@@ -1057,6 +1290,127 @@ const YJRLAdminPortal = () => {
               {achievements.map(a => <option key={a._id} value={a._id}>{a.icon} {a.name} ({a.rarity} — {a.xpValue || a.xp_value}xp)</option>)}
             </select>
           </div>
+        </Modal>
+      )}
+
+      {/* Sponsor Modal */}
+      {sponsorModal && (
+        <Modal title={editingSponsor ? 'Edit Sponsor' : 'Add Sponsor'} onClose={() => setSponsorModal(false)} footer={
+          <><button className="yjrl-btn yjrl-btn-secondary" onClick={() => setSponsorModal(false)}>Cancel</button>
+          <button className="yjrl-btn yjrl-btn-primary" onClick={saveSponsor} disabled={!sponsorForm.name}><Save size={15} /> {editingSponsor ? 'Update' : 'Add'}</button></>
+        }>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Name *</label><input className="yjrl-input" value={sponsorForm.name} onChange={e => setSponsorForm(p => ({ ...p, name:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Tier</label>
+              <select className="yjrl-input" value={sponsorForm.tier} onChange={e => setSponsorForm(p => ({ ...p, tier:e.target.value }))}>{SPONSOR_TIERS.map(t => <option key={t} value={t}>{t}</option>)}</select>
+            </div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Logo URL</label><input className="yjrl-input" value={sponsorForm.logo} onChange={e => setSponsorForm(p => ({ ...p, logo:e.target.value }))} placeholder="https://..." /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Website</label><input className="yjrl-input" value={sponsorForm.website} onChange={e => setSponsorForm(p => ({ ...p, website:e.target.value }))} placeholder="https://..." /></div>
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Description</label><textarea className="yjrl-input" rows={2} value={sponsorForm.description} onChange={e => setSponsorForm(p => ({ ...p, description:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Contact Name</label><input className="yjrl-input" value={sponsorForm.contactName} onChange={e => setSponsorForm(p => ({ ...p, contactName:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Contact Email</label><input className="yjrl-input" value={sponsorForm.contactEmail} onChange={e => setSponsorForm(p => ({ ...p, contactEmail:e.target.value }))} /></div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Merch Modal */}
+      {merchModal && (
+        <Modal title={editingMerch ? 'Edit Item' : 'Add Store Item'} onClose={() => setMerchModal(false)} footer={
+          <><button className="yjrl-btn yjrl-btn-secondary" onClick={() => setMerchModal(false)}>Cancel</button>
+          <button className="yjrl-btn yjrl-btn-primary" onClick={saveMerchItem} disabled={!merchForm.name}><Save size={15} /> {editingMerch ? 'Update' : 'Add'}</button></>
+        }>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Name *</label><input className="yjrl-input" value={merchForm.name} onChange={e => setMerchForm(p => ({ ...p, name:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Category</label>
+              <select className="yjrl-input" value={merchForm.category} onChange={e => setMerchForm(p => ({ ...p, category:e.target.value }))}>{MERCH_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            </div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Price ($)</label><input className="yjrl-input" type="number" value={merchForm.price} onChange={e => setMerchForm(p => ({ ...p, price:parseFloat(e.target.value)||0 }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Image URL</label><input className="yjrl-input" value={merchForm.image} onChange={e => setMerchForm(p => ({ ...p, image:e.target.value }))} placeholder="https://..." /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Sizes (comma separated)</label><input className="yjrl-input" value={(merchForm.sizes||[]).join(', ')} onChange={e => setMerchForm(p => ({ ...p, sizes:e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} placeholder="S, M, L, XL" /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Buy Link (external)</label><input className="yjrl-input" value={merchForm.externalUrl} onChange={e => setMerchForm(p => ({ ...p, externalUrl:e.target.value }))} placeholder="https://..." /></div>
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Description</label><textarea className="yjrl-input" rows={2} value={merchForm.description} onChange={e => setMerchForm(p => ({ ...p, description:e.target.value }))} /></div>
+            <label style={{ display:'flex', alignItems:'center', gap:'0.5rem', cursor:'pointer', fontSize:'0.85rem', color:'var(--yjrl-muted)' }}>
+              <input type="checkbox" checked={merchForm.inStock} onChange={e => setMerchForm(p => ({ ...p, inStock:e.target.checked }))} /> In Stock
+            </label>
+          </div>
+        </Modal>
+      )}
+
+      {/* Raffle Modal */}
+      {raffleModal && (
+        <Modal title={editingRaffle ? 'Edit Raffle' : 'Create Raffle'} onClose={() => setRaffleModal(false)} footer={
+          <><button className="yjrl-btn yjrl-btn-secondary" onClick={() => setRaffleModal(false)}>Cancel</button>
+          <button className="yjrl-btn yjrl-btn-primary" onClick={saveRaffle} disabled={!raffleForm.title}><Save size={15} /> {editingRaffle ? 'Update' : 'Create'}</button></>
+        }>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Title *</label><input className="yjrl-input" value={raffleForm.title} onChange={e => setRaffleForm(p => ({ ...p, title:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Prize Description</label><textarea className="yjrl-input" rows={2} value={raffleForm.prizeDescription} onChange={e => setRaffleForm(p => ({ ...p, prizeDescription:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Ticket Price ($)</label><input className="yjrl-input" type="number" value={raffleForm.ticketPrice} onChange={e => setRaffleForm(p => ({ ...p, ticketPrice:parseFloat(e.target.value)||0 }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Draw Date</label><input className="yjrl-input" type="date" value={raffleForm.drawDate} onChange={e => setRaffleForm(p => ({ ...p, drawDate:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Ticket Link (external)</label><input className="yjrl-input" value={raffleForm.externalUrl} onChange={e => setRaffleForm(p => ({ ...p, externalUrl:e.target.value }))} placeholder="https://..." /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Status</label>
+              <select className="yjrl-input" value={raffleForm.status} onChange={e => setRaffleForm(p => ({ ...p, status:e.target.value }))}>{['active','closed','drawn'].map(s => <option key={s} value={s}>{s}</option>)}</select>
+            </div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Image URL</label><input className="yjrl-input" value={raffleForm.image} onChange={e => setRaffleForm(p => ({ ...p, image:e.target.value }))} /></div>
+            {raffleForm.status === 'drawn' && <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Winner Name</label><input className="yjrl-input" value={raffleForm.winnerName || ''} onChange={e => setRaffleForm(p => ({ ...p, winnerName:e.target.value }))} /></div>}
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Description</label><textarea className="yjrl-input" rows={2} value={raffleForm.description} onChange={e => setRaffleForm(p => ({ ...p, description:e.target.value }))} /></div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Carnival Modal */}
+      {carnivalModal && (
+        <Modal title={editingCarnival ? 'Edit Carnival' : 'Create Carnival'} width={640} onClose={() => setCarnivalModal(false)} footer={
+          <><button className="yjrl-btn yjrl-btn-secondary" onClick={() => setCarnivalModal(false)}>Cancel</button>
+          <button className="yjrl-btn yjrl-btn-primary" onClick={saveCarnival} disabled={!carnivalForm.title || !carnivalForm.date}><Save size={15} /> {editingCarnival ? 'Update' : 'Create'}</button></>
+        }>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Title *</label><input className="yjrl-input" value={carnivalForm.title} onChange={e => setCarnivalForm(p => ({ ...p, title:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Date *</label><input className="yjrl-input" type="date" value={carnivalForm.date} onChange={e => setCarnivalForm(p => ({ ...p, date:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Time</label><input className="yjrl-input" value={carnivalForm.time} onChange={e => setCarnivalForm(p => ({ ...p, time:e.target.value }))} placeholder="e.g. 8:00 AM" /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Venue</label><input className="yjrl-input" value={carnivalForm.venue} onChange={e => setCarnivalForm(p => ({ ...p, venue:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Address</label><input className="yjrl-input" value={carnivalForm.address} onChange={e => setCarnivalForm(p => ({ ...p, address:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Entry Fee ($)</label><input className="yjrl-input" type="number" value={carnivalForm.entryFee} onChange={e => setCarnivalForm(p => ({ ...p, entryFee:parseFloat(e.target.value)||0 }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Max Teams</label><input className="yjrl-input" type="number" value={carnivalForm.maxTeams} onChange={e => setCarnivalForm(p => ({ ...p, maxTeams:parseInt(e.target.value)||'' }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Age Groups (comma separated)</label><input className="yjrl-input" value={(carnivalForm.ageGroups||[]).join(', ')} onChange={e => setCarnivalForm(p => ({ ...p, ageGroups:e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} placeholder="U10, U12, U14" /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">External Registration Link</label><input className="yjrl-input" value={carnivalForm.externalUrl} onChange={e => setCarnivalForm(p => ({ ...p, externalUrl:e.target.value }))} placeholder="https://..." /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Contact Name</label><input className="yjrl-input" value={carnivalForm.contactName} onChange={e => setCarnivalForm(p => ({ ...p, contactName:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Contact Email</label><input className="yjrl-input" value={carnivalForm.contactEmail} onChange={e => setCarnivalForm(p => ({ ...p, contactEmail:e.target.value }))} /></div>
+            <div className="yjrl-form-group" style={{ margin:0 }}><label className="yjrl-label">Status</label>
+              <select className="yjrl-input" value={carnivalForm.status} onChange={e => setCarnivalForm(p => ({ ...p, status:e.target.value }))}>{['open','closed','completed'].map(s => <option key={s} value={s}>{s}</option>)}</select>
+            </div>
+            <div className="yjrl-form-group" style={{ margin:0, gridColumn:'1/-1' }}><label className="yjrl-label">Description</label><textarea className="yjrl-input" rows={3} value={carnivalForm.description} onChange={e => setCarnivalForm(p => ({ ...p, description:e.target.value }))} /></div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Carnival Registrations Viewer */}
+      {carnivalRegs && (
+        <Modal title={`Registrations — ${carnivalRegs.title}`} width={700} onClose={() => setCarnivalRegs(null)} footer={
+          <button className="yjrl-btn yjrl-btn-secondary" onClick={() => setCarnivalRegs(null)}>Close</button>
+        }>
+          {(carnivalRegs.registrations || []).length > 0 ? (
+            <table className="yjrl-table">
+              <thead><tr><th>Team</th><th>Age</th><th>Contact</th><th>Email</th><th>Players</th><th>Status</th></tr></thead>
+              <tbody>
+                {(carnivalRegs.registrations || []).map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ fontWeight:600 }}>{r.team_name}</td>
+                    <td>{r.age_group}</td>
+                    <td>{r.contact_name}</td>
+                    <td style={{ fontSize:'0.8rem', color:'var(--yjrl-muted)' }}>{r.contact_email}</td>
+                    <td>{r.players_count}</td>
+                    <td><span style={{ fontSize:'0.7rem', padding:'0.15rem 0.5rem', borderRadius:'100px', fontWeight:600, textTransform:'capitalize',
+                      background: r.status === 'confirmed' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                      color: r.status === 'confirmed' ? '#10b981' : '#f59e0b'
+                    }}>{r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ padding:'2rem', textAlign:'center', color:'var(--yjrl-muted)' }}>No registrations yet.</div>
+          )}
         </Modal>
       )}
     </YJRLLayout>
