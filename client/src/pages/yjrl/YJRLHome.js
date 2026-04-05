@@ -14,36 +14,6 @@ const CATEGORY_EMOJI = {
   news: '📰', results: '🏆', events: '📅', club: '🏉', pathways: '⭐', community: '🤝', sponsors: '💛'
 };
 
-const DEFAULT_NEWS = [
-  {
-    _id: '1', title: 'Season 2026 Registration Now Open', category: 'news',
-    excerpt: 'Registration for the 2026 season is now open. All age groups from U6 through to Opens are welcome. Early bird pricing available until February 28.',
-    publishDate: new Date('2026-01-15'), image: ''
-  },
-  {
-    _id: '2', title: 'Seagulls Claim Grand Final Victory — U14s Champions!', category: 'results',
-    excerpt: 'What a performance! The Yeppoon Seagulls U14s fought back from a 10-point deficit in the second half to claim the 2025 Grand Final 24-16 against Rockhampton Tigers.',
-    publishDate: new Date('2025-09-20'), image: ''
-  },
-  {
-    _id: '3', title: 'Junior Pathway Program — Applications Open', category: 'pathways',
-    excerpt: 'The QRL RISE Program is now accepting applications for eligible U13-U15 players. This is your chance to take the next step in your rugby league journey.',
-    publishDate: new Date('2025-11-10'), image: ''
-  }
-];
-
-const DEFAULT_FIXTURES = [
-  { _id: 'f1', ageGroup: 'U14', homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 7 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
-  { _id: 'f2', ageGroup: 'U12', homeTeamName: 'Capricorn Cobras', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 7 * 86400000), time: '11:30 AM', venue: 'Gangwon Park', status: 'scheduled' },
-  { _id: 'f3', ageGroup: 'U16', homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Gladstone Warriors', date: new Date(Date.now() - 7 * 86400000), time: '2:00 PM', venue: 'Nev Skuse Oval', status: 'completed', homeScore: 26, awayScore: 14 },
-];
-
-const DEFAULT_TEAMS = AGE_GROUPS.map((ag, i) => ({
-  _id: String(i + 1), ageGroup: ag, name: `Yeppoon Seagulls ${ag}`, isActive: true,
-  wins: Math.floor(Math.random() * 8), losses: Math.floor(Math.random() * 5), draws: 0,
-  coachName: ['Mike Thompson', 'Sarah Johnson', 'Dave Williams', 'Lisa Chen', 'Brad Smith'][i % 5]
-}));
-
 const Countdown = ({ date }) => {
   const [diff, setDiff] = useState(0);
   useEffect(() => {
@@ -69,24 +39,24 @@ const Countdown = ({ date }) => {
 };
 
 const YJRLHome = () => {
-  const [news, setNews] = useState(DEFAULT_NEWS);
-  const [fixtures, setFixtures] = useState(DEFAULT_FIXTURES);
-  const [teams, setTeams] = useState(DEFAULT_TEAMS);
-  const [stats, setStats] = useState({ teamCount: 14, playerCount: 280, fixtureCount: 120 });
+  const [news, setNews] = useState([]);
+  const [fixtures, setFixtures] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [stats, setStats] = useState({ teamCount: 0, playerCount: 0, fixtureCount: 0 });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api.get('/news?limit=3&published=true').catch(() => ({ data: [] })),
-      api.get('/fixtures?upcoming=true&limit=3').catch(() => ({ data: [] })),
-      api.get('/teams').catch(() => ({ data: [] })),
-      api.get('/stats/overview').catch(() => ({ data: null }))
+      api.get('/yjrl/news?limit=3&published=true').catch(() => ({ data: [] })),
+      api.get('/yjrl/fixtures?upcoming=true&limit=3').catch(() => ({ data: [] })),
+      api.get('/yjrl/teams').catch(() => ({ data: [] })),
+      api.get('/yjrl/stats/overview').catch(() => ({ data: {} }))
     ]).then(([nRes, fRes, tRes, sRes]) => {
-      if (Array.isArray(nRes.data) && nRes.data.length) setNews(nRes.data);
-      if (Array.isArray(fRes.data) && fRes.data.length) setFixtures(fRes.data);
-      if (Array.isArray(tRes.data) && tRes.data.length) setTeams(tRes.data);
-      if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
+      if (Array.isArray(nRes.data)) setNews(nRes.data);
+      if (Array.isArray(fRes.data)) setFixtures(fRes.data);
+      if (Array.isArray(tRes.data)) setTeams(tRes.data);
+      if (sRes.data && typeof sRes.data === 'object') setStats(prev => ({ ...prev, ...sRes.data }));
     }).finally(() => setLoading(false));
   }, []);
 

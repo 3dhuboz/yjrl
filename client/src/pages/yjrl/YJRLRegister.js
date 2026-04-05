@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronRight, ArrowLeft, User, Users, MapPin, Calendar } from 'lucide-react';
 import YJRLLayout from './YJRLLayout';
+import api from '../../api';
 import toast from 'react-hot-toast';
 import './yjrl.css';
 
@@ -15,12 +16,6 @@ const STEPS = [
   { id: 4, label: 'Confirmation' },
 ];
 
-const FEES = {
-  U6: 80, U7: 80, U8: 95, U9: 95, U10: 110, U11: 110, U12: 125, U13: 140,
-  U14: 140, U15: 155, U16: 155, U17: 155, U18: 155, Womens: 120, Mens: 160
-};
-
-const EARLY_BIRD_CUTOFF = new Date('2026-02-28');
 const EARLY_BIRD_DISCOUNT = 20;
 
 const YJRLRegister = () => {
@@ -32,9 +27,35 @@ const YJRLRegister = () => {
     medicalNotes: '', agreeToTerms: false, agreeToPhotoPolicy: false
   });
   const [submitted, setSubmitted] = useState(false);
+  const [fees, setFees] = useState({});
+  const [earlyBirdActive, setEarlyBirdActive] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('paypal');
+  const [submitting, setSubmitting] = useState(false);
 
-  const isEarlyBird = new Date() < EARLY_BIRD_CUTOFF;
-  const fee = form.ageGroup ? FEES[form.ageGroup] || 140 : null;
+  // Load registration fees from API
+  useEffect(() => {
+    api.get('/registration-fees').then(res => {
+      setFees(res.data.fees);
+      setEarlyBirdActive(res.data.earlyBirdActive);
+    }).catch(() => {});
+  }, []);
+
+  // Handle PayPal return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const regId = params.get('reg');
+    const success = params.get('success');
+    if (success === 'true' && regId) {
+      api.post(`/register-player/${regId}/capture`).then(res => {
+        if (res.data.token) localStorage.setItem('yjrl_token', res.data.token);
+        setStep(5); // success
+        toast.success('Payment confirmed! Welcome to the Seagulls!');
+      }).catch(() => toast.error('Payment capture failed. Please contact the club.'));
+    }
+  }, []);
+
+  const isEarlyBird = earlyBirdActive;
+  const fee = form.ageGroup ? fees[form.ageGroup] || 140 : null;
   const finalFee = fee && isEarlyBird ? fee - EARLY_BIRD_DISCOUNT : fee;
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
@@ -52,13 +73,44 @@ const YJRLRegister = () => {
     setStep(prev => prev + 1);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.agreeToTerms) { toast.error('Please agree to the terms and conditions'); return; }
-    toast.success('Registration submitted! We will be in touch shortly.');
-    setSubmitted(true);
+    setSubmitting(true);
+    try {
+      const res = await api.post('/register-player', {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        dateOfBirth: form.dateOfBirth,
+        ageGroup: form.ageGroup,
+        position: form.position,
+        guardianName: form.guardianName,
+        guardianPhone: form.guardianPhone,
+        guardianEmail: form.guardianEmail,
+        emergencyName: form.emergencyName,
+        emergencyPhone: form.emergencyPhone,
+        emergencyRelationship: form.emergencyRelationship,
+        medicalNotes: form.medicalNotes,
+        agreeToTerms: form.agreeToTerms,
+        agreeToPhotoPolicy: form.agreeToPhotoPolicy,
+        paymentMethod: selectedPaymentMethod
+      });
+      if (res.data.approvalUrl) {
+        // Redirect to PayPal
+        window.location.href = res.data.approvalUrl;
+      } else {
+        // Offline payment - show success
+        if (res.data.token) localStorage.setItem('yjrl_token', res.data.token);
+        setStep(5); // success step
+        toast.success('Registration submitted!');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Registration failed');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  if (submitted) return (
+  if (submitted || step === 5) return (
     <YJRLLayout>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '5rem 1.5rem', textAlign: 'center' }}>
         <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>🏉</div>
@@ -114,7 +166,7 @@ const YJRLRegister = () => {
 
           {isEarlyBird && (
             <div style={{ marginTop: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(240,165,0,0.12)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem', color: 'var(--yjrl-gold)', fontWeight: 600 }}>
-              🎉 Early Bird Discount Active — Save ${EARLY_BIRD_DISCOUNT} before {EARLY_BIRD_CUTOFF.toLocaleDateString('en-AU', { day: 'numeric', month: 'long' })}
+              🎉 Early Bird Discount Active — Save ${EARLY_BIRD_DISCOUNT} on registration!
             </div>
           )}
         </div>
@@ -279,6 +331,37 @@ const YJRLRegister = () => {
                   </div>
                 )}
 
+                {/* Payment Method Selector */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--yjrl-gold)', marginBottom: '0.75rem' }}>Payment Method</div>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <label style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
+                      padding: '1rem', borderRadius: '10px',
+                      border: selectedPaymentMethod === 'paypal' ? '2px solid var(--yjrl-gold)' : '1px solid var(--yjrl-border)',
+                      background: selectedPaymentMethod === 'paypal' ? 'rgba(240,165,0,0.06)' : 'transparent'
+                    }}>
+                      <input type="radio" name="paymentMethod" value="paypal" checked={selectedPaymentMethod === 'paypal'} onChange={() => setSelectedPaymentMethod('paypal')} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>PayPal</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>Pay securely online now</div>
+                      </div>
+                    </label>
+                    <label style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
+                      padding: '1rem', borderRadius: '10px',
+                      border: selectedPaymentMethod === 'offline' ? '2px solid var(--yjrl-gold)' : '1px solid var(--yjrl-border)',
+                      background: selectedPaymentMethod === 'offline' ? 'rgba(240,165,0,0.06)' : 'transparent'
+                    }}>
+                      <input type="radio" name="paymentMethod" value="offline" checked={selectedPaymentMethod === 'offline'} onChange={() => setSelectedPaymentMethod('offline')} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Bank Transfer / Offline</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>Pay via bank transfer or at the club</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--yjrl-muted)', lineHeight: 1.5 }}>
                     <input type="checkbox" style={{ marginTop: '0.15rem', flexShrink: 0 }} checked={form.agreeToTerms} onChange={e => update('agreeToTerms', e.target.checked)} />
@@ -305,8 +388,8 @@ const YJRLRegister = () => {
                 Next <ChevronRight size={15} />
               </button>
             ) : (
-              <button className="yjrl-btn yjrl-btn-primary" onClick={handleSubmit} disabled={!form.agreeToTerms}>
-                <CheckCircle size={15} /> Submit Registration
+              <button className="yjrl-btn yjrl-btn-primary" onClick={handleSubmit} disabled={!form.agreeToTerms || submitting}>
+                <CheckCircle size={15} /> {submitting ? 'Submitting...' : 'Submit Registration'}
               </button>
             )}
           </div>

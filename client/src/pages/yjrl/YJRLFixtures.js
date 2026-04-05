@@ -7,25 +7,6 @@ import './yjrl.css';
 const AGE_GROUPS = ['All', 'U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens'];
 const SEASON = new Date().getFullYear().toString();
 
-// Demo data
-const DEMO_FIXTURES = [
-  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 7 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled', isHomeGame: true },
-  { _id: 'f2', ageGroup: 'U12', round: 5, homeTeamName: 'Capricorn Cobras', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 7 * 86400000), time: '11:30 AM', venue: 'Gangwon Park', status: 'scheduled', isHomeGame: false },
-  { _id: 'f3', ageGroup: 'U16', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Gladstone Warriors', date: new Date(Date.now() + 14 * 86400000), time: '2:00 PM', venue: 'Nev Skuse Oval', status: 'scheduled', isHomeGame: true },
-  { _id: 'f4', ageGroup: 'U14', round: 4, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Gladstone Warriors', date: new Date(Date.now() - 7 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'completed', homeScore: 26, awayScore: 14, isHomeGame: true },
-  { _id: 'f5', ageGroup: 'U12', round: 4, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'CQ Bulldogs', date: new Date(Date.now() - 7 * 86400000), time: '11:30 AM', venue: 'Nev Skuse Oval', status: 'completed', homeScore: 18, awayScore: 22, isHomeGame: true },
-  { _id: 'f6', ageGroup: 'U16', round: 4, homeTeamName: 'Capricorn Wildcats', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() - 7 * 86400000), time: '2:00 PM', venue: 'Rockhampton Leagues', status: 'completed', homeScore: 10, awayScore: 30, isHomeGame: false },
-  { _id: 'f7', ageGroup: 'U10', round: 4, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Emu Park Eagles', date: new Date(Date.now() - 7 * 86400000), time: '9:00 AM', venue: 'Nev Skuse Oval', status: 'completed', homeScore: 14, awayScore: 14, isHomeGame: true },
-];
-
-const DEMO_LADDER = [
-  { _id: 't1', ageGroup: 'U14', name: 'Yeppoon Seagulls', wins: 4, losses: 0, draws: 0, pointsFor: 96, pointsAgainst: 38 },
-  { _id: 't2', ageGroup: 'U14', name: 'Rockhampton Rockets', wins: 3, losses: 1, draws: 0, pointsFor: 72, pointsAgainst: 52 },
-  { _id: 't3', ageGroup: 'U14', name: 'Gladstone Warriors', wins: 2, losses: 2, draws: 0, pointsFor: 56, pointsAgainst: 60 },
-  { _id: 't4', ageGroup: 'U14', name: 'CQ Bulldogs', wins: 1, losses: 3, draws: 0, pointsFor: 44, pointsAgainst: 76 },
-  { _id: 't5', ageGroup: 'U14', name: 'Capricorn Wildcats', wins: 0, losses: 4, draws: 0, pointsFor: 28, pointsAgainst: 92 },
-];
-
 const ResultBadge = ({ fixture }) => {
   if (fixture.status !== 'completed') return null;
   const yjrlScore = fixture.isHomeGame ? fixture.homeScore : fixture.awayScore;
@@ -42,8 +23,8 @@ const ResultBadge = ({ fixture }) => {
 const YJRLFixtures = () => {
   const [tab, setTab] = useState('upcoming');
   const [ageFilter, setAgeFilter] = useState('All');
-  const [fixtures, setFixtures] = useState(DEMO_FIXTURES);
-  const [ladder, setLadder] = useState(DEMO_LADDER);
+  const [fixtures, setFixtures] = useState([]);
+  const [ladder, setLadder] = useState([]);
   const [ladderAge, setLadderAge] = useState('U14');
   const [loading, setLoading] = useState(false);
 
@@ -53,8 +34,8 @@ const YJRLFixtures = () => {
       api.get(`/yjrl/fixtures?season=${SEASON}`).catch(() => ({ data: [] })),
       api.get(`/yjrl/ladder?season=${SEASON}`).catch(() => ({ data: [] }))
     ]).then(([fRes, lRes]) => {
-      if (Array.isArray(fRes.data) && fRes.data.length) setFixtures(fRes.data);
-      if (Array.isArray(lRes.data) && lRes.data.length) setLadder(lRes.data);
+      if (Array.isArray(fRes.data)) setFixtures(fRes.data);
+      if (Array.isArray(lRes.data)) setLadder(lRes.data);
     }).finally(() => setLoading(false));
   }, []);
 

@@ -1,0 +1,32 @@
+name = "yjrl-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+FROM_EMAIL = "noreply@yepponjrl.com.au"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "yjrl-db"
+database_id = "placeholder-create-via-dashboard"
+
+# R2 Storage
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "yjrl-uploads"
+
+# Cron trigger for daily email reminders (8am AEST = 10pm UTC previous day)
+[triggers]
+crons = ["0 22 * * *"]
+
+# Secrets (set via `wrangler secret put`):
+# JWT_SECRET
+# ADMIN_EMAIL
+# ADMIN_PASSWORD
+# PAYPAL_CLIENT_ID
+# PAYPAL_CLIENT_SECRET
+# PAYPAL_MODE (sandbox or live)
+# RESEND_API_KEY
