@@ -79,6 +79,20 @@ const YJRLPlayerPortal = () => {
 
   if (loading) return <YJRLLayout><div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading your profile...</span></div></YJRLLayout>;
 
+  // Admin without player profile — redirect to admin portal
+  const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
+  if (user && !player && isAdmin) {
+    return <YJRLLayout><div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1.5rem', textAlign: 'center' }}>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏆</div>
+      <h2 style={{ marginBottom: '0.5rem' }}>Admin Account</h2>
+      <p style={{ color: 'var(--yjrl-muted)', marginBottom: '1.5rem' }}>You're logged in as an admin. Use the Admin Portal to manage the club.</p>
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Link to="/portal/admin" className="yjrl-btn yjrl-btn-primary">Open Admin Portal</Link>
+        <Link to="/portal/coach" className="yjrl-btn yjrl-btn-secondary">Coach Portal</Link>
+        <Link to="/portal/parent" className="yjrl-btn yjrl-btn-secondary">Parent Portal</Link>
+      </div>
+    </div></YJRLLayout>;
+  }
   if (user && !player) return <YJRLLayout><div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}><p>No player profile found. Contact your club admin to be registered.</p></div></YJRLLayout>;
 
   const p = player || {};

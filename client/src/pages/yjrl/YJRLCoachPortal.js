@@ -76,6 +76,24 @@ const YJRLCoachPortal = () => {
     setNoteText('');
   };
 
+  const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
+
+  // Admin or coach with no team assigned
+  if (!loading && user && !team) {
+    return (
+      <YJRLLayout>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+          <h2 style={{ marginBottom: '0.5rem' }}>No Team Assigned</h2>
+          <p style={{ color: 'var(--yjrl-muted)', marginBottom: '1.5rem' }}>
+            {isAdmin ? 'Assign yourself as a coach to a team in the Admin Portal.' : 'Contact your club admin to be assigned to a team.'}
+          </p>
+          {isAdmin && <Link to="/portal/admin" className="yjrl-btn yjrl-btn-primary">Open Admin Portal</Link>}
+        </div>
+      </YJRLLayout>
+    );
+  }
+
   return (
     <YJRLLayout>
       {/* Header */}
@@ -97,7 +115,7 @@ const YJRLCoachPortal = () => {
                 <h1 style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>Coach Portal</h1>
                 <span className="yjrl-role-badge coach">Coach</span>
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{team.name} · {team.wins}W {team.losses}L {team.draws}D</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{team?.name || 'No Team'} · {team?.wins || 0}W {team?.losses || 0}L {team?.draws || 0}D</div>
             </div>
           </div>
           <div className="yjrl-tabs yjrl-tabs-dark">

@@ -67,6 +67,26 @@ const YJRLParentPortal = () => {
   const childUpcoming = upcoming.filter(f => f.ageGroup === child?.ageGroup);
   const onboardingDone = ONBOARDING_STEPS.filter(s => s.done).length;
 
+  const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
+
+  // Admin or parent with no children linked
+  if (!loading && user && children.length === 0) {
+    return (
+      <YJRLLayout>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💛</div>
+          <h2 style={{ marginBottom: '0.5rem' }}>No Children Linked</h2>
+          <p style={{ color: 'var(--yjrl-muted)', marginBottom: '1.5rem' }}>
+            {isAdmin
+              ? 'No player profiles are linked to your email as guardian. Use the Admin Portal to manage players.'
+              : 'No player profiles are linked to your account yet. Once your child is registered with your email as guardian, they will appear here.'}
+          </p>
+          {isAdmin && <Link to="/portal/admin" className="yjrl-btn yjrl-btn-primary">Open Admin Portal</Link>}
+        </div>
+      </YJRLLayout>
+    );
+  }
+
   return (
     <YJRLLayout>
       {/* Header */}
