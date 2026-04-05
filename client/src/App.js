@@ -11,6 +11,10 @@ import YJRLPlayerPortal from './pages/yjrl/YJRLPlayerPortal';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
 import YJRLParentPortal from './pages/yjrl/YJRLParentPortal';
 import YJRLAdminPortal from './pages/yjrl/YJRLAdminPortal';
+import YJRLSponsors from './pages/yjrl/YJRLSponsors';
+import YJRLStore from './pages/yjrl/YJRLStore';
+import YJRLRaffles from './pages/yjrl/YJRLRaffles';
+import YJRLCarnivals from './pages/yjrl/YJRLCarnivals';
 import './pages/yjrl/yjrl.css';
 
 // ── Standalone Login Page ──
@@ -148,6 +152,10 @@ const AppRoutes = () => (
     <Route path="/news" element={<YJRLNews />} />
     <Route path="/news/:id" element={<YJRLNews />} />
     <Route path="/events" element={<YJRLFixtures />} />
+    <Route path="/sponsors" element={<YJRLSponsors />} />
+    <Route path="/store" element={<YJRLStore />} />
+    <Route path="/raffles" element={<YJRLRaffles />} />
+    <Route path="/carnivals" element={<YJRLCarnivals />} />
     <Route path="/register" element={<YJRLRegister />} />
     <Route path="/login" element={<Login />} />
 
