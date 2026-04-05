@@ -27,8 +27,12 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
-      navigate('/portal/player');
+      const result = await login(email, password);
+      const role = result?.user?.role;
+      if (role === 'admin' || role === 'dev') navigate('/portal/admin');
+      else if (role === 'coach') navigate('/portal/coach');
+      else if (role === 'parent') navigate('/portal/parent');
+      else navigate('/portal/player');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
