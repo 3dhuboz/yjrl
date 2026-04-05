@@ -124,12 +124,18 @@ const YJRLBroadcast = () => {
     }
   };
 
-  // Build scrolling ticker content
+  // Build scrolling ticker content — each sponsor is logo + text together
   const getTickerItems = useCallback(() => {
     const items = [];
     sponsors.forEach(s => {
-      if (s.text) items.push({ type: 'text', value: s.text, id: s.id });
-      if (s.logoUrl && sponsorImagesRef.current[s.id]) items.push({ type: 'logo', img: sponsorImagesRef.current[s.id], id: s.id });
+      if (s.text || (s.logoUrl && sponsorImagesRef.current[s.id])) {
+        items.push({
+          type: 'sponsor',
+          text: s.text || '',
+          img: sponsorImagesRef.current[s.id] || null,
+          id: s.id,
+        });
+      }
     });
     return items;
   }, [sponsors]);
@@ -193,65 +199,77 @@ const YJRLBroadcast = () => {
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 2;
 
-      // Calculate total ticker width
-      const logoH = barHeight * 0.6;
-      const spacing = fontSize * 2;
+      // Measure each sponsor item (logo + text paired together)
+      const logoH = barHeight * 0.55;
+      const gap = fontSize * 0.5; // gap between logo and text within a sponsor
+      const spacing = fontSize * 2.5; // gap between sponsors
       const separator = '  ·  ';
       ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+      const sepWidth = ctx.measureText(separator).width;
 
       let totalWidth = 0;
       const measured = tickerItems.map(item => {
-        if (item.type === 'text') {
-          const tw = ctx.measureText(item.value).width;
-          totalWidth += tw + spacing;
-          return { ...item, width: tw };
-        } else {
+        let itemWidth = 0;
+        let logoW = 0;
+        // Logo width
+        if (item.img) {
           const aspect = item.img.naturalWidth / item.img.naturalHeight;
-          const logoW = logoH * aspect;
-          totalWidth += logoW + spacing;
-          return { ...item, width: logoW, logoW, logoH };
+          logoW = logoH * aspect;
+          itemWidth += logoW;
+          if (item.text) itemWidth += gap; // gap between logo and text
         }
+        // Text width
+        let textW = 0;
+        if (item.text) {
+          textW = ctx.measureText(item.text).width;
+          itemWidth += textW;
+        }
+        totalWidth += itemWidth;
+        return { ...item, itemWidth, logoW, logoH, textW };
       });
 
-      // Add separators between items
-      const sepWidth = ctx.measureText(separator).width;
-      totalWidth += (measured.length - 1) * sepWidth;
+      // Add separators + spacing between items
+      if (measured.length > 1) totalWidth += (measured.length - 1) * (sepWidth + spacing);
 
-      // Scroll speed: 1px per frame at 30fps
+      // Scroll
       scrollXRef.current -= scrollSpeed;
-      if (scrollXRef.current < -totalWidth) scrollXRef.current = w;
+      if (scrollXRef.current < -totalWidth - spacing) scrollXRef.current = w;
 
-      // Draw ticker items
-      let x = scrollXRef.current;
       const centerY = barY + barHeight / 2;
 
       // Draw twice for seamless loop
       for (let pass = 0; pass < 2; pass++) {
-        let drawX = x + pass * (totalWidth + w * 0.5);
+        let drawX = scrollXRef.current + pass * (totalWidth + w * 0.3 + spacing);
         for (let i = 0; i < measured.length; i++) {
           const item = measured[i];
-          if (item.type === 'text') {
+
+          // Draw logo
+          if (item.img) {
+            const iy = centerY - item.logoH / 2;
+            ctx.drawImage(item.img, drawX, iy, item.logoW, item.logoH);
+            drawX += item.logoW + gap;
+          }
+
+          // Draw text next to logo
+          if (item.text) {
             ctx.fillStyle = 'white';
             ctx.font = `bold ${fontSize}px Inter, sans-serif`;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            ctx.fillText(item.value, drawX, centerY);
-            drawX += item.width;
-          } else {
-            const iy = centerY - item.logoH / 2;
-            ctx.drawImage(item.img, drawX, iy, item.logoW, item.logoH);
-            drawX += item.logoW;
+            ctx.fillText(item.text, drawX, centerY);
+            drawX += item.textW;
           }
-          // Separator dot
+
+          // Gold dot separator between sponsors
           if (i < measured.length - 1) {
+            drawX += spacing * 0.5;
             ctx.fillStyle = 'rgba(251, 191, 36, 0.7)';
             ctx.font = `bold ${fontSize}px Inter, sans-serif`;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            ctx.fillText(separator, drawX, centerY);
-            drawX += sepWidth;
+            ctx.fillText('·', drawX, centerY);
+            drawX += sepWidth * 0.3 + spacing * 0.5;
           }
-          drawX += spacing;
         }
       }
 
