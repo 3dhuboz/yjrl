@@ -8,13 +8,6 @@ import './yjrl.css';
 const CATEGORY_EMOJI = { news: '📰', results: '🏆', events: '📅', club: '🏉', pathways: '⭐', community: '🤝', sponsors: '💛' };
 const CATEGORIES = ['All', 'news', 'results', 'events', 'club', 'pathways', 'community'];
 
-const DEMO_ARTICLES = [
-  { _id: 'n1', title: 'Season 2026 Registration Now Open', category: 'news', published: true, featured: true, views: 241, publishDate: new Date('2026-01-15'), authorName: 'Yeppoon JRL', excerpt: 'Registration for the 2026 season is now open. All age groups from U6 through to Opens are welcome. Early bird pricing available until February 28.', content: 'Registration for the 2026 season is now open and we are excited to welcome back all our returning players and families, as well as any new families looking to join the Yeppoon Seagulls.\n\nAll age groups from U6 Mini Mod through to Opens are welcome. If you have a child aged 5 or above, we have a team for them!\n\n**Early Bird Pricing**\nRegister before February 28 and receive a $20 discount on your registration fee. This applies to all age groups.\n\n**How to Register**\nVisit our registration page or head to playhq.com to complete your online registration. Make sure to have your child\'s birth certificate ready for age verification.\n\n**What\'s Included**\n- Club jersey, shorts, and socks\n- Training sessions twice per week\n- Game day participation\n- Access to club facilities\n- Club presentation night invitation\n\nFor more information, contact us at info@yepponjrl.com.au or call (07) 4939 XXXX.' },
-  { _id: 'n2', title: 'Seagulls Claim Grand Final Victory — U14s Champions!', category: 'results', published: true, featured: false, views: 583, publishDate: new Date('2025-09-20'), authorName: 'Mike Thompson', excerpt: 'What a performance! The Yeppoon Seagulls U14s fought back from a 10-point deficit in the second half to claim the 2025 Grand Final 24-16.', content: 'In one of the most thrilling Grand Finals seen at Nev Skuse Oval in years, the Yeppoon Seagulls U14s claimed the 2025 premiership with a stunning comeback victory over the Rockhampton Rockets.\n\nTrailing 0-10 at half time, the Seagulls showed incredible character and determination to claw back the deficit and run away with a 24-16 victory.\n\n**Match Summary**\n- First Half: Rockets 10-0 Bulls\n- Second Half: Bulls scored 24 unanswered points\n- Final Score: Yeppoon Seagulls 24 – Rockhampton Rockets 16\n\n**Scorers**\n- Jordan Smith (3 tries, 3 goals)\n- Riley Wilson (2 tries)\n- Ethan Williams (1 try)\n\n**Man of the Match:** Jordan Smith — an outstanding performance with 3 tries, 3 goals, and numerous tackle breaks.\n\nCoach Mike Thompson said: "I couldn\'t be prouder of this group. They never gave up and showed what it means to be a Yeppoon Bull today."\n\nThis is the club\'s 12th premiership and first since 2021. Congratulations to all players, coaches, and families!' },
-  { _id: 'n3', title: 'Junior Pathway Program — Applications Open', category: 'pathways', published: true, featured: false, views: 142, publishDate: new Date('2025-11-10'), authorName: 'Yeppoon JRL', excerpt: 'The QRL RISE Program is now accepting applications for eligible U13-U15 players. This is your chance to take the next step in your rugby league journey.', content: 'The Queensland Rugby League RISE Program is now accepting applications for the 2026 season. This program is open to eligible players in the U13-U15 age groups.\n\n**What is the RISE Program?**\nThe RISE Program is the QRL\'s elite junior development pathway, designed to identify and develop the next generation of Queensland rugby league talent. Players selected will receive high-performance coaching, representative game exposure, and skills development sessions.\n\n**Eligibility Requirements**\n- Must be eligible to play in the U13, U14, or U15 age groups\n- Must be registered with an affiliated club\n- Must demonstrate commitment to training and development\n- Parent/guardian consent required for players under 18\n\n**Application Process**\nInterested players should submit an expression of interest through their club. The club will then submit nominations to the QRL for consideration.\n\nFor more information, speak to your team coach or contact the club office.' },
-  { _id: 'n4', title: 'Come & Try Day — All Welcome!', category: 'events', published: true, featured: false, views: 98, publishDate: new Date('2026-02-01'), authorName: 'Yeppoon JRL', excerpt: 'Never played rugby league before? Our Come & Try Day is the perfect way to give it a go in a fun, no-pressure environment. All ages welcome.', content: 'We are hosting our annual Come & Try Day for anyone interested in giving rugby league a go!\n\n**Details**\n- Date: Saturday, March 7, 2026\n- Time: 9:00 AM – 12:00 PM\n- Venue: Nev Skuse Oval, Yeppoon\n- Cost: FREE\n\nThis is a perfect opportunity for kids who have never played before to experience the game in a fun, safe, and inclusive environment. All equipment will be provided.\n\n**What to Bring**\n- Comfortable sports clothing\n- Running shoes or footy boots\n- Water bottle\n- Sunscreen\n- Plenty of enthusiasm!\n\nFor more information, contact us at info@yepponjrl.com.au' },
-];
-
 // Article detail view
 const ArticleDetail = ({ id }) => {
   const [article, setArticle] = useState(null);
@@ -22,7 +15,7 @@ const ArticleDetail = ({ id }) => {
 
   useEffect(() => {
     api.get(`/yjrl/news/${id}`).then(res => setArticle(res.data)).catch(() => {
-      setArticle(DEMO_ARTICLES.find(a => a._id === id) || null);
+      setArticle(null);
     }).finally(() => setLoading(false));
   }, [id]);
 
@@ -73,15 +66,15 @@ const ArticleDetail = ({ id }) => {
 
 const YJRLNews = () => {
   const { id } = useParams();
-  const [articles, setArticles] = useState(DEMO_ARTICLES);
+  const [articles, setArticles] = useState([]);
   const [catFilter, setCatFilter] = useState('All');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (id) return;
     setLoading(true);
-    api.get('/news?published=true').then(res => {
-      if (Array.isArray(res.data) && res.data.length) setArticles(res.data);
+    api.get('/yjrl/news?published=true').then(res => {
+      if (Array.isArray(res.data)) setArticles(res.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 

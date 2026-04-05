@@ -13,23 +13,6 @@ import './yjrl.css';
 
 const POSITIONS = ['Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row', 'Interchange'];
 
-const DEMO_TEAM = {
-  _id: 't1', name: 'Yeppoon Seagulls U14', ageGroup: 'U14', wins: 4, losses: 1, draws: 0,
-  trainingDay: 'Tuesday & Thursday', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval'
-};
-
-const DEMO_PLAYERS = [
-  { _id: 'p1', firstName: 'Jordan', lastName: 'Smith', jerseyNumber: 7, position: 'Halfback', stats: [{ season: '2026', gamesPlayed: 8, tries: 6, tackles: 47 }], attendanceRecords: Array(8).fill({ attended: true }) },
-  { _id: 'p2', firstName: 'Lachlan', lastName: 'Brown', jerseyNumber: 1, position: 'Fullback', stats: [{ season: '2026', gamesPlayed: 7, tries: 3, tackles: 22 }], attendanceRecords: Array(6).fill({ attended: true }).concat(Array(2).fill({ attended: false })) },
-  { _id: 'p3', firstName: 'Ethan', lastName: 'Williams', jerseyNumber: 9, position: 'Hooker', stats: [{ season: '2026', gamesPlayed: 8, tries: 2, tackles: 61 }], attendanceRecords: Array(8).fill({ attended: true }) },
-  { _id: 'p4', firstName: 'Tyler', lastName: 'Johnson', jerseyNumber: 13, position: 'Lock', stats: [{ season: '2026', gamesPlayed: 6, tries: 1, tackles: 55 }], attendanceRecords: Array(5).fill({ attended: true }).concat(Array(3).fill({ attended: false })) },
-  { _id: 'p5', firstName: 'Noah', lastName: 'Davis', jerseyNumber: 3, position: 'Centre', stats: [{ season: '2026', gamesPlayed: 8, tries: 4, tackles: 31 }], attendanceRecords: Array(7).fill({ attended: true }).concat(Array(1).fill({ attended: false })) },
-  { _id: 'p6', firstName: 'Riley', lastName: 'Wilson', jerseyNumber: 5, position: 'Wing', stats: [{ season: '2026', gamesPlayed: 7, tries: 5, tackles: 18 }], attendanceRecords: Array(7).fill({ attended: true }) },
-];
-
-const DEMO_UPCOMING = [
-  { _id: 'f1', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval' },
-];
 
 const AttendanceRate = ({ records }) => {
   if (!records?.length) return <span style={{ color: 'var(--yjrl-muted)' }}>—</span>;
@@ -41,9 +24,9 @@ const AttendanceRate = ({ records }) => {
 const YJRLCoachPortal = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState('roster');
-  const [team, setTeam] = useState(DEMO_TEAM);
-  const [players, setPlayers] = useState(DEMO_PLAYERS);
-  const [upcoming, setUpcoming] = useState(DEMO_UPCOMING);
+  const [team, setTeam] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
   const [loading, setLoading] = useState(false);
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceType, setAttendanceType] = useState('training');
@@ -52,6 +35,18 @@ const YJRLCoachPortal = () => {
   const [lineup, setLineup] = useState({});
   const [notePlayer, setNotePlayer] = useState(null);
   const [noteText, setNoteText] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    api.get('/yjrl/my-team').then(res => {
+      setTeam(res.data.team);
+      setPlayers(res.data.players || []);
+      return api.get(`/yjrl/fixtures?teamId=${res.data.team._id}&upcoming=true&limit=5`);
+    }).then(res => {
+      if (res && Array.isArray(res.data)) setUpcoming(res.data);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [user]);
 
   useEffect(() => {
     const init = {};
@@ -63,28 +58,20 @@ const YJRLCoachPortal = () => {
 
   const submitAttendance = async () => {
     const records = players.map(p => ({ playerId: p._id, attended: attendanceMap[p._id] ?? true }));
-    if (user) {
-      try {
-        await api.post(`/yjrl/teams/${team._id}/attendance`, { date: attendanceDate, type: attendanceType, records });
-        toast.success('Attendance saved!');
-      } catch (e) {
-        toast.error('Failed to save attendance');
-      }
-    } else {
-      toast.success(`Demo: Attendance recorded for ${records.length} players`);
+    try {
+      await api.post(`/yjrl/teams/${team._id}/attendance`, { date: attendanceDate, type: attendanceType, records });
+      toast.success('Attendance saved!');
+    } catch (e) {
+      toast.error('Failed to save attendance');
     }
   };
 
   const saveNote = async () => {
     if (!notePlayer) return;
-    if (user) {
-      try {
-        await api.put(`/yjrl/players/${notePlayer._id}`, { coachNotes: noteText });
-        toast.success('Note saved!');
-      } catch (e) { toast.error('Failed to save note'); }
-    } else {
-      toast.success('Demo: Note saved for ' + notePlayer.firstName);
-    }
+    try {
+      await api.put(`/yjrl/players/${notePlayer._id}`, { coachNotes: noteText });
+      toast.success('Note saved!');
+    } catch (e) { toast.error('Failed to save note'); }
     setNotePlayer(null);
     setNoteText('');
   };
@@ -286,7 +273,7 @@ const YJRLCoachPortal = () => {
                 </div>
                 <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--yjrl-border)' }}>
                   <button className="yjrl-btn yjrl-btn-primary" style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => toast.success('Demo: Lineup saved!')}>
+                    onClick={() => toast.success('Lineup saved!')}>
                     <Save size={15} /> Save Lineup
                   </button>
                 </div>

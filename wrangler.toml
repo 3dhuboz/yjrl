@@ -1,18 +1,16 @@
-# Cloudflare Pages configuration
+# Cloudflare Pages configuration (frontend only)
 # Deploy: npx wrangler pages deploy client/build --project-name=yjrl
 #
 # Or connect GitHub repo in Cloudflare Dashboard:
 #   Build command: cd client && npm install && npm run build
 #   Build output:  client/build
 #   Root directory: /
+#
+# IMPORTANT: Set this environment variable in CF Pages dashboard:
+#   REACT_APP_API_URL = https://yjrl-api.<your-subdomain>.workers.dev/api
+#
+# The API Worker is in the worker/ directory with its own wrangler.toml.
+# Deploy it separately: cd worker && npx wrangler deploy
 
 name = "yjrl"
 compatibility_date = "2024-12-01"
-
-# Pages-specific config — set these in the CF dashboard under
-# Settings > Environment Variables for your Pages project:
-#
-#   REACT_APP_API_URL = https://your-api-domain.com/api
-#
-# The API (Express + MongoDB) should be deployed separately
-# (Railway, Render, Fly.io, etc.) since CF Pages is static-only.

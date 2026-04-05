@@ -11,37 +11,6 @@ import YJRLLayout from './YJRLLayout';
 import YJRLChat from './YJRLChat';
 import './yjrl.css';
 
-const DEMO_CHILDREN = [
-  {
-    _id: 'p1', firstName: 'Jordan', lastName: 'Smith', ageGroup: 'U14', jerseyNumber: 7, position: 'Halfback',
-    registrationStatus: 'active',
-    teamId: { name: 'Yeppoon Seagulls U14', coachName: 'Mike Thompson', trainingDay: 'Tue & Thu', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval' },
-    stats: [{ season: '2026', gamesPlayed: 8, tries: 6, tackles: 47 }],
-    attendanceRecords: [
-      ...Array(6).fill({ type: 'training', attended: true }),
-      ...Array(2).fill({ type: 'training', attended: false }),
-    ]
-  },
-  {
-    _id: 'p2', firstName: 'Emma', lastName: 'Smith', ageGroup: 'U10', jerseyNumber: 4, position: 'Centre',
-    registrationStatus: 'active',
-    teamId: { name: 'Yeppoon Seagulls U10', coachName: 'Sarah Johnson', trainingDay: 'Wednesday', trainingTime: '4:30 PM', trainingVenue: 'Nev Skuse Oval' },
-    stats: [{ season: '2026', gamesPlayed: 7, tries: 3, tackles: 18 }],
-    attendanceRecords: Array(7).fill({ type: 'training', attended: true })
-  }
-];
-
-const DEMO_UPCOMING = [
-  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
-  { _id: 'f2', ageGroup: 'U10', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Emu Park Eagles', date: new Date(Date.now() + 6 * 86400000), time: '11:30 AM', venue: 'Nev Skuse Oval', status: 'scheduled' },
-  { _id: 'f3', ageGroup: 'U14', round: 6, homeTeamName: 'Gladstone Warriors', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 13 * 86400000), time: '2:00 PM', venue: 'Gladstone City Oval', status: 'scheduled' },
-];
-
-const DEMO_EVENTS = [
-  { _id: 'e1', title: 'Photo Day 2026', type: 'photo-day', date: new Date(Date.now() + 10 * 86400000), time: '8:30 AM', venue: 'Nev Skuse Oval', description: 'Annual club photos. All players in full uniform please.', rsvps: [] },
-  { _id: 'e2', title: 'Season Presentation Night', type: 'presentation', date: new Date(Date.now() + 90 * 86400000), time: '6:00 PM', venue: 'Yeppoon RSL', description: 'End of season awards and celebration. Families welcome.', rsvps: [] },
-  { _id: 'e3', title: 'Club BBQ Fundraiser', type: 'fundraiser', date: new Date(Date.now() + 20 * 86400000), time: '12:00 PM', venue: 'Nev Skuse Oval', description: 'Annual fundraiser BBQ. Come along and support the club!', rsvps: [] },
-];
 
 const EVENT_COLORS = {
   training: '#60a5fa', game: 'var(--yjrl-gold)', fundraiser: '#f472b6',
@@ -60,11 +29,26 @@ const ONBOARDING_STEPS = [
 const YJRLParentPortal = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState('overview');
-  const [children, setChildren] = useState(DEMO_CHILDREN);
-  const [upcoming, setUpcoming] = useState(DEMO_UPCOMING);
-  const [events, setEvents] = useState(DEMO_EVENTS);
+  const [children, setChildren] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [selectedChild, setSelectedChild] = useState(0);
   const [rsvpMap, setRsvpMap] = useState({});
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    Promise.all([
+      api.get('/yjrl/my-children').catch(() => ({ data: [] })),
+      api.get('/yjrl/fixtures?upcoming=true&limit=5').catch(() => ({ data: [] })),
+      api.get('/yjrl/events?upcoming=true&limit=5').catch(() => ({ data: [] })),
+    ]).then(([cRes, fRes, eRes]) => {
+      if (Array.isArray(cRes.data)) setChildren(cRes.data);
+      if (Array.isArray(fRes.data)) setUpcoming(fRes.data);
+      if (Array.isArray(eRes.data)) setEvents(eRes.data);
+    }).finally(() => setLoading(false));
+  }, [user]);
 
   const child = children[selectedChild] || children[0];
   const season = new Date().getFullYear().toString();
@@ -74,14 +58,10 @@ const YJRLParentPortal = () => {
 
   const handleRsvp = async (eventId, status) => {
     setRsvpMap(prev => ({ ...prev, [eventId]: status }));
-    if (user) {
-      try {
-        await api.post(`/yjrl/events/${eventId}/rsvp`, { status, adults: 2, children: 1 });
-        toast.success('RSVP saved!');
-      } catch (e) { toast.error('Failed to save RSVP'); }
-    } else {
-      toast.success(`Demo: RSVP'd ${status} for this event`);
-    }
+    try {
+      await api.post(`/yjrl/events/${eventId}/rsvp`, { status, adults: 2, children: 1 });
+      toast.success('RSVP saved!');
+    } catch (e) { toast.error('Failed to save RSVP'); }
   };
 
   const childUpcoming = upcoming.filter(f => f.ageGroup === child?.ageGroup);

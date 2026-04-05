@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Smile, ThumbsUp, Heart, Star, Zap, X, MessageCircle, Users } from 'lucide-react';
+import api from '../../api';
+import toast from 'react-hot-toast';
 
 // Quick reactions for different themes
 const PLAYER_REACTIONS = ['🏉', '⚡', '🔥', '💪', '🎉', '👏', '😂', '🦅'];
@@ -13,31 +15,6 @@ const PLAYER_QUICK_MSGS = [
   { text: 'Let\'s gooo! ⚡', emoji: '⚡' },
 ];
 
-// Demo chat messages for each portal type
-const DEMO_MESSAGES = {
-  player: [
-    { id: 1, user: 'Jordan S.', avatar: '🏉', text: 'Who\'s pumped for Saturday?! 🔥', time: new Date(Date.now() - 3600000 * 3), reactions: { '🔥': 4, '💪': 2 } },
-    { id: 2, user: 'Lachlan B.', avatar: '⚡', text: 'Can\'t wait! We\'re gonna smash it', time: new Date(Date.now() - 3600000 * 2.5), reactions: { '🏉': 3 } },
-    { id: 3, user: 'Ethan W.', avatar: '🛡️', text: 'Coach said we\'re working on our defensive line at training tomorrow', time: new Date(Date.now() - 3600000 * 2), reactions: { '👍': 5 } },
-    { id: 4, user: 'Tyler J.', avatar: '🎯', text: 'Go Seagulls! 🦅', time: new Date(Date.now() - 3600000 * 1.5), reactions: { '🦅': 6, '🎉': 2 } },
-    { id: 5, user: 'Noah D.', avatar: '🌟', text: 'Anyone bringing extra water bottles? It\'s gonna be hot 🌞', time: new Date(Date.now() - 3600000), reactions: { '👏': 1 } },
-    { id: 6, user: 'Riley W.', avatar: '🚀', text: 'My mum\'s doing oranges for halftime!', time: new Date(Date.now() - 1800000), reactions: {} },
-  ],
-  parent: [
-    { id: 1, user: 'Sarah M.', text: 'Hi everyone! Just confirming — training is still on tomorrow despite the weather forecast?', time: new Date(Date.now() - 7200000), reactions: {} },
-    { id: 2, user: 'Mike T. (Coach)', text: 'Yes training is on! We\'ll move under cover if it rains. Please have the kids there by 4:45.', time: new Date(Date.now() - 6800000), reactions: { '👍': 6 } },
-    { id: 3, user: 'Lisa B.', text: 'Can someone do the canteen roster this Saturday? I\'m away.', time: new Date(Date.now() - 5400000), reactions: {} },
-    { id: 4, user: 'Jenny K.', text: 'I can cover! Put me down 🙋‍♀️', time: new Date(Date.now() - 5000000), reactions: { '❤️': 3, '🙏': 2 } },
-    { id: 5, user: 'David S.', text: 'Photo day reminder — full uniform including socks. Does anyone have a spare pair of size 2 boots?', time: new Date(Date.now() - 3600000), reactions: {} },
-  ],
-  coach: [
-    { id: 1, user: 'Mike Thompson', text: 'Heads up — next Saturday\'s game has been moved to 11am', time: new Date(Date.now() - 86400000), reactions: { '✅': 3 } },
-    { id: 2, user: 'Sarah Johnson', text: 'U10s had a great training session. Working on passing drills paid off last weekend.', time: new Date(Date.now() - 43200000), reactions: { '⭐': 2, '👍': 4 } },
-    { id: 3, user: 'Dave Williams', text: 'Anyone have spare cones? The U16 set has gone walkabout again 😅', time: new Date(Date.now() - 21600000), reactions: { '😅': 3 } },
-    { id: 4, user: 'Mike Thompson', text: 'Club has ordered new tackle bags — arriving next week. I\'ll store them in the shed.', time: new Date(Date.now() - 10800000), reactions: { '👍': 5 } },
-  ]
-};
-
 const formatTime = (date) => {
   const now = new Date();
   const diff = now - date;
@@ -47,8 +24,8 @@ const formatTime = (date) => {
   return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 };
 
-const YJRLChat = ({ theme = 'player', roomName = 'Team Chat', teamName = 'U14 Seagulls', userName = 'You', onlineCount = 4 }) => {
-  const [messages, setMessages] = useState(DEMO_MESSAGES[theme] || DEMO_MESSAGES.player);
+const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName = 'U14 Seagulls', userName = 'You', avatar = '🦅', onlineCount = 4 }) => {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [showReactions, setShowReactions] = useState(null);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -63,21 +40,28 @@ const YJRLChat = ({ theme = 'player', roomName = 'Team Chat', teamName = 'U14 Se
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
+  // Load messages from API with polling
+  useEffect(() => {
+    if (!roomId) return;
+    const fetchMessages = () => {
+      api.get(`/yjrl/chat?room_id=${roomId}&limit=50`).then(res => {
+        if (res.data?.messages) setMessages(res.data.messages);
+      }).catch(() => {});
+    };
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [roomId]);
+
   const sendMessage = () => {
     const text = input.trim();
     if (!text) return;
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      user: userName,
-      avatar: '🦅',
-      text,
-      time: new Date(),
-      reactions: {},
-      isOwn: true
-    }]);
-    setInput('');
-    setShowEmoji(false);
-    inputRef.current?.focus();
+    api.post('/yjrl/chat', { room_id: roomId, message: text, user_avatar: avatar }).then(res => {
+      setMessages(prev => [...prev, res.data]);
+      setInput('');
+      setShowEmoji(false);
+      inputRef.current?.focus();
+    }).catch(() => toast.error('Failed to send message'));
   };
 
   const addReaction = (msgId, emoji) => {
@@ -91,9 +75,9 @@ const YJRLChat = ({ theme = 'player', roomName = 'Team Chat', teamName = 'U14 Se
   };
 
   const sendQuickMsg = (text) => {
-    setMessages(prev => [...prev, {
-      id: Date.now(), user: userName, avatar: '🦅', text, time: new Date(), reactions: {}, isOwn: true
-    }]);
+    api.post('/yjrl/chat', { room_id: roomId, message: text, user_avatar: avatar }).then(res => {
+      setMessages(prev => [...prev, res.data]);
+    }).catch(() => toast.error('Failed to send message'));
   };
 
   // Theme-specific styles

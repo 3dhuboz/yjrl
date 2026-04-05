@@ -18,24 +18,13 @@ const EMPTY_NEWS = { title: '', content: '', excerpt: '', category: 'news', publ
 
 const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
 
-// Demo overview stats
-const DEMO_STATS = { teamCount: 14, playerCount: 280, fixtureCount: 42, upcomingCount: 8 };
-const DEMO_TEAMS = [
-  { _id: 't1', ageGroup: 'U14', name: 'Yeppoon Seagulls U14', coachName: 'Mike Thompson', wins: 4, losses: 1, draws: 0, players: [] },
-  { _id: 't2', ageGroup: 'U12', name: 'Yeppoon Seagulls U12', coachName: 'Sarah Johnson', wins: 3, losses: 2, draws: 0, players: [] },
-  { _id: 't3', ageGroup: 'U16', name: 'Yeppoon Seagulls U16', coachName: 'Dave Williams', wins: 5, losses: 0, draws: 0, players: [] },
-];
-const DEMO_NEWS = [
-  { _id: 'n1', title: 'Season 2026 Registration Open', category: 'news', published: true, featured: true, views: 241, publishDate: new Date('2026-01-15') },
-  { _id: 'n2', title: 'U14s Grand Final Victory!', category: 'results', published: true, featured: false, views: 583, publishDate: new Date('2025-09-20') },
-];
 
 const YJRLAdminPortal = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState('overview');
-  const [stats, setStats] = useState(DEMO_STATS);
-  const [teams, setTeams] = useState(DEMO_TEAMS);
-  const [news, setNews] = useState(DEMO_NEWS);
+  const [stats, setStats] = useState({ teamCount: 0, playerCount: 0, fixtureCount: 0, upcomingCount: 0 });
+  const [teams, setTeams] = useState([]);
+  const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [teamModal, setTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
@@ -50,18 +39,18 @@ const YJRLAdminPortal = () => {
     Promise.all([
       api.get(`/yjrl/stats/overview?season=${SEASON}`).catch(() => ({ data: null })),
       api.get(`/yjrl/teams?season=${SEASON}`).catch(() => ({ data: [] })),
-      api.get('/news/all').catch(() => ({ data: [] })),
+      api.get('/yjrl/news/all').catch(() => ({ data: [] })),
     ]).then(([sRes, tRes, nRes]) => {
       if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
-      if (Array.isArray(tRes.data) && tRes.data.length) setTeams(tRes.data);
-      if (Array.isArray(nRes.data) && nRes.data.length) setNews(nRes.data);
+      if (Array.isArray(tRes.data)) setTeams(tRes.data);
+      if (Array.isArray(nRes.data)) setNews(nRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
   const saveTeam = async () => {
     if (isAdmin) {
       try {
-        const res = await api.post('/teams', teamForm);
+        const res = await api.post('/yjrl/teams', teamForm);
         setTeams(prev => [...prev, res.data]);
         toast.success('Team created!');
       } catch (e) { toast.error('Failed to create team'); return; }
@@ -88,7 +77,7 @@ const YJRLAdminPortal = () => {
           const res = await api.put(`/yjrl/news/${editingNews}`, newsForm);
           setNews(prev => prev.map(n => n._id === editingNews ? res.data : n));
         } else {
-          const res = await api.post('/news', newsForm);
+          const res = await api.post('/yjrl/news', newsForm);
           setNews(prev => [res.data, ...prev]);
         }
         toast.success(editingNews ? 'Article updated!' : 'Article created!');

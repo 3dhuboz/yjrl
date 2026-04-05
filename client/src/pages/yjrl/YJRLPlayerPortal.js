@@ -14,41 +14,6 @@ import './yjrl.css';
 const RARITY_COLORS = { common: '#94a3b8', rare: '#60a5fa', epic: '#c084fc', legendary: '#f0a500' };
 const RARITY_GLOW = { common: 'none', rare: '0 0 12px rgba(96,165,250,0.3)', epic: '0 0 12px rgba(192,132,252,0.3)', legendary: '0 0 18px rgba(240,165,0,0.4)' };
 
-// Demo data for unauthenticated preview
-const DEMO_PLAYER = {
-  firstName: 'Jordan', lastName: 'Smith', ageGroup: 'U14', position: 'Halfback', jerseyNumber: 7,
-  registrationStatus: 'active', pathwayProgress: { level: 'development' },
-  stats: [{ season: '2026', gamesPlayed: 8, tries: 6, goals: 4, tackles: 47, runMetres: 312, manOfMatch: 2 }],
-  achievementDates: [
-    { achievement: { _id: 'a1', name: 'Try Scorer', icon: '🏉', rarity: 'common', description: 'Scored your first try', xpValue: 10 }, date: new Date('2026-03-01') },
-    { achievement: { _id: 'a2', name: 'Iron Man', icon: '⚡', rarity: 'rare', description: '5 games in a row attended', xpValue: 25 }, date: new Date('2026-03-08') },
-    { achievement: { _id: 'a3', name: 'Hat Trick Hero', icon: '🎩', rarity: 'epic', description: '3 tries in a single game', xpValue: 50 }, date: new Date('2026-03-15') },
-  ],
-  attendanceRecords: [
-    { date: new Date(Date.now() - 14 * 86400000), type: 'training', attended: true },
-    { date: new Date(Date.now() - 11 * 86400000), type: 'game', attended: true },
-    { date: new Date(Date.now() - 7 * 86400000), type: 'training', attended: true },
-    { date: new Date(Date.now() - 4 * 86400000), type: 'training', attended: false },
-    { date: new Date(Date.now() - 1 * 86400000), type: 'training', attended: true },
-  ],
-  teamId: { name: 'Yeppoon Seagulls U14', trainingDay: 'Tuesday & Thursday', trainingTime: '5:00 PM', trainingVenue: 'Nev Skuse Oval', coachName: 'Mike Thompson' }
-};
-
-const DEMO_UPCOMING = [
-  { _id: 'f1', ageGroup: 'U14', round: 5, homeTeamName: 'Yeppoon Seagulls', awayTeamName: 'Rockhampton Rockets', date: new Date(Date.now() + 6 * 86400000), time: '10:00 AM', venue: 'Nev Skuse Oval' },
-  { _id: 'f2', ageGroup: 'U14', round: 6, homeTeamName: 'Gladstone Warriors', awayTeamName: 'Yeppoon Seagulls', date: new Date(Date.now() + 13 * 86400000), time: '2:00 PM', venue: 'Gladstone City Oval' },
-];
-
-const ALL_ACHIEVEMENTS = [
-  { _id: 'a1', name: 'First Try', icon: '🏉', rarity: 'common', description: 'Score your first try', xpValue: 10, category: 'performance' },
-  { _id: 'a2', name: 'Iron Man', icon: '⚡', rarity: 'rare', description: '5 consecutive sessions attended', xpValue: 25, category: 'attendance' },
-  { _id: 'a3', name: 'Hat Trick', icon: '🎩', rarity: 'epic', description: '3 tries in one game', xpValue: 50, category: 'performance' },
-  { _id: 'a4', name: 'Legend', icon: '👑', rarity: 'legendary', description: 'Player of the Season', xpValue: 200, category: 'season' },
-  { _id: 'a5', name: '10 Games', icon: '🏆', rarity: 'common', description: 'Play 10 games for the club', xpValue: 15, category: 'milestone' },
-  { _id: 'a6', name: 'Team Spirit', icon: '💛', rarity: 'common', description: 'Voted best team player', xpValue: 20, category: 'spirit' },
-  { _id: 'a7', name: 'Try Machine', icon: '🚀', rarity: 'rare', description: '10 tries in a season', xpValue: 60, category: 'performance' },
-  { _id: 'a8', name: 'Pathways Star', icon: '⭐', rarity: 'epic', description: 'Selected for representative squad', xpValue: 100, category: 'milestone' },
-];
 
 const PATHWAY_LEVELS = [
   { key: 'grassroots', label: 'Grassroots', color: '#94a3b8', icon: '🌱' },
@@ -94,30 +59,29 @@ const YJRLPlayerPortal = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState('overview');
   const [player, setPlayer] = useState(null);
-  const [upcoming, setUpcoming] = useState(DEMO_UPCOMING);
-  const [achievements, setAchievements] = useState(ALL_ACHIEVEMENTS);
+  const [upcoming, setUpcoming] = useState([]);
+  const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setPlayer(DEMO_PLAYER);
-      return;
-    }
+    if (!user) return;
     setLoading(true);
     Promise.all([
-      api.get('/my-player').catch(() => ({ data: null })),
-      api.get('/achievements').catch(() => ({ data: [] })),
-      api.get('/fixtures?upcoming=true&limit=5').catch(() => ({ data: [] }))
+      api.get('/yjrl/my-player').catch(() => ({ data: null })),
+      api.get('/yjrl/achievements').catch(() => ({ data: [] })),
+      api.get('/yjrl/fixtures?upcoming=true&limit=5').catch(() => ({ data: [] }))
     ]).then(([pRes, aRes, fRes]) => {
-      setPlayer((pRes.data && typeof pRes.data === 'object' && pRes.data._id) ? pRes.data : DEMO_PLAYER);
-      if (Array.isArray(aRes.data) && aRes.data.length) setAchievements(aRes.data);
-      if (Array.isArray(fRes.data) && fRes.data.length) setUpcoming(fRes.data);
+      if (pRes.data && typeof pRes.data === 'object' && pRes.data._id) setPlayer(pRes.data);
+      if (Array.isArray(aRes.data)) setAchievements(aRes.data);
+      if (Array.isArray(fRes.data)) setUpcoming(fRes.data);
     }).finally(() => setLoading(false));
   }, [user]);
 
   if (loading) return <YJRLLayout><div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading your profile...</span></div></YJRLLayout>;
 
-  const p = player || DEMO_PLAYER;
+  if (user && !player) return <YJRLLayout><div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}><p>No player profile found. Contact your club admin to be registered.</p></div></YJRLLayout>;
+
+  const p = player || {};
   const season = new Date().getFullYear().toString();
   const stats = p.stats?.find(s => s.season === season) || p.stats?.[0] || {};
   const earnedIds = new Set((p.achievementDates || []).map(a => a.achievement?._id || a.achievement));
@@ -309,7 +273,7 @@ const YJRLPlayerPortal = () => {
               <div className="yjrl-card">
                 <div className="yjrl-card-header">
                   <div className="yjrl-card-title"><Award size={16} /> Earned Badges</div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>{(p.achievementDates || []).length}/{ALL_ACHIEVEMENTS.length}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>{(p.achievementDates || []).length}/{achievements.length}</span>
                 </div>
                 <div className="yjrl-card-body">
                   {p.achievementDates?.length ? (

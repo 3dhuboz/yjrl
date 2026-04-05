@@ -4,13 +4,18 @@
   "description": "Yeppoon Junior Rugby League — digital club hub with player portals, fixtures, gamification, and more",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "concurrently \"npm run worker:dev\" \"npm run client\"",
+    "dev:legacy": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && npm start",
+    "worker:dev": "cd worker && npm run dev",
+    "worker:deploy": "cd worker && npm run deploy",
+    "worker:db:migrate": "cd worker && npm run db:migrate",
+    "worker:db:migrate:remote": "cd worker && npm run db:migrate:remote",
     "build": "cd client && npm run build",
     "start": "cd server && npm start",
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
-    "postinstall": "cd client && npm install && cd ../server && npm install"
+    "install:all": "npm install && cd client && npm install && cd ../worker && npm install",
+    "postinstall": "cd client && npm install && cd ../worker && npm install"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
