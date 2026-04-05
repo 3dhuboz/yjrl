@@ -452,37 +452,86 @@ const YJRLAdminPortal = () => {
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
 
-  const TABS = [
-    ['dashboard','Dashboard'],['users','Users'],['players','Players'],['teams','Teams'],
-    ['fixtures','Fixtures'],['news','News'],['registrations','Registrations'],
-    ['sponsors','Sponsors'],['merch','Store'],['raffles','Raffles'],['carnivals','Carnivals'],
-    ['settings','Settings']
+  const NAV_SECTIONS = [
+    { label: 'Overview', items: [['dashboard','Dashboard', BarChart3]] },
+    { label: 'People', items: [['users','Users', Users], ['players','Players', Trophy], ['teams','Teams', Shield]] },
+    { label: 'Competition', items: [['fixtures','Fixtures', Calendar], ['news','News', Newspaper]] },
+    { label: 'Finance', items: [['registrations','Registrations', FileText]] },
+    { label: 'Club', items: [['sponsors','Sponsors', Star], ['merch','Store', ShoppingBag], ['raffles','Raffles', Gift], ['carnivals','Carnivals', MapPin]] },
+    { label: 'System', items: [['settings','Settings', Settings]] },
   ];
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <YJRLLayout>
-      {/* Header */}
-      <div style={{ background:'linear-gradient(135deg, #172554, #1d4ed8)', color:'white', padding:'3rem 1.5rem 0', borderBottom:'1px solid var(--yjrl-border)' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'1rem', paddingBottom:'1.5rem', flexWrap:'wrap' }}>
-            <div style={{ width:56, height:56, borderRadius:'50%', background:'linear-gradient(135deg, var(--yjrl-gold), #d4840a)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.5rem' }}>🏆</div>
-            <div>
-              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.25rem' }}>
-                <h1 style={{ fontSize:'1.6rem', fontWeight:900, margin:0, textTransform:'uppercase' }}>Club Admin</h1>
-                <span className="yjrl-role-badge admin">Admin</span>
+      <div style={{ display:'flex', minHeight:'calc(100vh - 72px)' }}>
+
+        {/* ── Sidebar ── */}
+        <aside style={{
+          width: sidebarOpen ? 240 : 0, minWidth: sidebarOpen ? 240 : 0,
+          background:'linear-gradient(180deg, #0f1d3a 0%, #172554 100%)',
+          borderRight:'1px solid rgba(255,255,255,0.08)',
+          transition:'width 0.2s, min-width 0.2s',
+          overflow:'hidden', flexShrink:0,
+          display:'flex', flexDirection:'column',
+        }}>
+          {/* Admin header */}
+          <div style={{ padding:'1.25rem 1rem', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.6rem' }}>
+              <div style={{ width:36, height:36, borderRadius:'10px', background:'linear-gradient(135deg, var(--yjrl-gold), #d4840a)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', flexShrink:0 }}>🏆</div>
+              <div style={{ overflow:'hidden' }}>
+                <div style={{ fontWeight:800, fontSize:'0.85rem', color:'white', whiteSpace:'nowrap' }}>Club Admin</div>
+                <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.5)', whiteSpace:'nowrap' }}>{SEASON} Season</div>
               </div>
-              <div style={{ color:'rgba(255,255,255,0.7)', fontSize:'0.875rem' }}>Yeppoon Junior Rugby League · {SEASON} Season</div>
             </div>
           </div>
-          <div className="yjrl-tabs yjrl-tabs-dark" style={{ overflowX:'auto' }}>
-            {TABS.map(([k, l]) => (
-              <button key={k} className={`yjrl-tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      <div style={{ maxWidth:1280, margin:'0 auto', padding:'2rem 1.5rem' }}>
+          {/* Nav sections */}
+          <nav style={{ flex:1, overflowY:'auto', padding:'0.5rem 0' }}>
+            {NAV_SECTIONS.map(section => (
+              <div key={section.label} style={{ marginBottom:'0.25rem' }}>
+                <div style={{ padding:'0.5rem 1rem 0.25rem', fontSize:'0.6rem', fontWeight:700, color:'rgba(255,255,255,0.35)', textTransform:'uppercase', letterSpacing:'0.12em' }}>
+                  {section.label}
+                </div>
+                {section.items.map(([key, label, Icon]) => (
+                  <button key={key} onClick={() => setTab(key)} style={{
+                    display:'flex', alignItems:'center', gap:'0.6rem', width:'100%',
+                    padding:'0.55rem 1rem', border:'none', cursor:'pointer',
+                    background: tab === key ? 'rgba(251,191,36,0.12)' : 'transparent',
+                    color: tab === key ? '#fbbf24' : 'rgba(255,255,255,0.6)',
+                    fontSize:'0.82rem', fontWeight: tab === key ? 700 : 500,
+                    borderLeft: tab === key ? '3px solid #fbbf24' : '3px solid transparent',
+                    transition:'all 0.15s', textAlign:'left',
+                  }}>
+                    <Icon size={15} style={{ flexShrink:0 }} /> {label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          {/* Sidebar footer */}
+          <div style={{ padding:'0.75rem 1rem', borderTop:'1px solid rgba(255,255,255,0.08)', fontSize:'0.7rem', color:'rgba(255,255,255,0.35)' }}>
+            {user?.firstName} · {user?.role}
+          </div>
+        </aside>
+
+        {/* ── Main Content ── */}
+        <div style={{ flex:1, overflow:'auto' }}>
+          {/* Top bar */}
+          <div style={{ background:'white', borderBottom:'1px solid #e2e8f0', padding:'0.75rem 2rem', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background:'none', border:'none', cursor:'pointer', color:'#64748b', padding:'0.25rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+              </button>
+              <h2 style={{ margin:0, fontSize:'1rem', fontWeight:800, color:'#1e293b', textTransform:'uppercase' }}>
+                {NAV_SECTIONS.flatMap(s => s.items).find(([k]) => k === tab)?.[1] || 'Dashboard'}
+              </h2>
+            </div>
+          </div>
+
+          <div style={{ padding:'1.5rem 2rem', maxWidth:1400 }}>
 
         {/* ═══════════════ DASHBOARD ═══════════════ */}
         {tab === 'dashboard' && (
@@ -1106,6 +1155,8 @@ const YJRLAdminPortal = () => {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {/* ═══════════════ MODALS ═══════════════ */}

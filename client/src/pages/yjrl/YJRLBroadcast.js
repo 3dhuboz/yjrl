@@ -23,6 +23,8 @@ const YJRLBroadcast = () => {
   const [sponsors, setSponsors] = useState([
     { id: '1', text: '', logoUrl: '', logoImg: null }
   ]);
+  const [scrollSpeed, setScrollSpeed] = useState(1.2); // pixels per frame
+  const [saving, setSaving] = useState(false);
 
   // Stream state
   const [cameraEnabled, setCameraEnabled] = useState(false);
@@ -199,7 +201,7 @@ const YJRLBroadcast = () => {
       totalWidth += (measured.length - 1) * sepWidth;
 
       // Scroll speed: 1px per frame at 30fps
-      scrollXRef.current -= 1.2;
+      scrollXRef.current -= scrollSpeed;
       if (scrollXRef.current < -totalWidth) scrollXRef.current = w;
 
       // Draw ticker items
@@ -240,7 +242,7 @@ const YJRLBroadcast = () => {
     }
 
     animFrameRef.current = requestAnimationFrame(drawFrame);
-  }, [getTickerItems]);
+  }, [getTickerItems, scrollSpeed]);
 
   // Re-bind drawFrame when sponsors change
   useEffect(() => {
@@ -361,6 +363,43 @@ const YJRLBroadcast = () => {
       if (pcRef.current) pcRef.current.close();
     };
   }, []);
+
+  // Save sponsors to DB
+  const saveSponsors = async () => {
+    setSaving(true);
+    try {
+      // Get current DB sponsors
+      const existing = await api.get('/yjrl/club/sponsors').then(r => r.data || []).catch(() => []);
+      const existingIds = new Set(existing.map(s => s.id));
+      const currentIds = new Set(sponsors.map(s => s.id));
+
+      // Delete removed sponsors
+      for (const s of existing) {
+        if (!currentIds.has(s.id)) {
+          await api.delete(`/yjrl/club/sponsors/${s.id}`).catch(() => {});
+        }
+      }
+
+      // Create or update sponsors
+      for (let i = 0; i < sponsors.length; i++) {
+        const s = sponsors[i];
+        const data = { name: s.text, logo: s.logoUrl, tier: 'gold', sortOrder: i };
+        if (existingIds.has(s.id)) {
+          await api.put(`/yjrl/club/sponsors/${s.id}`, data).catch(() => {});
+        } else {
+          const res = await api.post('/yjrl/club/sponsors', data).catch(() => null);
+          if (res?.data?.id) {
+            setSponsors(prev => prev.map(sp => sp.id === s.id ? { ...sp, id: res.data.id } : sp));
+          }
+        }
+      }
+      toast.success('Sponsors saved!');
+    } catch {
+      toast.error('Failed to save sponsors');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Load existing sponsors from DB on mount
   useEffect(() => {
@@ -565,6 +604,25 @@ const YJRLBroadcast = () => {
                     No sponsors added. Click "Add" to include sponsor branding in the stream.
                   </div>
                 )}
+
+                {/* Scroll Speed */}
+                <div style={{ padding: '0.75rem 0', borderTop: '1px solid var(--yjrl-border)', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label className="yjrl-label" style={{ margin: 0, fontSize: '0.72rem' }}>Scroll Speed</label>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--yjrl-muted)', fontWeight: 600 }}>
+                      {scrollSpeed < 0.8 ? 'Slow' : scrollSpeed < 1.5 ? 'Normal' : scrollSpeed < 2.5 ? 'Fast' : 'Very Fast'}
+                    </span>
+                  </div>
+                  <input type="range" min="0.3" max="3.5" step="0.1" value={scrollSpeed}
+                    onChange={e => setScrollSpeed(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: '#fbbf24' }} />
+                </div>
+
+                {/* Save Button */}
+                <button className="yjrl-btn yjrl-btn-primary" onClick={saveSponsors} disabled={saving}
+                  style={{ width: '100%', justifyContent: 'center', marginTop: '0.75rem' }}>
+                  {saving ? 'Saving...' : 'Save Sponsors'}
+                </button>
               </div>
             </div>
           </div>

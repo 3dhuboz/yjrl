@@ -75,6 +75,7 @@ app.route('/api/yjrl/stats', statsRoutes);
 app.route('/api/yjrl/chat', chatRoutes);
 app.route('/api', registerRoutes);
 app.route('/api/upload', uploadRoutes);
+app.route('/api/uploads', uploadRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/yjrl/club', clubRoutes);
 app.route('/api/livestream', livestreamRoutes);

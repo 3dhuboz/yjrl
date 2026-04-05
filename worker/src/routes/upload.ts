@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
-import { authMiddleware, requireCoachOrAdmin } from '../middleware/auth';
+import { authMiddleware, requireCoachOrAdmin, requireBroadcaster } from '../middleware/auth';
 
 const upload = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -9,7 +9,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 // POST /api/upload
 upload.post('/', authMiddleware, async (c) => {
-  if (!requireCoachOrAdmin(c)) return c.json({ error: 'Coach or admin only' }, 403);
+  if (!requireCoachOrAdmin(c) && !requireBroadcaster(c)) return c.json({ error: 'Not authorized' }, 403);
 
   const contentType = c.req.header('Content-Type') || '';
   if (!contentType.includes('multipart/form-data')) {
@@ -35,9 +35,21 @@ upload.post('/', authMiddleware, async (c) => {
     httpMetadata: { contentType: file.type },
   });
 
-  // Return the R2 public URL — requires R2.dev access or custom domain
-  const url = `https://yjrl-uploads.r2.dev/${key}`;
+  // Return URL served via our own Worker (no R2.dev needed)
+  const baseUrl = new URL(c.req.url).origin;
+  const url = `${baseUrl}/api/uploads/${key}`;
   return c.json({ url, key }, 201);
+});
+
+// GET /api/uploads/:path+ — serve R2 files publicly
+upload.get('/:path{.+}', async (c) => {
+  const key = c.req.param('path');
+  const obj = await c.env.UPLOADS.get(key);
+  if (!obj) return c.json({ error: 'Not found' }, 404);
+  const headers = new Headers();
+  headers.set('Content-Type', obj.httpMetadata?.contentType || 'application/octet-stream');
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  return new Response(obj.body, { headers });
 });
 
 export default upload;
