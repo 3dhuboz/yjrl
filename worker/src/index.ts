@@ -13,6 +13,7 @@ import eventsRoutes from './routes/events';
 import achievementsRoutes from './routes/achievements';
 import statsRoutes from './routes/stats';
 import chatRoutes from './routes/chat';
+import adminRoutes from './routes/admin';
 import registerRoutes from './routes/register';
 import uploadRoutes from './routes/upload';
 
@@ -72,6 +73,7 @@ app.route('/api/yjrl/stats', statsRoutes);
 app.route('/api/yjrl/chat', chatRoutes);
 app.route('/api', registerRoutes);
 app.route('/api/upload', uploadRoutes);
+app.route('/api/admin', adminRoutes);
 
 // Auto-seed admin user on first request
 let adminSeeded = false;

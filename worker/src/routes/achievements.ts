@@ -54,4 +54,11 @@ achievements.put('/:id', authMiddleware, async (c) => {
   return c.json(format(a));
 });
 
+// DELETE /yjrl/achievements/:id
+achievements.delete('/:id', authMiddleware, async (c) => {
+  if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
+  await c.env.DB.prepare('UPDATE achievements SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(c.req.param('id')).run();
+  return c.json({ message: 'Achievement removed' });
+});
+
 export default achievements;
