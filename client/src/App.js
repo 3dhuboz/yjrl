@@ -15,6 +15,8 @@ import YJRLSponsors from './pages/yjrl/YJRLSponsors';
 import YJRLStore from './pages/yjrl/YJRLStore';
 import YJRLRaffles from './pages/yjrl/YJRLRaffles';
 import YJRLCarnivals from './pages/yjrl/YJRLCarnivals';
+import YJRLBroadcast from './pages/yjrl/YJRLBroadcast';
+import YJRLLive from './pages/yjrl/YJRLLive';
 import './pages/yjrl/yjrl.css';
 
 // ── Standalone Login Page ──
@@ -34,6 +36,7 @@ const Login = () => {
       const result = await login(email, password);
       const role = result?.user?.role;
       if (role === 'admin' || role === 'dev') navigate('/portal/admin');
+      else if (role === 'videographer') navigate('/broadcast');
       else if (role === 'coach') navigate('/portal/coach');
       else if (role === 'parent') navigate('/portal/parent');
       else navigate('/portal/player');
@@ -156,6 +159,8 @@ const AppRoutes = () => (
     <Route path="/store" element={<YJRLStore />} />
     <Route path="/raffles" element={<YJRLRaffles />} />
     <Route path="/carnivals" element={<YJRLCarnivals />} />
+    <Route path="/live" element={<YJRLLive />} />
+    <Route path="/broadcast" element={<YJRLBroadcast />} />
     <Route path="/register" element={<YJRLRegister />} />
     <Route path="/login" element={<Login />} />
 

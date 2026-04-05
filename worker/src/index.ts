@@ -15,6 +15,7 @@ import statsRoutes from './routes/stats';
 import chatRoutes from './routes/chat';
 import adminRoutes from './routes/admin';
 import clubRoutes from './routes/club';
+import livestreamRoutes from './routes/livestream';
 import registerRoutes from './routes/register';
 import uploadRoutes from './routes/upload';
 
@@ -76,6 +77,7 @@ app.route('/api', registerRoutes);
 app.route('/api/upload', uploadRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/yjrl/club', clubRoutes);
+app.route('/api/livestream', livestreamRoutes);
 
 // Auto-seed admin user on first request
 let adminSeeded = false;

@@ -15,7 +15,7 @@ import './yjrl.css';
 
 const SEASON = new Date().getFullYear().toString();
 const AGE_GROUPS = ['U6','U7','U8','U9','U10','U11','U12','U13','U14','U15','U16','U17','U18','Womens','Mens'];
-const ROLES = ['player','parent','coach','admin'];
+const ROLES = ['player','parent','coach','videographer','admin'];
 const EMPTY_TEAM = { name:'', ageGroup:'U14', division:'', season:SEASON, coachName:'', managerName:'', trainingDay:'', trainingTime:'', trainingVenue:'Nev Skuse Oval' };
 const EMPTY_FIXTURE = { ageGroup:'U14', round:1, homeTeamName:'Yeppoon Seagulls', awayTeamName:'', date:'', time:'', venue:'Nev Skuse Oval', status:'scheduled', isHomeGame:true, season:SEASON };
 const EMPTY_NEWS = { title:'', content:'', excerpt:'', category:'news', published:false, featured:false };

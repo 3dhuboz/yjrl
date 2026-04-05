@@ -44,6 +44,7 @@ const YJRLHome = () => {
   const [teams, setTeams] = useState([]);
   const [stats, setStats] = useState({ teamCount: 0, playerCount: 0, fixtureCount: 0 });
   const [loading, setLoading] = useState(false);
+  const [liveStream, setLiveStream] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -58,6 +59,16 @@ const YJRLHome = () => {
       if (Array.isArray(tRes.data)) setTeams(tRes.data);
       if (sRes.data && typeof sRes.data === 'object') setStats(prev => ({ ...prev, ...sRes.data }));
     }).finally(() => setLoading(false));
+  }, []);
+
+  // Poll for live stream status
+  useEffect(() => {
+    const checkLive = () => api.get('/livestream/status').then(r => {
+      setLiveStream(r.data?.is_live ? r.data : null);
+    }).catch(() => {});
+    checkLive();
+    const id = setInterval(checkLive, 30000);
+    return () => clearInterval(id);
   }, []);
 
   const nextGame = fixtures.find(f => f.status === 'scheduled' && new Date(f.date) > new Date());
@@ -156,6 +167,56 @@ const YJRLHome = () => {
           </div>
         </div>
       </section>
+
+      {/* ═══ LIVE NOW BANNER ═══ */}
+      {liveStream && (
+        <Link to="/live" style={{ textDecoration: 'none', display: 'block' }}>
+          <div style={{
+            background: 'linear-gradient(90deg, #0f0a0a, #1a0505, #0f0a0a)',
+            borderTop: '2px solid rgba(239,68,68,0.4)',
+            borderBottom: '2px solid rgba(239,68,68,0.4)',
+            padding: '1.25rem 1.5rem',
+            cursor: 'pointer',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+              background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), transparent)',
+            }} />
+            <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  background: '#ef4444', color: 'white', padding: '0.3rem 0.75rem',
+                  borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800,
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                  animation: 'pulse 2s infinite',
+                }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'white', animation: 'pulse 1.5s infinite' }} />
+                  Live Now
+                </span>
+              </div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>
+                {liveStream.title || 'Live from Yeppoon Seagulls'}
+              </div>
+              {liveStream.sponsor_text && (
+                <div style={{ fontSize: '0.85rem', color: '#fbbf24', fontWeight: 600 }}>
+                  {liveStream.sponsor_text}
+                </div>
+              )}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                padding: '0.4rem 1rem', borderRadius: '100px',
+                color: '#ef4444', fontWeight: 700, fontSize: '0.85rem',
+              }}>
+                Watch Now <ArrowRight size={14} />
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* ═══ LATEST RESULTS TICKER ═══ */}
       {recentResults.length > 0 && (

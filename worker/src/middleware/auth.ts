@@ -42,3 +42,8 @@ export function requireCoachOrAdmin(c: Context<{ Bindings: Env; Variables: Varia
   const user = c.get('user');
   return user.role === 'admin' || user.role === 'dev' || user.role === 'coach';
 }
+
+export function requireBroadcaster(c: Context<{ Bindings: Env; Variables: Variables }>): boolean {
+  const user = c.get('user');
+  return user.role === 'admin' || user.role === 'dev' || user.role === 'videographer';
+}

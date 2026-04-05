@@ -12,6 +12,8 @@ export interface Env {
   RESEND_API_KEY: string;
   FROM_EMAIL: string;
   ENVIRONMENT: string;
+  CF_CALLS_APP_ID: string;
+  CF_CALLS_APP_SECRET: string;
 }
 
 export interface AuthUser {

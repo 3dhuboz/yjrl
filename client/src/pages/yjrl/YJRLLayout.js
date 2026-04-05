@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Home, Calendar, Trophy, Newspaper, Users, LogIn, LogOut,
   Menu, X, ChevronDown, User, Shield, Heart, Zap, Mail,
-  ShoppingBag, Gift, Star, ExternalLink, MapPin
+  ShoppingBag, Gift, Star, ExternalLink, MapPin, Radio
 } from 'lucide-react';
 import './yjrl.css';
 
@@ -38,6 +38,7 @@ const YJRLLayout = ({ children }) => {
   };
 
   const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
+  const canBroadcast = user && (user.role === 'admin' || user.role === 'dev' || user.role === 'videographer');
 
   return (
     <div className="yjrl-page">
@@ -89,6 +90,15 @@ const YJRLLayout = ({ children }) => {
                   boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
                   zIndex: 999
                 }}>
+                  {canBroadcast && (
+                    <>
+                      <Link to="/broadcast" onClick={() => setPortalOpen(false)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '7px', color: '#ef4444', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, background: 'rgba(239,68,68,0.06)' }}>
+                        <Radio size={15} /> Go Live
+                      </Link>
+                      <div style={{ borderTop: '1px solid #e2e8f0', margin: '0.4rem 0' }} />
+                    </>
+                  )}
                   <div style={{ padding: '0.3rem 0.75rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Club</div>
                   {[
                     { to: '/raffles', label: 'Raffles', icon: Gift },
