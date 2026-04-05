@@ -70,23 +70,31 @@ livestream.post('/calls/sessions/:sessionId/tracks/new', authMiddleware, async (
 });
 
 // ─── CF CALLS PROXY: Subscribe (public — viewers connect here) ───────────────
-livestream.post('/calls/subscribe', async (c) => {
+// Step 1: Create subscriber session
+livestream.post('/calls/subscribe/session', async (c) => {
   const body = await c.req.json();
-  const { broadcasterSessionId, sdp } = body;
   const appId = c.env.CF_CALLS_APP_ID;
   const secret = c.env.CF_CALLS_APP_SECRET;
   if (!appId || !secret) return c.json({ error: 'Cloudflare Calls not configured' }, 500);
 
-  // Create a new subscriber session
-  const sessRes = await fetch(`${CF_CALLS_BASE}/${appId}/sessions/new`, {
+  const res = await fetch(`${CF_CALLS_BASE}/${appId}/sessions/new`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionDescription: { type: 'offer', sdp } }),
+    body: JSON.stringify(body),
   });
-  const sessData = await sessRes.json() as { sessionId: string; sessionDescription: { sdp: string } };
+  const data = await res.json();
+  return c.json(data, res.status as 200);
+});
 
-  // Pull tracks from the broadcaster's session
-  const tracksRes = await fetch(`${CF_CALLS_BASE}/${appId}/sessions/${sessData.sessionId}/tracks/new`, {
+// Step 2: Pull remote tracks into subscriber session
+livestream.post('/calls/subscribe/tracks', async (c) => {
+  const body = await c.req.json();
+  const { subscriberSessionId, broadcasterSessionId } = body;
+  const appId = c.env.CF_CALLS_APP_ID;
+  const secret = c.env.CF_CALLS_APP_SECRET;
+  if (!appId || !secret) return c.json({ error: 'Cloudflare Calls not configured' }, 500);
+
+  const res = await fetch(`${CF_CALLS_BASE}/${appId}/sessions/${subscriberSessionId}/tracks/new`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -96,9 +104,25 @@ livestream.post('/calls/subscribe', async (c) => {
       ],
     }),
   });
-  const tracksData = await tracksRes.json();
+  const data = await res.json();
+  return c.json(data, res.status as 200);
+});
 
-  return c.json({ ...sessData, tracks: tracksData });
+// Step 3: Renegotiate — send new offer after tracks are pulled, get updated answer
+livestream.post('/calls/subscribe/renegotiate', async (c) => {
+  const body = await c.req.json();
+  const { sessionId, sessionDescription } = body;
+  const appId = c.env.CF_CALLS_APP_ID;
+  const secret = c.env.CF_CALLS_APP_SECRET;
+  if (!appId || !secret) return c.json({ error: 'Cloudflare Calls not configured' }, 500);
+
+  const res = await fetch(`${CF_CALLS_BASE}/${appId}/sessions/${sessionId}/renegotiate`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionDescription }),
+  });
+  const data = await res.json();
+  return c.json(data, res.status as 200);
 });
 
 // ─── LIVE CHAT: Get Messages ─────────────────────────────────────────────────

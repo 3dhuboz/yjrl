@@ -68,32 +68,51 @@ const YJRLLive = () => {
         });
         pcRef.current = pc;
 
-        // Add recvonly transceivers for video and audio
-        pc.addTransceiver('video', { direction: 'recvonly' });
-        pc.addTransceiver('audio', { direction: 'recvonly' });
-
         // Handle incoming tracks
         pc.ontrack = (event) => {
-          if (videoRef.current && event.streams?.[0]) {
-            videoRef.current.srcObject = event.streams[0];
+          if (videoRef.current) {
+            if (event.streams?.[0]) {
+              videoRef.current.srcObject = event.streams[0];
+            } else if (event.track) {
+              if (!videoRef.current.srcObject) {
+                videoRef.current.srcObject = new MediaStream();
+              }
+              videoRef.current.srcObject.addTrack(event.track);
+            }
+            videoRef.current.play().catch(() => {});
           }
         };
 
-        // Create offer
+        // Step 1: Create subscriber session (empty — no tracks yet)
+        const step1Res = await api.post('/livestream/calls/subscribe/session', {
+          sessionDescription: { type: 'offer', sdp: '' }
+        });
+        const subSessionId = step1Res.data?.sessionId;
+        if (!subSessionId) throw new Error('Failed to create subscriber session');
+
+        // Step 2: Pull broadcaster's tracks into our session
+        await api.post('/livestream/calls/subscribe/tracks', {
+          subscriberSessionId: subSessionId,
+          broadcasterSessionId: streamStatus.session_id,
+        });
+
+        // Step 3: Now add transceivers and create a real offer
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        pc.addTransceiver('audio', { direction: 'recvonly' });
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        // Send to server
-        const res = await api.post('/livestream/calls/subscribe', {
-          broadcasterSessionId: streamStatus.session_id,
-          sdp: offer.sdp
+        // Step 4: Renegotiate with the real offer to get answer with tracks
+        const renego = await api.post('/livestream/calls/subscribe/renegotiate', {
+          sessionId: subSessionId,
+          sessionDescription: { type: 'offer', sdp: offer.sdp },
         });
 
-        const answerSdp = res.data?.sessionDescription?.sdp || res.data?.sdp;
+        const answerSdp = renego.data?.sessionDescription?.sdp;
         if (answerSdp) {
           await pc.setRemoteDescription(new RTCSessionDescription({
             type: 'answer',
-            sdp: answerSdp
+            sdp: answerSdp,
           }));
           setConnected(true);
         }
