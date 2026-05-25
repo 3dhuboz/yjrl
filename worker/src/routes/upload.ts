@@ -95,7 +95,8 @@ upload.post('/', authMiddleware, async (c) => {
   });
 
   const publicBase = c.env.UPLOADS_PUBLIC_URL?.replace(/\/+$/, '');
-  const url = publicBase ? `${publicBase}/${key}` : null;
+  const status = consentRequired ? 'pending_review' : 'approved';
+  const url = status === 'approved' && publicBase ? `${publicBase}/${key}` : null;
   await c.env.DB.prepare(
     `INSERT INTO upload_records
      (key, url, uploader_user_id, category, player_id, consent_required, consent_granted, status, mime_type, byte_size, sha256)
@@ -108,14 +109,14 @@ upload.post('/', authMiddleware, async (c) => {
     playerId || null,
     consentRequired ? 1 : 0,
     consentRequired ? 1 : 0,
-    consentRequired ? 'pending_review' : 'approved',
+    status,
     file.type,
     file.size,
     hash,
   ).run();
 
   await writeAudit(c.env, user, 'upload_created', 'upload', key, { category, playerId: playerId || null, consentRequired });
-  return c.json({ url, key, status: consentRequired ? 'pending_review' : 'approved' }, 201);
+  return c.json({ url, key: status === 'approved' ? key : undefined, status }, 201);
 });
 
 export default upload;

@@ -29,26 +29,35 @@ The production Worker and Pages deployment are live, and several critical issues
 - Adult role approval APIs now record Blue Card/WWCC status, expiry, identity checks, safeguarding training, approval state, approval user, and audit events.
 - Uploads now verify image file signatures, force safe extensions, require child media consent for child-related public media, bind player uploads to authorised coaches/admins, and record review metadata.
 - Worker-side rate limits were added for login, registration, player registration, chat, upload, and safety report endpoints.
+- Admin moderation now includes operable safety report actions, adult role approvals, upload review, and safeguarding audit history.
+- Admins can create adult role approval requests for coaches/staff, and approval requires a verified Blue Card/WWCC status, future expiry, identity check, and safeguarding training.
+- Rejected, expired, or suspended adult role approvals revoke coach access; suspended users are disabled.
+- Team coach assignment is enforced server-side against current approved adult role records.
+- Admins can assign players to teams, and parents now receive team training/venue/coach details for linked children.
+- Child-related uploads no longer return public URLs while pending review; approved review issues the URL and rejected review removes the R2 object.
+- Player photo fields now require an approved reviewed upload for that player.
 
 ## Verified Live
 
 - Worker deployed at `https://yjrl-api.steve-700.workers.dev`.
 - Latest Worker version verified in deploy output: `fa5d8f76-5958-4c6d-943e-939cfc9995e9`.
+- Latest Worker version verified after admin-safeguarding controls: `6fc1e60b-52c4-47ae-addc-285dd72804fc`.
 - Pages deployed at `https://yjrl.pages.dev`.
+- Latest Pages preview deployed after admin-safeguarding controls: `https://db6ec473.yjrl.pages.dev`.
 - `https://yjrl.pages.dev/api/registration-fees` now returns a 307 redirect to the Worker and resolves to JSON with `curl -L`.
 - Production bundle uses `https://yjrl-api.steve-700.workers.dev/api`.
-- Latest Pages bundle verified as `assets/index-AtYtnBNf.js`.
+- Latest Pages bundle verified as `assets/index-DkXoscPG.js`.
 - `OPTIONS` from `https://not-yjrl.pages.dev` no longer receives an allowed origin.
 - `OPTIONS` from `https://cb4d03c7.yjrl.pages.dev` receives its matching allowed origin.
 - Client production build passes.
 - Worker typecheck passes.
 - Client and Worker production dependency audits report zero vulnerabilities.
 - Live smoke test confirmed registration creates parent-child link, consent row, safety report, and audit records; temporary smoke records were cleaned from production D1.
+- Live smoke test confirmed adult invite creation, temporary-password return, expired approval rejection, unapproved coach assignment rejection, approved coach assignment, player team assignment, parent team details, pending upload URL/key withholding, unapproved photo rejection, rejected upload R2 removal, safety report close workflow, non-admin chat-room listing denial, and adult approval revocation; temporary smoke records were cleaned from production D1/R2.
 
 ## Blocking Before Customer Launch
 
-- Add admin UI for adult-role approvals and formal child-safety sign-off, not just the API foundation.
-- Add block, mute, takedown, evidence-preservation, escalation, and incident-resolution workflows for safety reports.
+- Add formal club incident playbooks for block, mute, takedown, evidence-preservation, escalation, and incident-resolution decisions.
 - Make audit logging comprehensive across every admin mutation; current logging covers the highest-risk new flows but not every route.
 - Enforce media consent across news/story publishing and any future public player features; upload consent is enforced, public stats remain anonymised.
 - Continue splitting player response data into public, player, parent, coach, and admin DTOs so each role receives only what it needs.

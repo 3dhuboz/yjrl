@@ -13,7 +13,7 @@ import './yjrl.css';
 const SEASON = new Date().getFullYear().toString();
 
 const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
-const STATUS_OPTIONS = ['pending', 'active', 'waitlisted', 'cancelled'];
+const STATUS_OPTIONS = ['pending', 'active', 'inactive', 'transferred'];
 
 const EMPTY_TEAM = {
   name: '',
@@ -21,6 +21,7 @@ const EMPTY_TEAM = {
   division: '',
   season: SEASON,
   coachName: '',
+  coachId: '',
   managerName: '',
   trainingDay: '',
   trainingTime: '',
@@ -48,6 +49,15 @@ const EMPTY_NEWS = {
   category: 'news',
   published: false,
   featured: false
+};
+
+const EMPTY_ADULT_INVITE = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  requestedRole: 'coach',
+  notes: ''
 };
 
 function formatDate(value) {
@@ -96,6 +106,12 @@ const YJRLAdminPortal = () => {
   const [news, setNews] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [safetyReports, setSafetyReports] = useState([]);
+  const [adultApprovals, setAdultApprovals] = useState([]);
+  const [approvalDrafts, setApprovalDrafts] = useState({});
+  const [adultInviteForm, setAdultInviteForm] = useState(EMPTY_ADULT_INVITE);
+  const [lastInvite, setLastInvite] = useState(null);
+  const [uploadRecords, setUploadRecords] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamModal, setTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
@@ -110,6 +126,15 @@ const YJRLAdminPortal = () => {
     label: `${team.name || team.ageGroup} (${team.ageGroup || 'Team'})`
   })), [teams]);
 
+  const approvedCoaches = useMemo(() => adultApprovals
+    .filter(approval => (approval.requestedRole || approval.requested_role) === 'coach' && approval.status === 'approved')
+    .map(approval => ({
+      id: approval.userId || approval.user_id,
+      label: `${approval.first_name || ''} ${approval.last_name || ''}`.trim() || approval.email || 'Approved coach',
+      email: approval.email
+    }))
+    .filter(coach => coach.id), [adultApprovals]);
+
   useEffect(() => {
     if (!isAdmin) return;
     let alive = true;
@@ -122,8 +147,11 @@ const YJRLAdminPortal = () => {
       api.get('/yjrl/players').catch(() => ({ data: [] })),
       api.get('/yjrl/news/all').catch(() => ({ data: [] })),
       api.get('/yjrl/chat/rooms').catch(() => ({ data: [] })),
-      api.get('/yjrl/safety/reports').catch(() => ({ data: [] }))
-    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes]) => {
+      api.get('/yjrl/safety/reports').catch(() => ({ data: [] })),
+      api.get('/yjrl/safety/adult-approvals').catch(() => ({ data: [] })),
+      api.get('/yjrl/safety/uploads').catch(() => ({ data: [] })),
+      api.get('/yjrl/safety/audit-log?limit=50').catch(() => ({ data: [] }))
+    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes, aaRes, uRes, aRes]) => {
       if (!alive) return;
       if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
       setTeams(Array.isArray(tRes.data) ? tRes.data : []);
@@ -132,6 +160,9 @@ const YJRLAdminPortal = () => {
       setNews(Array.isArray(nRes.data) ? nRes.data : []);
       setRooms(Array.isArray(rRes.data) ? rRes.data : []);
       setSafetyReports(Array.isArray(srRes.data) ? srRes.data : []);
+      setAdultApprovals(Array.isArray(aaRes.data) ? aaRes.data : []);
+      setUploadRecords(Array.isArray(uRes.data) ? uRes.data : []);
+      setAuditLog(Array.isArray(aRes.data) ? aRes.data : []);
     }).finally(() => {
       if (alive) setLoading(false);
     });
@@ -143,7 +174,13 @@ const YJRLAdminPortal = () => {
 
   const saveTeam = async () => {
     try {
-      const res = await api.post('/yjrl/teams', teamForm);
+      const selectedCoach = approvedCoaches.find(coach => coach.id === teamForm.coachId);
+      const payload = {
+        ...teamForm,
+        coachName: teamForm.coachName || selectedCoach?.label || '',
+        coachId: teamForm.coachId || null
+      };
+      const res = await api.post('/yjrl/teams', payload);
       setTeams(prev => [...prev, res.data]);
       setStats(prev => ({ ...prev, teamCount: (prev.teamCount || 0) + 1 }));
       setTeamModal(false);
@@ -162,6 +199,21 @@ const YJRLAdminPortal = () => {
       toast.success('Team deactivated');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to remove team');
+    }
+  };
+
+  const updateTeamCoach = async (team, coachId) => {
+    try {
+      const id = team._id || team.id;
+      const selectedCoach = approvedCoaches.find(coach => coach.id === coachId);
+      const res = await api.put(`/yjrl/teams/${id}`, {
+        coachId: coachId || null,
+        coachName: selectedCoach?.label || ''
+      });
+      setTeams(prev => prev.map(item => ((item._id || item.id) === id ? { ...item, ...res.data } : item)));
+      toast.success(selectedCoach ? `Coach assigned to ${team.name || team.ageGroup}` : 'Coach assignment cleared');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update team coach');
     }
   };
 
@@ -197,6 +249,23 @@ const YJRLAdminPortal = () => {
       toast.success('Player status updated');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to update player');
+    }
+  };
+
+  const updatePlayerTeam = async (player, teamId) => {
+    try {
+      const id = player._id || player.id;
+      const res = await api.put(`/yjrl/players/${id}`, { teamId: teamId || null });
+      const team = teams.find(item => (item._id || item.id) === teamId);
+      setPlayers(prev => prev.map(item => ((item._id || item.id) === id ? {
+        ...item,
+        ...res.data,
+        teamId: teamId || null,
+        team: team ? { _id: team._id || team.id, name: team.name, ageGroup: team.ageGroup } : null
+      } : item)));
+      toast.success(team ? `Assigned to ${team.name || team.ageGroup}` : 'Team assignment cleared');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update player team');
     }
   };
 
@@ -240,6 +309,83 @@ const YJRLAdminPortal = () => {
       featured: !!article.featured
     });
     setNewsModal(true);
+  };
+
+  const updateSafetyReport = async (report, status) => {
+    try {
+      const id = report._id || report.id;
+      const actionTaken = {
+        triaged: 'Report triaged by club admin',
+        actioned: 'Action taken by club admin',
+        closed: 'Report closed by club admin'
+      }[status] || '';
+      const res = await api.put(`/yjrl/safety/reports/${id}`, { status, actionTaken });
+      setSafetyReports(prev => prev.map(item => ((item._id || item.id) === id ? res.data : item)));
+      toast.success(`Report marked ${status}`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update safety report');
+    }
+  };
+
+  const reviewUpload = async (record, status) => {
+    try {
+      const res = await api.put('/yjrl/safety/uploads/review', { key: record.key, status });
+      setUploadRecords(prev => prev.map(item => (item.key === record.key ? res.data : item)));
+      toast.success(`Upload ${status.replace('_', ' ')}`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to review upload');
+    }
+  };
+
+  const approvalKey = (approval) => `${approval.userId || approval.user_id}:${approval.requestedRole || approval.requested_role}`;
+  const getApprovalDraft = (approval) => approvalDrafts[approvalKey(approval)] || {
+    blueCardReference: approval.blueCardReference || approval.blue_card_reference || '',
+    blueCardStatus: approval.blueCardStatus || approval.blue_card_status || 'not-provided',
+    blueCardExpiry: approval.blueCardExpiry || approval.blue_card_expiry || '',
+    identityChecked: !!(approval.identityChecked || approval.identity_checked),
+    safeguardingTrainingCompleted: !!(approval.safeguardingTrainingCompleted || approval.safeguarding_training_completed),
+    notes: approval.notes || ''
+  };
+  const setApprovalDraft = (approval, field, value) => {
+    const key = approvalKey(approval);
+    setApprovalDrafts(prev => ({ ...prev, [key]: { ...getApprovalDraft(approval), ...prev[key], [field]: value } }));
+  };
+
+  const saveAdultApproval = async (approval, status) => {
+    const draft = getApprovalDraft(approval);
+    if (status === 'approved' && (!draft.blueCardReference || draft.blueCardStatus !== 'verified' || !draft.identityChecked || !draft.safeguardingTrainingCompleted)) {
+      toast.error('Verified Blue Card, identity check, and safeguarding training are required');
+      return;
+    }
+    try {
+      const payload = {
+        userId: approval.userId || approval.user_id,
+        requestedRole: approval.requestedRole || approval.requested_role,
+        status,
+        ...draft
+      };
+      const res = await api.post('/yjrl/safety/adult-approvals', payload);
+      setAdultApprovals(prev => prev.map(item => (approvalKey(item) === approvalKey(res.data) ? res.data : item)));
+      toast.success(`Adult role ${status}`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update adult approval');
+    }
+  };
+
+  const createAdultInvite = async () => {
+    try {
+      const res = await api.post('/yjrl/safety/adult-approvals/invite', adultInviteForm);
+      const approval = res.data.approval;
+      setAdultApprovals(prev => {
+        const existing = prev.some(item => approvalKey(item) === approvalKey(approval));
+        return existing ? prev.map(item => (approvalKey(item) === approvalKey(approval) ? approval : item)) : [approval, ...prev];
+      });
+      setLastInvite(res.data.temporaryPassword ? { email: adultInviteForm.email, temporaryPassword: res.data.temporaryPassword } : null);
+      setAdultInviteForm(EMPTY_ADULT_INVITE);
+      toast.success('Adult role request created');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to create adult role request');
+    }
   };
 
   return (
@@ -371,6 +517,12 @@ const YJRLAdminPortal = () => {
                     <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: 'var(--yjrl-muted)' }}>
                       {team.trainingDay || 'Training day TBA'} {team.trainingTime ? `at ${team.trainingTime}` : ''} - {team.trainingVenue || 'Venue TBA'}
                     </div>
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <select className="yjrl-input" value={team.coachId || ''} onChange={event => updateTeamCoach(team, event.target.value)}>
+                        <option value="">Assign approved coach</option>
+                        {approvedCoaches.map(coach => <option key={coach.id} value={coach.id}>{coach.label}</option>)}
+                      </select>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', fontSize: '0.85rem' }}>
                       <span style={{ color: '#16a34a', fontWeight: 700 }}>{team.wins || 0}W</span>
                       <span style={{ color: '#dc2626', fontWeight: 700 }}>{team.losses || 0}L</span>
@@ -485,7 +637,7 @@ const YJRLAdminPortal = () => {
             <div className="yjrl-card">
               <table className="yjrl-table">
                 <thead>
-                  <tr><th>Player</th><th>Age Group</th><th>Team</th><th>Guardian</th><th>Status</th></tr>
+                  <tr><th>Player</th><th>Age Group</th><th>Team</th><th>Guardian</th><th>Status</th><th>Assign</th></tr>
                 </thead>
                 <tbody>
                   {players.map(player => {
@@ -504,10 +656,16 @@ const YJRLAdminPortal = () => {
                             {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
                           </select>
                         </td>
+                        <td>
+                          <select className="yjrl-input" style={{ minWidth: 180 }} value={player.teamId || player.team?._id || ''} onChange={event => updatePlayerTeam(player, event.target.value)}>
+                            <option value="">Unassigned</option>
+                            {fixtureTeamOptions.map(team => <option key={team.id} value={team.id}>{team.label}</option>)}
+                          </select>
+                        </td>
                       </tr>
                     );
                   })}
-                  {players.length === 0 && !loading && emptyTable(5, <Users size={34} />, 'No player registrations yet', 'Completed registration forms will appear here for review.')}
+                  {players.length === 0 && !loading && emptyTable(6, <Users size={34} />, 'No player registrations yet', 'Completed registration forms will appear here for review.')}
                 </tbody>
               </table>
             </div>
@@ -522,19 +680,140 @@ const YJRLAdminPortal = () => {
               </div>
               <table className="yjrl-table">
                 <thead>
-                  <tr><th>Reason</th><th>Category</th><th>Severity</th><th>Status</th><th>Reported</th></tr>
+                  <tr><th>Report</th><th>Reporter</th><th>Entity</th><th>Severity</th><th>Status</th><th>Reported</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                   {safetyReports.map(report => (
                     <tr key={report._id || report.id}>
-                      <td style={{ fontWeight: 700 }}>{report.reason}</td>
-                      <td style={{ textTransform: 'capitalize' }}>{report.category || report.entity_type || '-'}</td>
+                      <td>
+                        <div style={{ fontWeight: 700 }}>{report.reason}</div>
+                        {report.description && <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{report.description}</div>}
+                        {report.action_taken && <div style={{ color: '#166534', fontSize: '0.75rem', marginTop: '0.25rem', fontWeight: 700 }}>Action: {report.action_taken}</div>}
+                      </td>
+                      <td>{report.reporter_name || report.reporter_user_id || '-'}</td>
+                      <td>
+                        <div style={{ textTransform: 'capitalize' }}>{report.category || '-'}</div>
+                        <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{report.entity_type || 'general'}{report.entity_id ? `:${report.entity_id}` : ''}</div>
+                      </td>
                       <td style={{ textTransform: 'capitalize', color: report.severity === 'critical' || report.severity === 'high' ? '#dc2626' : 'var(--yjrl-muted)', fontWeight: 700 }}>{report.severity}</td>
                       <td style={{ textTransform: 'capitalize' }}>{report.status}</td>
                       <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(report.created_at)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {report.status === 'open' && <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => updateSafetyReport(report, 'triaged')}>Triage</button>}
+                          {report.status !== 'actioned' && report.status !== 'closed' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => updateSafetyReport(report, 'actioned')}>Actioned</button>}
+                          {report.status !== 'closed' && <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => updateSafetyReport(report, 'closed')}>Close</button>}
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {safetyReports.length === 0 && !loading && emptyTable(5, <AlertCircle size={34} />, 'No safety reports', 'Reports submitted from chat and safety tools will appear here.')}
+                  {safetyReports.length === 0 && !loading && emptyTable(7, <AlertCircle size={34} />, 'No safety reports', 'Reports submitted from chat and safety tools will appear here.')}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="yjrl-card">
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title"><Shield size={16} /> Adult Role Approvals ({adultApprovals.length})</div>
+              </div>
+              <div className="yjrl-card-body" style={{ display: 'grid', gap: '1rem', borderBottom: '1px solid var(--yjrl-border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                  <input className="yjrl-input" value={adultInviteForm.firstName} placeholder="First name" onChange={event => setAdultInviteForm(prev => ({ ...prev, firstName: event.target.value }))} />
+                  <input className="yjrl-input" value={adultInviteForm.lastName} placeholder="Last name" onChange={event => setAdultInviteForm(prev => ({ ...prev, lastName: event.target.value }))} />
+                  <input className="yjrl-input" type="email" value={adultInviteForm.email} placeholder="Email" onChange={event => setAdultInviteForm(prev => ({ ...prev, email: event.target.value }))} />
+                  <input className="yjrl-input" value={adultInviteForm.phone} placeholder="Phone" onChange={event => setAdultInviteForm(prev => ({ ...prev, phone: event.target.value }))} />
+                  <select className="yjrl-input" value={adultInviteForm.requestedRole} onChange={event => setAdultInviteForm(prev => ({ ...prev, requestedRole: event.target.value }))}>
+                    {['coach', 'admin', 'dev'].map(role => <option key={role} value={role}>{role}</option>)}
+                  </select>
+                  <button className="yjrl-btn yjrl-btn-primary" onClick={createAdultInvite} disabled={!adultInviteForm.firstName || !adultInviteForm.email}>
+                    <Plus size={15} /> Create Request
+                  </button>
+                </div>
+                {lastInvite && (
+                  <div style={{ padding: '0.75rem', borderRadius: 8, border: '1px solid #facc15', background: '#fefce8', color: '#854d0e', fontSize: '0.85rem', fontWeight: 700 }}>
+                    Temporary password for {lastInvite.email}: {lastInvite.temporaryPassword}
+                  </div>
+                )}
+              </div>
+              <table className="yjrl-table">
+                <thead>
+                  <tr><th>Person</th><th>Role</th><th>Blue Card</th><th>Checks</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {adultApprovals.map(approval => {
+                    const draft = getApprovalDraft(approval);
+                    const name = `${approval.first_name || ''} ${approval.last_name || ''}`.trim() || approval.email || 'Adult account';
+                    return (
+                      <tr key={approvalKey(approval)}>
+                        <td>
+                          <div style={{ fontWeight: 700 }}>{name}</div>
+                          <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{approval.email}</div>
+                        </td>
+                        <td style={{ textTransform: 'capitalize' }}>{approval.requestedRole || approval.requested_role}</td>
+                        <td>
+                          <div style={{ display: 'grid', gap: '0.35rem', minWidth: 180 }}>
+                            <input className="yjrl-input" value={draft.blueCardReference} placeholder="Reference" onChange={event => setApprovalDraft(approval, 'blueCardReference', event.target.value)} />
+                            <select className="yjrl-input" value={draft.blueCardStatus} onChange={event => setApprovalDraft(approval, 'blueCardStatus', event.target.value)}>
+                              {['not-provided', 'pending', 'verified', 'expired'].map(status => <option key={status} value={status}>{status}</option>)}
+                            </select>
+                            <input type="date" className="yjrl-input" value={draft.blueCardExpiry || ''} onChange={event => setApprovalDraft(approval, 'blueCardExpiry', event.target.value)} />
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'grid', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <input type="checkbox" checked={draft.identityChecked} onChange={event => setApprovalDraft(approval, 'identityChecked', event.target.checked)} /> Identity
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <input type="checkbox" checked={draft.safeguardingTrainingCompleted} onChange={event => setApprovalDraft(approval, 'safeguardingTrainingCompleted', event.target.checked)} /> Training
+                            </label>
+                          </div>
+                        </td>
+                        <td style={{ textTransform: 'capitalize', fontWeight: 700 }}>{approval.status}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => saveAdultApproval(approval, 'approved')}>Approve</button>
+                            <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => saveAdultApproval(approval, 'rejected')}>Reject</button>
+                            <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => saveAdultApproval(approval, 'suspended')}>Suspend</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {adultApprovals.length === 0 && !loading && emptyTable(6, <Shield size={34} />, 'No adult role requests', 'Coach and staff approvals will appear here before any adult role is activated.')}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="yjrl-card">
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title"><Newspaper size={16} /> Upload Review ({uploadRecords.filter(record => record.status === 'pending_review').length})</div>
+              </div>
+              <table className="yjrl-table">
+                <thead>
+                  <tr><th>Upload</th><th>Player</th><th>Category</th><th>Consent</th><th>Status</th><th>Uploaded</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {uploadRecords.map(record => (
+                    <tr key={record.key}>
+                      <td style={{ maxWidth: 260, wordBreak: 'break-word' }}>
+                        {record.url ? <a href={record.url} target="_blank" rel="noreferrer" style={{ color: 'var(--yjrl-blue)' }}>{record.key}</a> : record.key}
+                        <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{record.mimeType || record.mime_type} · {Math.round((record.byteSize || record.byte_size || 0) / 1024)} KB</div>
+                      </td>
+                      <td>{record.playerName || record.player_id || '-'}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{record.category}</td>
+                      <td>{record.consentGranted || record.consent_granted ? 'Granted' : record.consentRequired || record.consent_required ? 'Required' : 'Not required'}</td>
+                      <td style={{ textTransform: 'capitalize', fontWeight: 700 }}>{String(record.status || '').replace('_', ' ')}</td>
+                      <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(record.created_at)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {record.status !== 'approved' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
+                          {record.status !== 'rejected' && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>Reject</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {uploadRecords.length === 0 && !loading && emptyTable(7, <Newspaper size={34} />, 'No uploads to review', 'Child-related public media uploads will be held here before use.')}
                 </tbody>
               </table>
             </div>
@@ -565,11 +844,34 @@ const YJRLAdminPortal = () => {
               </table>
             </div>
 
+            <div className="yjrl-card">
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title"><CheckCircle size={16} /> Safeguarding Audit Log</div>
+              </div>
+              <table className="yjrl-table">
+                <thead>
+                  <tr><th>Action</th><th>Entity</th><th>User</th><th>Details</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                  {auditLog.map(entry => (
+                    <tr key={entry.id}>
+                      <td style={{ fontWeight: 700 }}>{entry.action}</td>
+                      <td>{entry.entity_type}{entry.entity_id ? `:${entry.entity_id}` : ''}</td>
+                      <td>{entry.user_name || entry.user_id}</td>
+                      <td style={{ maxWidth: 360, wordBreak: 'break-word', color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{JSON.stringify(entry.details || {})}</td>
+                      <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(entry.created_at)}</td>
+                    </tr>
+                  ))}
+                  {auditLog.length === 0 && !loading && emptyTable(5, <CheckCircle size={34} />, 'No audit events yet', 'Safeguarding actions will be recorded here.')}
+                </tbody>
+              </table>
+            </div>
+
             <div className="yjrl-grid-3">
               {[
                 ['Adult boundaries', 'Coaches use parent/team-adult rooms and cannot post in junior player rooms.'],
                 ['Player hours', 'Player rooms accept messages from 7am to 8pm AEST.'],
-                ['Launch gate', 'Blocking, takedown workflow, and formal incident escalation still require club sign-off before customer launch.']
+                ['Launch gate', 'Reports, adult approvals, media review, and audit history are live. Formal incident escalation still needs club sign-off before customer launch.']
               ].map(([title, detail]) => (
                 <div key={title} className="yjrl-card" style={{ padding: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>
@@ -602,9 +904,19 @@ const YJRLAdminPortal = () => {
                     {AGE_GROUPS.map(age => <option key={age} value={age}>{age}</option>)}
                   </select>
                 </div>
+                <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
+                  <label className="yjrl-label">Approved Coach Account</label>
+                  <select className="yjrl-input" value={teamForm.coachId} onChange={event => {
+                    const selected = approvedCoaches.find(coach => coach.id === event.target.value);
+                    setTeamForm(prev => ({ ...prev, coachId: event.target.value, coachName: selected?.label || prev.coachName }));
+                  }}>
+                    <option value="">Unassigned</option>
+                    {approvedCoaches.map(coach => <option key={coach.id} value={coach.id}>{coach.label}{coach.email ? ` - ${coach.email}` : ''}</option>)}
+                  </select>
+                </div>
                 {[
                   ['Division', 'division', 'A Grade'],
-                  ['Coach Name', 'coachName', ''],
+                  ['Coach Display Name', 'coachName', ''],
                   ['Manager Name', 'managerName', ''],
                   ['Training Days', 'trainingDay', 'Tue and Thu'],
                   ['Training Time', 'trainingTime', '5:00 PM'],

@@ -16,12 +16,16 @@ Protecting children from grooming, predatory behaviour, bullying, harassment, an
 - New registrations must create verified parent-child links and media consent records.
 - Child-related uploads must require media consent, safe image type verification, authorised uploader checks, and review metadata.
 - Chat messages must be reportable, and reports must be visible to authorised club administrators.
+- Adult role requests must be created or reviewed by club administrators and require verified Blue Card/WWCC details, future expiry, identity check, and safeguarding training before access is granted.
+- Approved coaches must be assigned to teams only through server-enforced adult approval checks.
+- Pending child-related uploads must not expose public URLs; rejected uploads must be removed from public storage.
+- Player photo fields must reference approved reviewed media for that player.
+- Admins must be able to assign players to teams so parents receive accurate team, training, venue, and coach details.
 
 ## Must Be Completed Before Paying Customers
 
-- Admin UI and club sign-off workflow for adult-role approvals covering coaches, managers, volunteers, administrators, and staff.
 - Parent-visible or administrator-visible communication model for any child-facing chat. No unobserved one-to-one adult-to-child messaging.
-- Block, mute, delete, takedown, escalate, evidence-preservation, and incident-resolution workflows for chat, uploads, profiles, news, and events.
+- Formal club sign-off workflow for child-safety incident handling, including block, mute, delete, takedown, escalate, evidence-preservation, and incident-resolution decisions for chat, uploads, profiles, news, and events.
 - Comprehensive immutable audit logging for every admin edit and child-data access, building on the current auth, registration, upload, chat, report, and adult-approval audit events.
 - Consent enforcement for photos, videos, player stories, stats, team pages, news, uploads, and public sharing.
 - Data-minimised response shapes for public, player, parent, coach, and admin contexts. Medical, guardian, emergency, and coach-note data must be returned only to roles with a genuine need.

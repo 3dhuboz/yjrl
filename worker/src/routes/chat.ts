@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
 import { hasVerifiedParentForTeam } from '../lib/safeguarding';
 
@@ -176,8 +176,38 @@ chat.post('/:id/report', authMiddleware, async (c) => {
 
 // GET /yjrl/chat/rooms — list available chat rooms
 chat.get('/rooms', authMiddleware, async (c) => {
-  const result = await c.env.DB.prepare('SELECT * FROM chat_rooms WHERE active = 1 ORDER BY type, age_group').all();
-  return c.json(result.results || []);
+  if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
+  const [seeded, dynamic] = await Promise.all([
+    c.env.DB.prepare('SELECT * FROM chat_rooms WHERE active = 1 ORDER BY type, age_group').all(),
+    c.env.DB.prepare(
+      `SELECT room_id, COUNT(*) AS message_count, MAX(created_at) AS last_message_at
+       FROM chat_messages
+       GROUP BY room_id
+       ORDER BY last_message_at DESC`
+    ).all(),
+  ]);
+  const rooms = [...(seeded.results || [])];
+  const known = new Set(rooms.map(room => room.room_id || room.id || room.name));
+  for (const row of (dynamic.results || [])) {
+    if (known.has(row.room_id)) continue;
+    const [type, teamId] = String(row.room_id || '').split(':');
+    let team: Record<string, unknown> | null = null;
+    if (teamId) {
+      team = await c.env.DB.prepare('SELECT name, age_group FROM teams WHERE id = ?').bind(teamId).first();
+    }
+    rooms.push({
+      id: row.room_id,
+      room_id: row.room_id,
+      name: team ? `${team.name} ${type} room` : row.room_id,
+      type,
+      team_id: teamId || null,
+      age_group: team?.age_group || null,
+      active: 1,
+      message_count: row.message_count,
+      last_message_at: row.last_message_at,
+    });
+  }
+  return c.json(rooms);
 });
 
 export default chat;

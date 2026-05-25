@@ -4,7 +4,7 @@ import { authMiddleware, requireAdmin } from '../middleware/auth';
 
 const teams = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function addVirtuals(team: Record<string, unknown>) {
+function addVirtuals(team: Record<string, unknown>, options: { includePrivateIds?: boolean } = {}) {
   const wins = (team.wins as number) || 0;
   const losses = (team.losses as number) || 0;
   const draws = (team.draws as number) || 0;
@@ -25,7 +25,32 @@ function addVirtuals(team: Record<string, unknown>) {
     trainingVenue: team.training_venue,
     isActive: !!team.is_active,
     colors: { primary: team.color_primary, secondary: team.color_secondary },
+    ...(options.includePrivateIds ? {
+      coachId: team.coach_id,
+      assistantId: team.assistant_id,
+      managerId: team.manager_id,
+    } : {}),
   };
+}
+
+async function hasCurrentAdultApproval(env: Env, userId: string, role: 'coach' | 'admin' | 'dev') {
+  const today = new Date().toISOString().split('T')[0];
+  const row = await env.DB.prepare(
+    `SELECT ara.user_id
+     FROM adult_role_approvals ara
+     JOIN users u ON ara.user_id = u.id
+     WHERE ara.user_id = ?
+       AND ara.requested_role = ?
+       AND ara.status = 'approved'
+       AND ara.blue_card_status = 'verified'
+       AND ara.blue_card_expiry IS NOT NULL
+       AND ara.blue_card_expiry >= ?
+       AND ara.identity_checked = 1
+       AND ara.safeguarding_training_completed = 1
+       AND u.is_active = 1
+       AND u.role = ?`
+  ).bind(userId, role, today, role).first();
+  return !!row;
 }
 
 // GET /yjrl/teams
@@ -38,7 +63,7 @@ teams.get('/', async (c) => {
   if (active !== 'false') { sql += ' AND is_active = 1'; }
   sql += ' ORDER BY age_group ASC';
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(addVirtuals));
+  return c.json((result.results || []).map(team => addVirtuals(team)));
 });
 
 // GET /yjrl/teams/:id
@@ -57,14 +82,18 @@ teams.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
   const id = crypto.randomUUID();
+  const coachId = body.coachId || body.coach || body.coach_id || null;
+  if (coachId && !(await hasCurrentAdultApproval(c.env, coachId, 'coach'))) {
+    return c.json({ error: 'Coach account must have a current approved adult role before team assignment' }, 400);
+  }
   await c.env.DB.prepare(
     `INSERT INTO teams (id, name, age_group, division, season, coach_id, coach_name, assistant_id, assistant_name, manager_id, manager_name, training_day, training_time, training_venue, color_primary, color_secondary, photo)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, body.name, body.ageGroup || body.age_group || '', body.division || '', body.season || new Date().getFullYear().toString(),
-    body.coach || body.coach_id || null, body.coachName || body.coach_name || '',
-    body.assistant || body.assistant_id || null, body.assistantName || body.assistant_name || '',
-    body.manager || body.manager_id || null, body.managerName || body.manager_name || '',
+    coachId, body.coachName || body.coach_name || '',
+    body.assistantId || body.assistant || body.assistant_id || null, body.assistantName || body.assistant_name || '',
+    body.managerId || body.manager || body.manager_id || null, body.managerName || body.manager_name || '',
     body.trainingDay || body.training_day || '', body.trainingTime || body.training_time || '',
     body.trainingVenue || body.training_venue || 'Nev Skuse Oval, Yeppoon',
     body.colors?.primary || body.color_primary || '#0c1d35',
@@ -72,7 +101,7 @@ teams.post('/', authMiddleware, async (c) => {
     body.photo || ''
   ).run();
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
-  return c.json(addVirtuals(team!), 201);
+  return c.json(addVirtuals(team!, { includePrivateIds: true }), 201);
 });
 
 // PUT /yjrl/teams/:id
@@ -82,11 +111,15 @@ teams.put('/:id', authMiddleware, async (c) => {
   const id = c.req.param('id');
   const fields: string[] = [];
   const vals: unknown[] = [];
+  const coachCandidate = body.coachId ?? body.coach_id ?? body.coach;
+  if (coachCandidate && !(await hasCurrentAdultApproval(c.env, coachCandidate, 'coach'))) {
+    return c.json({ error: 'Coach account must have a current approved adult role before team assignment' }, 400);
+  }
   const map: Record<string, string> = {
     name: 'name', ageGroup: 'age_group', age_group: 'age_group', division: 'division', season: 'season',
-    coachName: 'coach_name', coach_name: 'coach_name', coach_id: 'coach_id',
-    assistantName: 'assistant_name', assistant_name: 'assistant_name', assistant_id: 'assistant_id',
-    managerName: 'manager_name', manager_name: 'manager_name', manager_id: 'manager_id',
+    coachName: 'coach_name', coach_name: 'coach_name', coachId: 'coach_id', coach_id: 'coach_id',
+    assistantName: 'assistant_name', assistant_name: 'assistant_name', assistantId: 'assistant_id', assistant_id: 'assistant_id',
+    managerName: 'manager_name', manager_name: 'manager_name', managerId: 'manager_id', manager_id: 'manager_id',
     trainingDay: 'training_day', training_day: 'training_day',
     trainingTime: 'training_time', training_time: 'training_time',
     trainingVenue: 'training_venue', training_venue: 'training_venue',
@@ -96,7 +129,10 @@ teams.put('/:id', authMiddleware, async (c) => {
     pointsAgainst: 'points_against', points_against: 'points_against',
   };
   for (const [k, v] of Object.entries(body)) {
-    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(v); }
+    if (map[k]) {
+      fields.push(`${map[k]} = ?`);
+      vals.push(map[k].endsWith('_id') ? (v || null) : v);
+    }
   }
   if (body.colors) {
     if (body.colors.primary) { fields.push('color_primary = ?'); vals.push(body.colors.primary); }
@@ -108,7 +144,7 @@ teams.put('/:id', authMiddleware, async (c) => {
   await c.env.DB.prepare(`UPDATE teams SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
   if (!team) return c.json({ error: 'Team not found' }, 404);
-  return c.json(addVirtuals(team));
+  return c.json(addVirtuals(team, { includePrivateIds: true }));
 });
 
 // DELETE /yjrl/teams/:id (soft delete)

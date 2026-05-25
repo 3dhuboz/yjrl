@@ -57,6 +57,17 @@ async function canManagePlayer(c: any, player: Record<string, unknown>) {
   return coachOwnsTeam(c, player.team_id);
 }
 
+async function isApprovedPlayerMedia(env: Env, playerId: string, value: string) {
+  if (!value) return true;
+  const row = await env.DB.prepare(
+    `SELECT key FROM upload_records
+     WHERE player_id = ?
+       AND status = 'approved'
+       AND (key = ? OR url = ?)`
+  ).bind(playerId, value, value).first();
+  return !!row;
+}
+
 // GET /yjrl/players
 players.get('/', authMiddleware, async (c) => {
   const user = c.get('user');
@@ -103,7 +114,9 @@ players.get('/my-player', authMiddleware, async (c) => {
 players.get('/my-children', authMiddleware, async (c) => {
   const user = c.get('user');
   const result = await c.env.DB.prepare(
-    `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group
+    `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group,
+            t.training_day AS team_training_day, t.training_time AS team_training_time,
+            t.training_venue AS team_training_venue, t.coach_name AS team_coach_name
      FROM players p
      LEFT JOIN teams t ON p.team_id = t.id
      WHERE p.is_active = 1
@@ -121,7 +134,19 @@ players.get('/my-children', authMiddleware, async (c) => {
       c.env.DB.prepare('SELECT * FROM player_stats WHERE player_id = ?').bind(p.id).all(),
       c.env.DB.prepare('SELECT * FROM attendance_records WHERE player_id = ? ORDER BY date DESC LIMIT 20').bind(p.id).all(),
     ]);
-    children.push(formatPlayer(p, statsR.results || [], [], attR.results || []));
+    const formatted = formatPlayer(p, statsR.results || [], [], attR.results || []);
+    if (p.team_id) {
+      formatted.teamId = {
+        _id: p.team_id,
+        name: p.team_name,
+        ageGroup: p.team_age_group,
+        trainingDay: p.team_training_day,
+        trainingTime: p.team_training_time,
+        trainingVenue: p.team_training_venue,
+        coachName: p.team_coach_name,
+      } as unknown as string;
+    }
+    children.push(formatted);
   }
   return c.json(children);
 });
@@ -175,6 +200,7 @@ players.get('/:id', authMiddleware, async (c) => {
 players.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  if (body.photo) return c.json({ error: 'Player photos must be uploaded, reviewed, and approved before use' }, 400);
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO players (id, user_id, first_name, last_name, date_of_birth, age_group, team_id, position, jersey_number, guardian_name, guardian_phone, guardian_email, emergency_name, emergency_phone, emergency_relationship, medical_notes, registration_status, registration_year, playhq_id, coach_notes, pathway_level, pathway_notes, photo)
@@ -221,7 +247,7 @@ players.post('/', authMiddleware, async (c) => {
 players.put('/:id', authMiddleware, async (c) => {
   if (!requireCoachOrAdmin(c)) return c.json({ error: 'Coach or admin only' }, 403);
   const body = await c.req.json();
-  const id = c.req.param('id');
+  const id = c.req.param('id') || '';
   const existing = await c.env.DB.prepare('SELECT * FROM players WHERE id = ? AND is_active = 1').bind(id).first();
   if (!existing) return c.json({ error: 'Player not found' }, 404);
   if (!(await canManagePlayer(c, existing))) return c.json({ error: 'Not allowed to update this player' }, 403);
@@ -244,6 +270,10 @@ players.put('/:id', authMiddleware, async (c) => {
     photo: 'photo',
   };
   const map = adminUpdate ? adminMap : coachMap;
+  const requestedPhoto = body.photo;
+  if (requestedPhoto && !(await isApprovedPlayerMedia(c.env, id, String(requestedPhoto)))) {
+    return c.json({ error: 'Player photo must reference an approved reviewed upload for this player' }, 400);
+  }
   for (const [k, v] of Object.entries(body)) {
     if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(v); }
   }

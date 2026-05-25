@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { parseJson, writeAudit } from '../lib/audit';
+import { hashPassword } from '../lib/password';
 
 const safety = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -30,6 +31,30 @@ function formatApproval(row: Record<string, unknown>) {
     approvedByUserId: row.approved_by_user_id,
     approvedAt: row.approved_at,
   };
+}
+
+function formatUpload(row: Record<string, unknown>) {
+  return {
+    ...row,
+    uploaderName: [row.uploader_first_name, row.uploader_last_name].filter(Boolean).join(' '),
+    playerName: [row.player_first_name, row.player_last_name].filter(Boolean).join(' '),
+    playerId: row.player_id,
+    consentRequired: !!row.consent_required,
+    consentGranted: !!row.consent_granted,
+    byteSize: row.byte_size,
+    mimeType: row.mime_type,
+  };
+}
+
+function isFutureDate(value: unknown) {
+  if (!value) return false;
+  const expiry = new Date(`${value}T23:59:59+10:00`);
+  return !Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now();
+}
+
+function randomTemporaryPassword() {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return `YJRL-${[...bytes].map(byte => byte.toString(36).padStart(2, '0')).join('').slice(0, 18)}!`;
 }
 
 // POST /yjrl/safety/reports
@@ -127,6 +152,118 @@ safety.get('/audit-log', authMiddleware, async (c) => {
   return c.json((result.results || []).map(row => ({ ...row, details: parseJson(row.details) })));
 });
 
+// GET /yjrl/safety/uploads
+safety.get('/uploads', authMiddleware, async (c) => {
+  if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
+  const status = c.req.query('status');
+  const params: unknown[] = [];
+  let sql = `
+    SELECT ur.*, u.first_name AS uploader_first_name, u.last_name AS uploader_last_name,
+           p.first_name AS player_first_name, p.last_name AS player_last_name
+    FROM upload_records ur
+    LEFT JOIN users u ON ur.uploader_user_id = u.id
+    LEFT JOIN players p ON ur.player_id = p.id
+    WHERE 1=1`;
+  if (status) {
+    sql += ' AND ur.status = ?';
+    params.push(status);
+  }
+  sql += ' ORDER BY CASE ur.status WHEN "pending_review" THEN 1 WHEN "approved" THEN 2 ELSE 3 END, ur.created_at DESC LIMIT 100';
+  const result = await c.env.DB.prepare(sql).bind(...params).all();
+  return c.json((result.results || []).map(formatUpload));
+});
+
+// PUT /yjrl/safety/uploads/review
+safety.put('/uploads/review', authMiddleware, async (c) => {
+  const admin = c.get('user');
+  if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
+  const body = await c.req.json().catch(() => null);
+  if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
+
+  const key = String(body.key || '').trim();
+  const status = String(body.status || '').trim();
+  if (!key || !['pending_review', 'approved', 'rejected'].includes(status)) {
+    return c.json({ error: 'A valid key and review status are required' }, 400);
+  }
+
+  const existing = await c.env.DB.prepare('SELECT * FROM upload_records WHERE key = ?').bind(key).first();
+  if (!existing) return c.json({ error: 'Upload record not found' }, 404);
+
+  const publicBase = c.env.UPLOADS_PUBLIC_URL?.replace(/\/+$/, '');
+  const approvedUrl = status === 'approved' && publicBase ? `${publicBase}/${key}` : null;
+  if (status === 'rejected') {
+    await c.env.UPLOADS.delete(key);
+  }
+  await c.env.DB.prepare(
+    'UPDATE upload_records SET status = ?, url = ?, updated_at = datetime(\'now\') WHERE key = ?'
+  ).bind(status, approvedUrl, key).run();
+  await writeAudit(c.env, admin, 'upload_reviewed', 'upload', key, {
+    status,
+    previousStatus: existing.status,
+    category: existing.category,
+    playerId: existing.player_id || null,
+  });
+
+  const row = await c.env.DB.prepare(
+    `SELECT ur.*, u.first_name AS uploader_first_name, u.last_name AS uploader_last_name,
+            p.first_name AS player_first_name, p.last_name AS player_last_name
+     FROM upload_records ur
+     LEFT JOIN users u ON ur.uploader_user_id = u.id
+     LEFT JOIN players p ON ur.player_id = p.id
+     WHERE ur.key = ?`
+  ).bind(key).first();
+  return c.json(formatUpload(row!));
+});
+
+// POST /yjrl/safety/adult-approvals/invite
+safety.post('/adult-approvals/invite', authMiddleware, async (c) => {
+  const admin = c.get('user');
+  if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
+  const body = await c.req.json().catch(() => null);
+  if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
+
+  const email = String(body.email || '').toLowerCase().trim();
+  const firstName = String(body.firstName || body.first_name || '').trim();
+  const lastName = String(body.lastName || body.last_name || '').trim();
+  const requestedRole = String(body.requestedRole || body.requested_role || 'coach').trim();
+  if (!email || !firstName || !['coach', 'admin', 'dev'].includes(requestedRole)) {
+    return c.json({ error: 'First name, email, and a valid requestedRole are required' }, 400);
+  }
+
+  let temporaryPassword = '';
+  let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
+  if (!user) {
+    const userId = crypto.randomUUID();
+    temporaryPassword = randomTemporaryPassword();
+    const passwordHash = await hashPassword(temporaryPassword);
+    await c.env.DB.prepare(
+      'INSERT INTO users (id, first_name, last_name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(userId, firstName, lastName, email, passwordHash, 'parent', body.phone || '').run();
+    user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+  } else if (!user.is_active) {
+    return c.json({ error: 'This user account is suspended and cannot receive a new adult role request' }, 400);
+  }
+
+  const approvalId = crypto.randomUUID();
+  await c.env.DB.prepare(
+    `INSERT INTO adult_role_approvals (id, user_id, requested_role, status, notes)
+     VALUES (?, ?, ?, 'pending', ?)
+     ON CONFLICT(user_id, requested_role) DO UPDATE SET
+      status = 'pending',
+      notes = excluded.notes,
+      updated_at = datetime('now')`
+  ).bind(approvalId, user!.id, requestedRole, body.notes || '').run();
+
+  await writeAudit(c.env, admin, 'adult_role_invited', 'user', user!.id as string, { requestedRole, email });
+  const row = await c.env.DB.prepare(
+    `SELECT ara.*, u.first_name, u.last_name, u.email, u.role
+     FROM adult_role_approvals ara
+     JOIN users u ON ara.user_id = u.id
+     WHERE ara.user_id = ? AND ara.requested_role = ?`
+  ).bind(user!.id, requestedRole).first();
+  return c.json({ approval: formatApproval(row!), temporaryPassword }, 201);
+});
+
 // GET /yjrl/safety/adult-approvals
 safety.get('/adult-approvals', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
@@ -153,6 +290,15 @@ safety.post('/adult-approvals', authMiddleware, async (c) => {
   }
 
   const status = ['pending', 'approved', 'rejected', 'suspended', 'expired'].includes(body.status) ? body.status : 'pending';
+  if (status === 'approved') {
+    const blueCardStatus = body.blueCardStatus || body.blue_card_status;
+    const identityChecked = !!(body.identityChecked || body.identity_checked);
+    const trainingCompleted = !!(body.safeguardingTrainingCompleted || body.safeguarding_training_completed);
+    const expiry = body.blueCardExpiry || body.blue_card_expiry;
+    if (blueCardStatus !== 'verified' || !identityChecked || !trainingCompleted || !isFutureDate(expiry)) {
+      return c.json({ error: 'Verified Blue Card, future expiry, identity check, and safeguarding training are required before approval' }, 400);
+    }
+  }
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO adult_role_approvals (
@@ -190,11 +336,24 @@ safety.post('/adult-approvals', authMiddleware, async (c) => {
   if (status === 'approved') {
     await c.env.DB.prepare('UPDATE users SET role = ?, updated_at = datetime(\'now\') WHERE id = ?').bind(requestedRole, userId).run();
   } else if (status === 'suspended') {
-    await c.env.DB.prepare('UPDATE users SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(userId).run();
+    await c.env.DB.batch([
+      c.env.DB.prepare('UPDATE users SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(userId),
+      c.env.DB.prepare('UPDATE teams SET coach_id = NULL, updated_at = datetime(\'now\') WHERE coach_id = ?').bind(userId),
+    ]);
+  } else if (status === 'rejected' || status === 'expired') {
+    await c.env.DB.batch([
+      c.env.DB.prepare('UPDATE users SET role = CASE WHEN role = ? THEN ? ELSE role END, updated_at = datetime(\'now\') WHERE id = ?').bind(requestedRole, 'parent', userId),
+      c.env.DB.prepare('UPDATE teams SET coach_id = NULL, updated_at = datetime(\'now\') WHERE coach_id = ?').bind(userId),
+    ]);
   }
 
   await writeAudit(c.env, admin, 'adult_role_approval_updated', 'user', userId, { requestedRole, status });
-  const row = await c.env.DB.prepare('SELECT * FROM adult_role_approvals WHERE user_id = ? AND requested_role = ?').bind(userId, requestedRole).first();
+  const row = await c.env.DB.prepare(
+    `SELECT ara.*, u.first_name, u.last_name, u.email, u.role
+     FROM adult_role_approvals ara
+     JOIN users u ON ara.user_id = u.id
+     WHERE ara.user_id = ? AND ara.requested_role = ?`
+  ).bind(userId, requestedRole).first();
   return c.json(formatApproval(row!), 201);
 });
 
