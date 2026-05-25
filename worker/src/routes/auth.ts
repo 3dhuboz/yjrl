@@ -3,6 +3,7 @@ import * as jose from 'jose';
 import type { Env, Variables } from '../types';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { authMiddleware } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
 
 const auth = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -50,6 +51,7 @@ auth.post('/register', async (c) => {
   ).bind(id, firstName, lastName || '', emailNorm, passwordHash, validRole, phone || '').run();
 
   const token = await makeToken(id, c.env.JWT_SECRET);
+  await writeAudit(c.env, { id, role: validRole, firstName, lastName: lastName || '', email: emailNorm }, 'auth_register', 'user', id, { role: validRole });
   return c.json({
     token,
     user: { _id: id, firstName, lastName: lastName || '', email: emailNorm, role: validRole },
@@ -78,6 +80,13 @@ auth.post('/login', async (c) => {
   if (!valid) return c.json({ error: 'Invalid email or password' }, 401);
 
   const token = await makeToken(user.id as string, c.env.JWT_SECRET);
+  await writeAudit(c.env, {
+    id: user.id as string,
+    role: user.role as string,
+    firstName: user.first_name as string,
+    lastName: user.last_name as string,
+    email: user.email as string,
+  }, 'auth_login', 'user', user.id as string);
   return c.json({
     token,
     user: { _id: user.id, firstName: user.first_name, lastName: user.last_name, email: user.email, role: user.role },

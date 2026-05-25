@@ -15,8 +15,37 @@ import statsRoutes from './routes/stats';
 import chatRoutes from './routes/chat';
 import registerRoutes from './routes/register';
 import uploadRoutes from './routes/upload';
+import safetyRoutes from './routes/safety';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function clientKey(c: any, scope: string) {
+  const ip = c.req.header('CF-Connecting-IP')
+    || c.req.header('x-forwarded-for')
+    || c.req.header('x-real-ip')
+    || 'unknown';
+  return `${scope}:${ip}`;
+}
+
+function rateLimit(scope: string, max: number, windowSeconds: number) {
+  return async (c: any, next: any) => {
+    const now = Date.now();
+    const key = clientKey(c, scope);
+    const existing = rateBuckets.get(key);
+    if (!existing || existing.resetAt <= now) {
+      rateBuckets.set(key, { count: 1, resetAt: now + windowSeconds * 1000 });
+      await next();
+      return;
+    }
+    existing.count += 1;
+    if (existing.count > max) {
+      return c.json({ error: 'Too many requests. Please wait and try again.' }, 429);
+    }
+    await next();
+  };
+}
 
 function allowedOrigin(origin: string | undefined, env: Env): string | undefined {
   if (!origin) return undefined;
@@ -81,6 +110,14 @@ app.use('*', async (c, next) => {
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Abuse-sensitive route limits. These are isolate-local guardrails; durable blocking can be added later.
+app.use('/api/auth/login', rateLimit('auth-login', 10, 15 * 60));
+app.use('/api/auth/register', rateLimit('auth-register', 5, 60 * 60));
+app.use('/api/register-player', rateLimit('player-register', 5, 60 * 60));
+app.use('/api/yjrl/chat', rateLimit('chat', 120, 60));
+app.use('/api/upload', rateLimit('upload', 20, 60 * 60));
+app.use('/api/yjrl/safety/reports', rateLimit('safety-report', 30, 60 * 60));
+
 // Mount routes
 app.route('/api/auth', authRoutes);
 app.route('/api/yjrl/teams', teamsRoutes);
@@ -110,6 +147,7 @@ app.route('/api/yjrl/events', eventsRoutes);
 app.route('/api/yjrl/achievements', achievementsRoutes);
 app.route('/api/yjrl/stats', statsRoutes);
 app.route('/api/yjrl/chat', chatRoutes);
+app.route('/api/yjrl/safety', safetyRoutes);
 app.route('/api', registerRoutes);
 app.route('/api/upload', uploadRoutes);
 

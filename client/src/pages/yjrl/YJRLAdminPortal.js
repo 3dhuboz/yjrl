@@ -95,6 +95,7 @@ const YJRLAdminPortal = () => {
   const [players, setPlayers] = useState([]);
   const [news, setNews] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [safetyReports, setSafetyReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamModal, setTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
@@ -120,8 +121,9 @@ const YJRLAdminPortal = () => {
       api.get(`/yjrl/fixtures?season=${SEASON}`).catch(() => ({ data: [] })),
       api.get('/yjrl/players').catch(() => ({ data: [] })),
       api.get('/yjrl/news/all').catch(() => ({ data: [] })),
-      api.get('/yjrl/chat/rooms').catch(() => ({ data: [] }))
-    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes]) => {
+      api.get('/yjrl/chat/rooms').catch(() => ({ data: [] })),
+      api.get('/yjrl/safety/reports').catch(() => ({ data: [] }))
+    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes]) => {
       if (!alive) return;
       if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
       setTeams(Array.isArray(tRes.data) ? tRes.data : []);
@@ -129,6 +131,7 @@ const YJRLAdminPortal = () => {
       setPlayers(Array.isArray(pRes.data) ? pRes.data : []);
       setNews(Array.isArray(nRes.data) ? nRes.data : []);
       setRooms(Array.isArray(rRes.data) ? rRes.data : []);
+      setSafetyReports(Array.isArray(srRes.data) ? srRes.data : []);
     }).finally(() => {
       if (alive) setLoading(false);
     });
@@ -515,6 +518,29 @@ const YJRLAdminPortal = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="yjrl-card">
               <div className="yjrl-card-header">
+                <div className="yjrl-card-title"><AlertCircle size={16} /> Safety Reports ({safetyReports.length})</div>
+              </div>
+              <table className="yjrl-table">
+                <thead>
+                  <tr><th>Reason</th><th>Category</th><th>Severity</th><th>Status</th><th>Reported</th></tr>
+                </thead>
+                <tbody>
+                  {safetyReports.map(report => (
+                    <tr key={report._id || report.id}>
+                      <td style={{ fontWeight: 700 }}>{report.reason}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{report.category || report.entity_type || '-'}</td>
+                      <td style={{ textTransform: 'capitalize', color: report.severity === 'critical' || report.severity === 'high' ? '#dc2626' : 'var(--yjrl-muted)', fontWeight: 700 }}>{report.severity}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{report.status}</td>
+                      <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(report.created_at)}</td>
+                    </tr>
+                  ))}
+                  {safetyReports.length === 0 && !loading && emptyTable(5, <AlertCircle size={34} />, 'No safety reports', 'Reports submitted from chat and safety tools will appear here.')}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="yjrl-card">
+              <div className="yjrl-card-header">
                 <div className="yjrl-card-title"><Shield size={16} /> Active Chat Rooms ({rooms.length})</div>
               </div>
               <table className="yjrl-table">
@@ -543,7 +569,7 @@ const YJRLAdminPortal = () => {
               {[
                 ['Adult boundaries', 'Coaches use parent/team-adult rooms and cannot post in junior player rooms.'],
                 ['Player hours', 'Player rooms accept messages from 7am to 8pm AEST.'],
-                ['Launch gate', 'Reporting, blocking, flagged queues, and immutable audit logs are still required before customer launch.']
+                ['Launch gate', 'Blocking, takedown workflow, and formal incident escalation still require club sign-off before customer launch.']
               ].map(([title, detail]) => (
                 <div key={title} className="yjrl-card" style={{ padding: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>

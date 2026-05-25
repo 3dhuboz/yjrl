@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin, requireCoachOrAdmin } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
+import { hasVerifiedParentLink } from '../lib/safeguarding';
 
 const players = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function formatPlayer(p: Record<string, unknown>, stats?: Record<string, unknown>[], achievements?: Record<string, unknown>[], attendance?: Record<string, unknown>[]) {
+function formatPlayer(p: Record<string, unknown>, stats?: Record<string, unknown>[], achievements?: Record<string, unknown>[], attendance?: Record<string, unknown>[], options: { includeCoachNotes?: boolean } = {}) {
   const season = new Date().getFullYear().toString();
   const currentStats = stats?.find(s => s.season === season) || { season, gamesPlayed: 0, tries: 0, goals: 0, fieldGoals: 0, tackles: 0, runMetres: 0, manOfMatch: 0 };
   const total = attendance?.length || 0;
@@ -16,7 +18,8 @@ function formatPlayer(p: Record<string, unknown>, stats?: Record<string, unknown
     guardianName: p.guardian_name, guardianPhone: p.guardian_phone, guardianEmail: p.guardian_email,
     emergencyContact: { name: p.emergency_name, phone: p.emergency_phone, relationship: p.emergency_relationship },
     medicalNotes: p.medical_notes, registrationStatus: p.registration_status,
-    registrationYear: p.registration_year, playHQId: p.playhq_id, coachNotes: p.coach_notes,
+    registrationYear: p.registration_year, playHQId: p.playhq_id,
+    ...(options.includeCoachNotes ? { coachNotes: p.coach_notes } : {}),
     pathwayProgress: { level: p.pathway_level, notes: p.pathway_notes },
     isActive: !!p.is_active,
     stats: stats?.map(s => ({ ...s, gamesPlayed: s.games_played, fieldGoals: s.field_goals, runMetres: s.run_metres, manOfMatch: s.man_of_match })) || [],
@@ -45,7 +48,7 @@ async function canReadPlayer(c: any, player: Record<string, unknown>) {
   const user = c.get('user');
   if (isAdmin(c)) return true;
   if (player.user_id === user.id) return true;
-  if (String(player.guardian_email || '').toLowerCase() === user.email.toLowerCase()) return true;
+  if (await hasVerifiedParentLink(c.env.DB, user, player)) return true;
   return coachOwnsTeam(c, player.team_id);
 }
 
@@ -100,8 +103,18 @@ players.get('/my-player', authMiddleware, async (c) => {
 players.get('/my-children', authMiddleware, async (c) => {
   const user = c.get('user');
   const result = await c.env.DB.prepare(
-    'SELECT p.*, t.name AS team_name, t.age_group AS team_age_group FROM players p LEFT JOIN teams t ON p.team_id = t.id WHERE p.guardian_email = ? AND p.is_active = 1'
-  ).bind(user.email).all();
+    `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group
+     FROM players p
+     LEFT JOIN teams t ON p.team_id = t.id
+     WHERE p.is_active = 1
+       AND (
+        p.user_id = ?
+        OR EXISTS (
+          SELECT 1 FROM parent_child_links pcl
+          WHERE pcl.player_id = p.id AND pcl.parent_user_id = ? AND pcl.status = 'verified'
+        )
+       )`
+  ).bind(user.id, user.id).all();
   const children = [];
   for (const p of (result.results || [])) {
     const [statsR, attR] = await Promise.all([
@@ -134,7 +147,7 @@ players.get('/my-team', authMiddleware, async (c) => {
       c.env.DB.prepare('SELECT * FROM player_stats WHERE player_id = ?').bind(p.id).all(),
       c.env.DB.prepare('SELECT * FROM attendance_records WHERE player_id = ? ORDER BY date DESC LIMIT 20').bind(p.id).all(),
     ]);
-    playersFormatted.push(formatPlayer(p, statsR.results || [], [], attR.results || []));
+    playersFormatted.push(formatPlayer(p, statsR.results || [], [], attR.results || [], { includeCoachNotes: true }));
   }
   return c.json({ team: teamFormatted, players: playersFormatted });
 });
@@ -149,7 +162,13 @@ players.get('/:id', authMiddleware, async (c) => {
     c.env.DB.prepare('SELECT a.* FROM achievements a JOIN player_achievements pa ON a.id = pa.achievement_id WHERE pa.player_id = ?').bind(p.id).all(),
     c.env.DB.prepare('SELECT * FROM attendance_records WHERE player_id = ? ORDER BY date DESC').bind(p.id).all(),
   ]);
-  return c.json(formatPlayer(p, statsR.results || [], (achR.results || []).map(a => ({ ...a, _id: a.id })), attR.results || []));
+  return c.json(formatPlayer(
+    p,
+    statsR.results || [],
+    (achR.results || []).map(a => ({ ...a, _id: a.id })),
+    attR.results || [],
+    { includeCoachNotes: isAdmin(c) || await coachOwnsTeam(c, p.team_id) },
+  ));
 });
 
 // POST /yjrl/players
@@ -177,6 +196,24 @@ players.post('/', authMiddleware, async (c) => {
     body.pathwayProgress?.level || body.pathway_level || 'grassroots',
     body.pathwayProgress?.notes || body.pathway_notes || '', body.photo || ''
   ).run();
+  const user = c.get('user');
+  if (body.mediaConsent !== undefined || body.agreeToPhotoPolicy !== undefined) {
+    const mediaConsent = body.mediaConsent ?? body.agreeToPhotoPolicy;
+    await c.env.DB.prepare(
+      `INSERT OR REPLACE INTO player_consents
+       (player_id, media_consent, public_profile_consent, stats_public_consent, consent_source, consent_by_user_id, consent_by_name, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(id, mediaConsent ? 1 : 0, mediaConsent ? 1 : 0, 0, 'admin-player-create', user.id, `${user.firstName} ${user.lastName}`.trim()).run();
+  }
+  const parentId = body.parentUserId || body.parent_user_id || body.userId || body.user_id;
+  if (parentId) {
+    await c.env.DB.prepare(
+      `INSERT OR IGNORE INTO parent_child_links
+       (id, parent_user_id, player_id, relationship, status, source, verified_by_user_id, verified_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(crypto.randomUUID(), parentId, id, 'guardian', 'verified', 'admin-player-create', user.id).run();
+  }
+  await writeAudit(c.env, user, 'player_created', 'player', id, { ageGroup: body.ageGroup || body.age_group || '' });
   return c.json({ _id: id, id }, 201);
 });
 
@@ -223,6 +260,31 @@ players.put('/:id', authMiddleware, async (c) => {
   fields.push('updated_at = datetime(\'now\')');
   vals.push(id);
   await c.env.DB.prepare(`UPDATE players SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
+  if (adminUpdate && (body.mediaConsent !== undefined || body.publicProfileConsent !== undefined || body.statsPublicConsent !== undefined)) {
+    const user = c.get('user');
+    await c.env.DB.prepare(
+      `INSERT INTO player_consents
+       (player_id, media_consent, public_profile_consent, stats_public_consent, consent_source, consent_by_user_id, consent_by_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(player_id) DO UPDATE SET
+        media_consent = excluded.media_consent,
+        public_profile_consent = excluded.public_profile_consent,
+        stats_public_consent = excluded.stats_public_consent,
+        consent_source = excluded.consent_source,
+        consent_by_user_id = excluded.consent_by_user_id,
+        consent_by_name = excluded.consent_by_name,
+        updated_at = datetime('now')`
+    ).bind(
+      id,
+      body.mediaConsent ? 1 : 0,
+      body.publicProfileConsent ? 1 : 0,
+      body.statsPublicConsent ? 1 : 0,
+      'admin-player-update',
+      user.id,
+      `${user.firstName} ${user.lastName}`.trim(),
+    ).run();
+  }
+  await writeAudit(c.env, c.get('user'), 'player_updated', 'player', id, { adminUpdate, fields: Object.keys(body) });
   const player = await c.env.DB.prepare('SELECT * FROM players WHERE id = ?').bind(id).first();
   if (!player) return c.json({ error: 'Player not found' }, 404);
   return c.json({ ...player, _id: player.id });
@@ -249,6 +311,15 @@ players.post('/teams/:teamId/attendance', authMiddleware, async (c) => {
   const { date, type, records } = body;
   const teamId = c.req.param('teamId');
   if (!(await coachOwnsTeam(c, teamId))) return c.json({ error: 'Not allowed to record attendance for this team' }, 403);
+  if (!Array.isArray(records) || records.length === 0) return c.json({ error: 'No attendance records provided' }, 400);
+  const playerIds = (records as { playerId: string }[]).map(r => r.playerId).filter(Boolean);
+  if (playerIds.length !== records.length) return c.json({ error: 'Every attendance record must include a playerId' }, 400);
+  const placeholders = playerIds.map(() => '?').join(',');
+  const validPlayers = await c.env.DB.prepare(
+    `SELECT id FROM players WHERE team_id = ? AND is_active = 1 AND id IN (${placeholders})`
+  ).bind(teamId, ...playerIds).all();
+  const validIds = new Set((validPlayers.results || []).map(row => row.id));
+  if (validIds.size !== playerIds.length) return c.json({ error: 'Attendance includes players outside this team' }, 400);
   const stmt = c.env.DB.prepare(
     'INSERT INTO attendance_records (player_id, date, type, attended, notes) VALUES (?, ?, ?, ?, ?)'
   );
@@ -256,6 +327,7 @@ players.post('/teams/:teamId/attendance', authMiddleware, async (c) => {
     stmt.bind(r.playerId, date, type, r.attended ? 1 : 0, r.notes || '')
   );
   await c.env.DB.batch(batch);
+  await writeAudit(c.env, c.get('user'), 'attendance_bulk_recorded', 'team', teamId, { date, type, count: records.length });
   return c.json({ message: `Attendance recorded for ${records.length} players` });
 });
 

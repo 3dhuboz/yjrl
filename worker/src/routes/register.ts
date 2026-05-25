@@ -3,6 +3,7 @@ import type { Env, Variables } from '../types';
 import { hashPassword } from '../lib/password';
 import { createOrder, captureOrder } from '../lib/paypal';
 import { sendEmail, registrationConfirmationEmail, adminRegistrationNotification } from '../lib/email';
+import { writeAudit } from '../lib/audit';
 import * as jose from 'jose';
 
 const register = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -132,6 +133,27 @@ register.post('/register-player', async (c) => {
     medicalNotes || '', 'pending', new Date().getFullYear().toString()
   ).run();
 
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT OR REPLACE INTO player_consents
+       (player_id, media_consent, public_profile_consent, stats_public_consent, consent_source, consent_by_user_id, consent_by_name, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      playerId,
+      body.agreeToPhotoPolicy ? 1 : 0,
+      body.agreeToPhotoPolicy ? 1 : 0,
+      0,
+      'registration',
+      userId,
+      guardianName || `${firstName} ${lastName}`.trim(),
+    ),
+    c.env.DB.prepare(
+      `INSERT OR IGNORE INTO parent_child_links
+       (id, parent_user_id, player_id, relationship, status, source, verified_by_user_id, verified_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(crypto.randomUUID(), userId, playerId, 'guardian', 'verified', 'registration', userId),
+  ]);
+
   // Create registration record
   const regId = crypto.randomUUID();
   const effectivePaymentMethod = paymentMethod === 'paypal' && paypalAvailable(c.env) ? 'paypal' : 'offline';
@@ -160,6 +182,13 @@ register.post('/register-player', async (c) => {
       await sendEmail(c.env.RESEND_API_KEY, c.env.FROM_EMAIL, { to: c.env.ADMIN_EMAIL, ...adminEmail });
     }
 
+    await writeAudit(c.env, { id: userId, role: 'parent', firstName, lastName, email: emailNorm }, 'registration_created', 'registration', regId, {
+      playerId,
+      ageGroup,
+      paymentMethod: 'offline',
+      mediaConsent: !!body.agreeToPhotoPolicy,
+    });
+
     return c.json({ registrationId: regId, paymentMethod: 'offline', token, user: { _id: userId, firstName, lastName, email: emailNorm, role: 'parent' } }, 201);
   }
 
@@ -183,6 +212,12 @@ register.post('/register-player', async (c) => {
   );
 
   await c.env.DB.prepare('UPDATE registrations SET paypal_order_id = ? WHERE id = ?').bind(orderId, regId).run();
+  await writeAudit(c.env, { id: userId, role: 'parent', firstName, lastName, email: emailNorm }, 'registration_created', 'registration', regId, {
+    playerId,
+    ageGroup,
+    paymentMethod: 'paypal',
+    mediaConsent: !!body.agreeToPhotoPolicy,
+  });
 
   return c.json({ registrationId: regId, approvalUrl, orderId }, 201);
 });

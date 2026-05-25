@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
+import { hasVerifiedParentForTeam } from '../lib/safeguarding';
 
 const chat = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -59,13 +61,11 @@ async function canAccessRoom(c: any, roomId: string): Promise<boolean> {
   if (type === 'player') {
     const player = await c.env.DB.prepare('SELECT id FROM players WHERE user_id = ? AND team_id = ? AND is_active = 1').bind(user.id, teamId).first();
     if (player) return true;
-    const child = await c.env.DB.prepare('SELECT id FROM players WHERE guardian_email = ? AND team_id = ? AND is_active = 1').bind(user.email, teamId).first();
-    return user.role === 'parent' && !!child;
+    return user.role === 'parent' && await hasVerifiedParentForTeam(c.env.DB, user, teamId);
   }
 
   if (type === 'parent') {
-    const child = await c.env.DB.prepare('SELECT id FROM players WHERE guardian_email = ? AND team_id = ? AND is_active = 1').bind(user.email, teamId).first();
-    return !!child;
+    return await hasVerifiedParentForTeam(c.env.DB, user, teamId);
   }
 
   return false;
@@ -105,7 +105,8 @@ chat.get('/', authMiddleware, async (c) => {
 // POST /yjrl/chat — send a message (requires auth)
 chat.post('/', authMiddleware, async (c) => {
   const user = c.get('user');
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => null);
+  if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
   const { room_id, message, user_avatar } = body;
 
   if (!room_id || !message) {
@@ -131,6 +132,8 @@ chat.post('/', authMiddleware, async (c) => {
     'INSERT INTO chat_messages (room_id, user_id, user_name, user_avatar, message, flagged) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(room_id, user.id, userName, user_avatar || '🦅', sanitized, flagged).run();
 
+  await writeAudit(c.env, user, 'chat_message_sent', 'chat_message', result.meta?.last_row_id || null, { roomId: room_id, flagged: !!flagged });
+
   return c.json({
     id: result.meta?.last_row_id,
     room_id, user_id: user.id, user_name: userName,
@@ -142,6 +145,33 @@ chat.post('/', authMiddleware, async (c) => {
     time: new Date().toISOString(),
     isOwn: true,
   }, 201);
+});
+
+// POST /yjrl/chat/:id/report
+chat.post('/:id/report', authMiddleware, async (c) => {
+  const user = c.get('user');
+  const messageId = c.req.param('id');
+  const body = await c.req.json().catch(() => null);
+  if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
+
+  const message = await c.env.DB.prepare('SELECT * FROM chat_messages WHERE id = ?').bind(messageId).first();
+  if (!message) return c.json({ error: 'Message not found' }, 404);
+  if (!(await canAccessRoom(c, message.room_id as string))) return c.json({ error: 'Not allowed to report this message' }, 403);
+
+  const reason = String(body.reason || '').trim();
+  if (!reason) return c.json({ error: 'Report reason is required' }, 400);
+
+  const reportId = crypto.randomUUID();
+  const severity = ['low', 'medium', 'high', 'critical'].includes(body.severity) ? body.severity : 'medium';
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO safety_reports (id, reporter_user_id, reporter_name, category, entity_type, entity_id, reason, description, severity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(reportId, user.id, `${user.firstName} ${user.lastName}`.trim(), 'chat', 'chat_message', messageId, reason, body.description || '', severity),
+    c.env.DB.prepare('UPDATE chat_messages SET flagged = 1, updated_at = datetime(\'now\') WHERE id = ?').bind(messageId),
+  ]);
+  await writeAudit(c.env, user, 'chat_message_reported', 'chat_message', messageId, { reportId, severity });
+  return c.json({ id: reportId, _id: reportId, status: 'open' }, 201);
 });
 
 // GET /yjrl/chat/rooms — list available chat rooms

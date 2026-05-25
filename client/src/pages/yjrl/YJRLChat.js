@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Smile, ThumbsUp, Heart, Star, Zap, X, MessageCircle, Users } from 'lucide-react';
+import { Send, Smile, ThumbsUp, Heart, Star, Zap, X, MessageCircle, Users, Flag } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -87,6 +87,17 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
     api.post('/yjrl/chat', { room_id: roomId, message: text, user_avatar: avatar }).then(res => {
       setMessages(prev => [...prev, res.data]);
     }).catch(err => toast.error(err.response?.data?.error || 'Failed to send message'));
+  };
+
+  const reportMessage = (msg) => {
+    const reason = window.prompt('Briefly describe the safety concern');
+    if (!reason || !reason.trim()) return;
+    api.post(`/yjrl/chat/${msg.id}/report`, {
+      reason: reason.trim(),
+      severity: 'medium',
+      description: `Reported from ${roomName}`
+    }).then(() => toast.success('Report sent to club administrators'))
+      .catch(err => toast.error(err.response?.data?.error || 'Unable to send report'));
   };
 
   // Theme-specific styles
@@ -242,6 +253,26 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
             <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.15rem', paddingLeft: msg.isOwn ? 0 : '0.5rem', paddingRight: msg.isOwn ? '0.5rem' : 0 }}>
               {formatTime(msg.time)}
             </div>
+            <button
+              type="button"
+              onClick={() => reportMessage(msg)}
+              title="Report safety concern"
+              aria-label="Report safety concern"
+              style={{
+                marginTop: '0.2rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                fontSize: '0.68rem',
+                padding: '0.15rem 0.35rem'
+              }}
+            >
+              <Flag size={11} /> Report
+            </button>
           </div>
         ))}
         <div ref={messagesEndRef} />

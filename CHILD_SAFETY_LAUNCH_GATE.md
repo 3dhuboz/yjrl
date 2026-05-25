@@ -13,18 +13,20 @@ Protecting children from grooming, predatory behaviour, bullying, harassment, an
 - Public event endpoints must show only events marked public.
 - Adults cannot post in junior player chat rooms; coaches should use parent/team-adult communication channels.
 - The legal child-safety page must state safe communication, adult role approval, media consent, and concern escalation expectations.
+- New registrations must create verified parent-child links and media consent records.
+- Child-related uploads must require media consent, safe image type verification, authorised uploader checks, and review metadata.
+- Chat messages must be reportable, and reports must be visible to authorised club administrators.
 
 ## Must Be Completed Before Paying Customers
 
-- Adult-role approval workflow for coaches, managers, volunteers, administrators, and staff, including Blue Card or Working With Children Check status, expiry, club verification, safeguarding training, approval user, approval timestamp, and suspension state.
-- Verified parent-child linking that does not rely only on matching guardian email text.
+- Admin UI and club sign-off workflow for adult-role approvals covering coaches, managers, volunteers, administrators, and staff.
 - Parent-visible or administrator-visible communication model for any child-facing chat. No unobserved one-to-one adult-to-child messaging.
-- Report, block, mute, delete, escalate, and incident-record workflows for chat, uploads, profiles, news, and events.
-- Immutable audit logging for login attempts, role changes, adult approvals, child data access, uploads, chat sends/deletes, incident reports, and admin edits.
+- Block, mute, delete, takedown, escalate, evidence-preservation, and incident-resolution workflows for chat, uploads, profiles, news, and events.
+- Comprehensive immutable audit logging for every admin edit and child-data access, building on the current auth, registration, upload, chat, report, and adult-approval audit events.
 - Consent enforcement for photos, videos, player stories, stats, team pages, news, uploads, and public sharing.
 - Data-minimised response shapes for public, player, parent, coach, and admin contexts. Medical, guardian, emergency, and coach-note data must be returned only to roles with a genuine need.
 - Upload hardening for image type verification, file size, file extension control, EXIF stripping or re-encoding, moderation, and team/player binding.
-- Rate limiting and abuse monitoring for login, registration, chat, upload, and report endpoints.
+- Durable rate limiting and abuse monitoring for login, registration, chat, upload, and report endpoints.
 - Legacy Express API must remain disabled in production unless it is separately hardened and approved.
 
 ## Operating Guidance
