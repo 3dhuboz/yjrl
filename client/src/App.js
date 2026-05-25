@@ -5,7 +5,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import InstallPrompt from './components/InstallPrompt';
 import YJRLHome from './pages/yjrl/YJRLHome';
 import YJRLFixtures from './pages/yjrl/YJRLFixtures';
+import YJRLTeams from './pages/yjrl/YJRLTeams';
 import YJRLNews from './pages/yjrl/YJRLNews';
+import YJRLEvents from './pages/yjrl/YJRLEvents';
+import YJRLLegal from './pages/yjrl/YJRLLegal';
 import YJRLRegister from './pages/yjrl/YJRLRegister';
 import YJRLPlayerPortal from './pages/yjrl/YJRLPlayerPortal';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
@@ -27,8 +30,12 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
-      navigate('/portal/player');
+      const session = await login(email, password);
+      const role = session.user?.role;
+      if (role === 'admin' || role === 'dev') navigate('/portal/admin');
+      else if (role === 'coach') navigate('/portal/coach');
+      else if (role === 'parent') navigate('/portal/parent');
+      else navigate('/portal/player');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
@@ -125,12 +132,22 @@ const Login = () => {
   );
 };
 
+const portalForRole = (role) => {
+  if (role === 'admin' || role === 'dev') return '/portal/admin';
+  if (role === 'coach') return '/portal/coach';
+  if (role === 'parent') return '/portal/parent';
+  return '/portal/player';
+};
+
 // ── Protected Route ──
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, roles = [] }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading-screen">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (adminOnly && user.role !== 'admin' && user.role !== 'dev') return <Navigate to="/portal/player" />;
+  if (roles.length && !roles.includes(user.role) && user.role !== 'admin' && user.role !== 'dev') {
+    return <Navigate to={portalForRole(user.role)} />;
+  }
   return children;
 };
 
@@ -140,17 +157,18 @@ const AppRoutes = () => (
     {/* Public */}
     <Route path="/" element={<YJRLHome />} />
     <Route path="/fixtures" element={<YJRLFixtures />} />
-    <Route path="/teams" element={<YJRLFixtures />} />
+    <Route path="/teams" element={<YJRLTeams />} />
     <Route path="/news" element={<YJRLNews />} />
     <Route path="/news/:id" element={<YJRLNews />} />
-    <Route path="/events" element={<YJRLFixtures />} />
+    <Route path="/events" element={<YJRLEvents />} />
+    <Route path="/legal/:page" element={<YJRLLegal />} />
     <Route path="/register" element={<YJRLRegister />} />
     <Route path="/login" element={<Login />} />
 
     {/* Portals */}
-    <Route path="/portal/player" element={<YJRLPlayerPortal />} />
-    <Route path="/portal/coach" element={<YJRLCoachPortal />} />
-    <Route path="/portal/parent" element={<YJRLParentPortal />} />
+    <Route path="/portal/player" element={<ProtectedRoute roles={['player']}><YJRLPlayerPortal /></ProtectedRoute>} />
+    <Route path="/portal/coach" element={<ProtectedRoute roles={['coach']}><YJRLCoachPortal /></ProtectedRoute>} />
+    <Route path="/portal/parent" element={<ProtectedRoute roles={['parent', 'player']}><YJRLParentPortal /></ProtectedRoute>} />
     <Route path="/portal/admin" element={<ProtectedRoute adminOnly><YJRLAdminPortal /></ProtectedRoute>} />
 
     {/* Legacy routes — redirect /yjrl/* to root */}

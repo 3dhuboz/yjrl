@@ -33,6 +33,7 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
   const inputRef = useRef(null);
 
   const reactions = theme === 'player' ? PLAYER_REACTIONS : theme === 'parent' ? PARENT_REACTIONS : COACH_REACTIONS;
+  const roomReady = Boolean(roomId);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,6 +56,10 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
 
   const sendMessage = () => {
     const text = input.trim();
+    if (!roomReady) {
+      toast.error('Chat will be available once your team is assigned');
+      return;
+    }
     if (!text) return;
     api.post('/yjrl/chat', { room_id: roomId, message: text, user_avatar: avatar }).then(res => {
       setMessages(prev => [...prev, res.data]);
@@ -75,6 +80,10 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
   };
 
   const sendQuickMsg = (text) => {
+    if (!roomReady) {
+      toast.error('Chat will be available once your team is assigned');
+      return;
+    }
     api.post('/yjrl/chat', { room_id: roomId, message: text, user_avatar: avatar }).then(res => {
       setMessages(prev => [...prev, res.data]);
     }).catch(() => toast.error('Failed to send message'));
@@ -139,7 +148,21 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
         display: 'flex', flexDirection: 'column', gap: '0.75rem',
         background: isPlayer ? '#fafbff' : '#ffffff'
       }}>
-        {messages.map((msg) => (
+        {!roomReady && (
+          <div style={{ margin: 'auto', textAlign: 'center', color: '#64748b', maxWidth: 320 }}>
+            <MessageCircle size={32} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+            <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Chat not ready yet</div>
+            <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>A team assignment is needed before this room can open.</div>
+          </div>
+        )}
+        {roomReady && messages.length === 0 && (
+          <div style={{ margin: 'auto', textAlign: 'center', color: '#64748b', maxWidth: 320 }}>
+            <Users size={32} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+            <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>No messages yet</div>
+            <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>Start the conversation when you are ready.</div>
+          </div>
+        )}
+        {roomReady && messages.map((msg) => (
           <div key={msg.id} style={{
             display: 'flex', flexDirection: 'column',
             alignItems: msg.isOwn ? 'flex-end' : 'flex-start',
@@ -235,6 +258,7 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
             <button
               key={i}
               onClick={() => sendQuickMsg(q.text)}
+              disabled={!roomReady}
               style={{
                 whiteSpace: 'nowrap',
                 background: '#f0f7ff', border: '1px solid #dbeafe',
@@ -300,7 +324,8 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder={isPlayer ? 'Say something to your team...' : 'Type a message...'}
+          placeholder={!roomReady ? 'Team chat opens after assignment' : isPlayer ? 'Say something to your team...' : 'Type a message...'}
+          disabled={!roomReady}
           style={{
             flex: 1, padding: '0.6rem 1rem',
             border: '1px solid #e2e8f0', borderRadius: '100px',
@@ -314,13 +339,13 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
 
         <button
           onClick={sendMessage}
-          disabled={!input.trim()}
+          disabled={!roomReady || !input.trim()}
           style={{
             width: 38, height: 38, borderRadius: '50%',
-            background: input.trim() ? '#1d4ed8' : '#e2e8f0',
-            border: 'none', cursor: input.trim() ? 'pointer' : 'default',
+            background: roomReady && input.trim() ? '#1d4ed8' : '#e2e8f0',
+            border: 'none', cursor: roomReady && input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: input.trim() ? 'white' : '#94a3b8',
+            color: roomReady && input.trim() ? 'white' : '#94a3b8',
             transition: 'all 0.15s',
             flexShrink: 0
           }}

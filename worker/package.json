@@ -3,18 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --config wrangler.toml",
+    "deploy": "wrangler deploy --config wrangler.toml",
+    "deploy:dry-run": "wrangler deploy --dry-run --config wrangler.toml",
+    "typecheck": "tsc --noEmit",
     "db:migrate": "wrangler d1 execute yjrl-db --local --file=./migrations/0001_schema.sql && wrangler d1 execute yjrl-db --local --file=./migrations/0002_seed.sql",
     "db:migrate:remote": "wrangler d1 execute yjrl-db --remote --file=./migrations/0001_schema.sql && wrangler d1 execute yjrl-db --remote --file=./migrations/0002_seed.sql"
   },
   "dependencies": {
-    "hono": "^4.6.0",
+    "hono": "^4.12.18",
     "jose": "^5.9.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241205.0",
     "typescript": "^5.7.0",
-    "wrangler": "^3.99.0"
+    "wrangler": "^4.94.0"
   }
 }

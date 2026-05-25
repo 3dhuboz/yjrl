@@ -3,7 +3,7 @@
 interface PayPalEnv {
   PAYPAL_CLIENT_ID: string;
   PAYPAL_CLIENT_SECRET: string;
-  PAYPAL_MODE: string;
+  PAYPAL_MODE?: string;
 }
 
 function baseUrl(mode: string): string {
@@ -11,7 +11,7 @@ function baseUrl(mode: string): string {
 }
 
 async function getAccessToken(env: PayPalEnv): Promise<string> {
-  const url = `${baseUrl(env.PAYPAL_MODE)}/v1/oauth2/token`;
+  const url = `${baseUrl(env.PAYPAL_MODE || 'sandbox')}/v1/oauth2/token`;
   const auth = btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`);
   const res = await fetch(url, {
     method: 'POST',
@@ -28,7 +28,7 @@ async function getAccessToken(env: PayPalEnv): Promise<string> {
 
 export async function createOrder(env: PayPalEnv, amount: number, currency: string, description: string, returnUrl: string, cancelUrl: string) {
   const token = await getAccessToken(env);
-  const url = `${baseUrl(env.PAYPAL_MODE)}/v2/checkout/orders`;
+  const url = `${baseUrl(env.PAYPAL_MODE || 'sandbox')}/v2/checkout/orders`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -60,7 +60,7 @@ export async function createOrder(env: PayPalEnv, amount: number, currency: stri
 
 export async function captureOrder(env: PayPalEnv, orderId: string) {
   const token = await getAccessToken(env);
-  const url = `${baseUrl(env.PAYPAL_MODE)}/v2/checkout/orders/${orderId}/capture`;
+  const url = `${baseUrl(env.PAYPAL_MODE || 'sandbox')}/v2/checkout/orders/${orderId}/capture`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {

@@ -18,15 +18,33 @@ import uploadRoutes from './routes/upload';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+function allowedOrigin(origin: string | undefined, env: Env): string | undefined {
+  if (!origin) return undefined;
+  let host: string;
+  try {
+    host = new URL(origin).hostname;
+  } catch {
+    return undefined;
+  }
+  const configured = (env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  const exactOrigins = new Set([
+    ...configured,
+    'https://yjrl.pages.dev',
+    'https://yeppoonjrl.com.au',
+    'https://www.yeppoonjrl.com.au',
+  ]);
+
+  if (host === 'localhost' || host === '127.0.0.1') return origin;
+  if (host.endsWith('.pages.dev')) return origin;
+  return exactOrigins.has(origin) ? origin : undefined;
+}
+
 // CORS
 app.use('*', cors({
-  origin: (origin) => {
-    if (!origin) return '*';
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) return origin;
-    if (origin.includes('.pages.dev')) return origin;
-    if (origin.includes('yepponjrl.com.au')) return origin;
-    return origin;
-  },
+  origin: (origin, c) => allowedOrigin(origin, c.env),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400,
@@ -36,6 +54,28 @@ app.use('*', cors({
 app.onError((err, c) => {
   console.error('Unhandled error:', err);
   return c.json({ error: 'Internal server error' }, 500);
+});
+
+// Auto-seed admin user before matched routes run.
+let adminSeeded = false;
+app.use('*', async (c, next) => {
+  if (!adminSeeded) {
+    adminSeeded = true;
+    try {
+      const existing = await c.env.DB.prepare('SELECT id FROM users WHERE role = ? LIMIT 1').bind('admin').first();
+      if (!existing && c.env.ADMIN_EMAIL && c.env.ADMIN_PASSWORD) {
+        const id = crypto.randomUUID();
+        const hash = await hashPassword(c.env.ADMIN_PASSWORD);
+        await c.env.DB.prepare(
+          'INSERT OR IGNORE INTO users (id, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(id, 'Admin', '', c.env.ADMIN_EMAIL.toLowerCase(), hash, 'admin').run();
+        console.log('Admin user seeded');
+      }
+    } catch (e) {
+      console.error('Admin seed error:', e);
+    }
+  }
+  await next();
 });
 
 // Health check
@@ -72,28 +112,6 @@ app.route('/api/yjrl/stats', statsRoutes);
 app.route('/api/yjrl/chat', chatRoutes);
 app.route('/api', registerRoutes);
 app.route('/api/upload', uploadRoutes);
-
-// Auto-seed admin user on first request
-let adminSeeded = false;
-app.use('*', async (c, next) => {
-  if (!adminSeeded) {
-    adminSeeded = true;
-    try {
-      const existing = await c.env.DB.prepare('SELECT id FROM users WHERE role = ? LIMIT 1').bind('admin').first();
-      if (!existing && c.env.ADMIN_EMAIL && c.env.ADMIN_PASSWORD) {
-        const id = crypto.randomUUID();
-        const hash = await hashPassword(c.env.ADMIN_PASSWORD);
-        await c.env.DB.prepare(
-          'INSERT OR IGNORE INTO users (id, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)'
-        ).bind(id, 'Admin', '', c.env.ADMIN_EMAIL.toLowerCase(), hash, 'admin').run();
-        console.log('Admin user seeded');
-      }
-    } catch (e) {
-      console.error('Admin seed error:', e);
-    }
-  }
-  await next();
-});
 
 export default {
   fetch: app.fetch,

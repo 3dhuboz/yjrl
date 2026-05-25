@@ -5,83 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-  <!-- ── Favicon ── -->
   <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/images/icon-192.png" />
-  <link rel="icon" type="image/svg+xml" href="/images/icon-192.svg" />
   <link rel="shortcut icon" href="/images/icon-192.png" />
-
-  <!-- ── PWA ── -->
   <link rel="manifest" href="/manifest.json" />
+
   <meta name="theme-color" content="#1d4ed8" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Yeppoon JRL" />
   <link rel="apple-touch-icon" href="/images/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="192x192" href="/images/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="512x512" href="/images/icon-512.png" />
 
-  <!-- ── SEO ── -->
-  <title>Yeppoon Seagulls Junior Rugby League — Where Capricorn Coast Champions Are Made</title>
+  <title>Yeppoon Seagulls Junior Rugby League - Where Capricorn Coast Champions Are Made</title>
   <meta name="description" content="Official website of Yeppoon Seagulls Junior Rugby League. Fixtures, results, player portals, team registration, news, and events for the Capricorn Coast's premier junior rugby league club." />
   <meta name="keywords" content="Yeppoon Seagulls, Junior Rugby League, JRL, QRL, Capricorn Coast, Yeppoon QLD, rugby league, junior sport, registration, fixtures, player portal, Nev Skuse Oval" />
   <meta name="author" content="Yeppoon Seagulls Junior Rugby League" />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://yjrl.pages.dev/" />
+  <link rel="canonical" href="https://yeppoonjrl.com.au/" />
 
-  <!-- ── Open Graph (Facebook, LinkedIn, etc.) ── -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Yeppoon Seagulls JRL" />
   <meta property="og:title" content="Yeppoon Seagulls Junior Rugby League" />
-  <meta property="og:description" content="Where Capricorn Coast Champions Are Made. Join the mighty Yeppoon Seagulls — fixtures, results, player portals, and registration for all age groups." />
-  <meta property="og:image" content="https://yjrl.pages.dev/images/logo.png" />
-  <meta property="og:image:width" content="645" />
-  <meta property="og:image:height" content="633" />
+  <meta property="og:description" content="Where Capricorn Coast Champions Are Made. Fixtures, results, player portals, and registration for all age groups." />
+  <meta property="og:image" content="https://yeppoonjrl.com.au/images/logo.png" />
   <meta property="og:image:alt" content="Yeppoon Seagulls JRL Logo" />
-  <meta property="og:url" content="https://yjrl.pages.dev/" />
+  <meta property="og:url" content="https://yeppoonjrl.com.au/" />
   <meta property="og:locale" content="en_AU" />
 
-  <!-- ── Twitter Card ── -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Yeppoon Seagulls Junior Rugby League" />
   <meta name="twitter:description" content="Where Capricorn Coast Champions Are Made. Fixtures, results, player portals, and registration." />
-  <meta name="twitter:image" content="https://yjrl.pages.dev/images/logo.png" />
-  <meta name="twitter:image:alt" content="Yeppoon Seagulls JRL Logo" />
+  <meta name="twitter:image" content="https://yeppoonjrl.com.au/images/logo.png" />
 
-  <!-- ── Geo / Location ── -->
   <meta name="geo.region" content="AU-QLD" />
   <meta name="geo.placename" content="Yeppoon, Queensland" />
   <meta name="geo.position" content="-23.1327;150.7441" />
   <meta name="ICBM" content="-23.1327, 150.7441" />
 
-  <!-- ── Fonts ── -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
-  <!-- ── Mobile / PWA inline styles ── -->
-  <style>
-    * { -webkit-tap-highlight-color: transparent; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-    body { overscroll-behavior-y: none; }
-    .yjrl-nav { padding-left: max(1.5rem, env(safe-area-inset-left)); padding-right: max(1.5rem, env(safe-area-inset-right)); }
-    .yjrl-footer { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
-    @media (display-mode: standalone) {
-      body { background: #f8fafb; }
-    }
-  </style>
-
-  <!-- ── Structured Data (JSON-LD) ── -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SportsOrganization",
     "name": "Yeppoon Seagulls Junior Rugby League",
     "alternateName": "Yeppoon JRL",
-    "url": "https://yjrl.pages.dev",
-    "logo": "https://yjrl.pages.dev/images/logo.png",
-    "image": "https://yjrl.pages.dev/images/hero.jpg",
+    "url": "https://yeppoonjrl.com.au",
+    "logo": "https://yeppoonjrl.com.au/images/logo.png",
+    "image": "https://yeppoonjrl.com.au/images/hero.jpg",
     "description": "Junior rugby league club serving the Capricorn Coast community in Yeppoon, Queensland. All age groups from Under 6 to Opens.",
     "sport": "Rugby League",
     "email": "yeppoonjrl@outlook.com",
@@ -112,5 +86,6 @@
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
   <div id="root"></div>
+  <script type="module" src="/src/index.jsx"></script>
 </body>
 </html>

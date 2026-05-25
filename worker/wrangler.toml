@@ -5,13 +5,15 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
-FROM_EMAIL = "noreply@yepponjrl.com.au"
+FROM_EMAIL = "noreply@yeppoonjrl.com.au"
+ALLOWED_ORIGINS = "https://yeppoonjrl.com.au,https://www.yeppoonjrl.com.au"
+UPLOADS_PUBLIC_URL = "https://uploads.yeppoonjrl.com.au"
 
 # D1 Database
 [[d1_databases]]
 binding = "DB"
 database_name = "yjrl-db"
-database_id = "placeholder-create-via-dashboard"
+database_id = "690424d2-5985-4576-9d4c-62e643ae5ed3"
 
 # R2 Storage
 [[r2_buckets]]

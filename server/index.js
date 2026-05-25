@@ -63,13 +63,17 @@ async function connectDB() {
   // Auto-seed admin user
   const User = require('./models/User');
   const bcrypt = require('bcryptjs');
-  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@yepponjrl.com.au').toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@yeppoonjrl.com.au').toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
   const existing = await User.findOne({ email: adminEmail });
   if (!existing) {
+    if (process.env.NODE_ENV === 'production' && !adminPassword) {
+      console.warn('[Admin] ADMIN_PASSWORD is not set; skipping automatic admin creation');
+      return;
+    }
     const salt = await bcrypt.genSalt(10);
-    const hashed = await bcrypt.hash(adminPassword, salt);
+    const hashed = await bcrypt.hash(adminPassword || 'admin123', salt);
     await User.collection.insertOne({
       firstName: 'Admin',
       lastName: 'YJRL',

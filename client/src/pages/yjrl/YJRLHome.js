@@ -216,7 +216,7 @@ const YJRLHome = () => {
 
           <div className="yjrl-grid-3">
             {news.map(article => (
-              <Link key={article._id} to={`/yjrl/news/${article._id}`} className="yjrl-news-card">
+              <Link key={article._id} to={`/news/${article._id}`} className="yjrl-news-card">
                 {article.image ? (
                   <img src={article.image} alt={article.title} className="yjrl-news-img" />
                 ) : (
@@ -354,15 +354,15 @@ const YJRLHome = () => {
             <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">
               Register Now <ArrowRight size={18} />
             </Link>
-            <a href="mailto:info@yepponjrl.com.au" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
+            <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
               Contact Us
             </a>
           </div>
           <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2.5rem', flexWrap: 'wrap' }}>
             {[
               ['📍', 'Nev Skuse Oval, Yeppoon QLD'],
-              ['📞', '(07) 4939 XXXX'],
-              ['✉️', 'info@yepponjrl.com.au']
+              ['📞', '0432 357 532'],
+              ['✉️', 'yeppoonjrl@outlook.com']
             ].map(([icon, text]) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.65)' }}>
                 <span>{icon}</span> {text}

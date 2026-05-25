@@ -35,8 +35,8 @@ upload.post('/', authMiddleware, async (c) => {
     httpMetadata: { contentType: file.type },
   });
 
-  // Return the R2 public URL — requires R2.dev access or custom domain
-  const url = `https://yjrl-uploads.r2.dev/${key}`;
+  const publicBase = c.env.UPLOADS_PUBLIC_URL?.replace(/\/+$/, '');
+  const url = publicBase ? `${publicBase}/${key}` : null;
   return c.json({ url, key }, 201);
 });
 

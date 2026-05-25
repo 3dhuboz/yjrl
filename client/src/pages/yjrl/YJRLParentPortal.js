@@ -66,6 +66,8 @@ const YJRLParentPortal = () => {
 
   const childUpcoming = upcoming.filter(f => f.ageGroup === child?.ageGroup);
   const onboardingDone = ONBOARDING_STEPS.filter(s => s.done).length;
+  const childTeamId = typeof child?.teamId === 'object' ? child?.teamId?._id : child?.teamId;
+  const parentRoomId = childTeamId ? `parent:${childTeamId}` : null;
 
   return (
     <YJRLLayout>
@@ -225,7 +227,7 @@ const YJRLParentPortal = () => {
                   { label: 'View Full Fixtures', to: '/fixtures', icon: Calendar },
                   { label: 'Club Events & RSVP', onClick: () => setTab('events'), icon: Heart },
                   { label: 'Register Another Child', to: '/register', icon: Users },
-                  { label: 'Contact the Club', href: 'mailto:info@yepponjrl.com.au', icon: MessageSquare },
+                  { label: 'Contact the Club', href: 'mailto:yeppoonjrl@outlook.com', icon: MessageSquare },
                 ].map((item, i) => (
                   item.to ? (
                     <Link key={i} to={item.to} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--yjrl-text)', textDecoration: 'none', transition: 'all 0.15s' }}>
@@ -382,7 +384,7 @@ const YJRLParentPortal = () => {
                   { icon: '🛡️', title: 'Child Safety', text: 'All coaches and volunteers hold current Working With Children Checks (Blue Card). Our Child Safety Policy is available at the clubhouse or via email.' },
                   { icon: '🚑', title: 'Medical & First Aid', text: 'First aid is available at all training sessions and games. Please ensure you have submitted your child\'s medical form and updated it if anything changes.' },
                   { icon: '👕', title: 'Uniform', text: 'All players are required to wear the club jersey, shorts, and socks for game day. Boots with moulded stops are recommended for juniors.' },
-                  { icon: '📱', title: 'Communication', text: 'Team communications are managed through this portal. For urgent matters, contact your coach directly or call the club on (07) 4939 XXXX.' },
+                  { icon: '📱', title: 'Communication', text: 'Team communications are managed through this portal. For urgent matters, contact your coach directly or call the club on 0432 357 532.' },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                     <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{item.icon}</span>
@@ -406,6 +408,7 @@ const YJRLParentPortal = () => {
             </div>
             <YJRLChat
               theme="parent"
+              roomId={parentRoomId}
               roomName="Parents Group"
               teamName={child?.teamId?.name || 'Yeppoon Seagulls'}
               userName={user?.firstName || 'Parent'}

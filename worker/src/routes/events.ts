@@ -4,17 +4,17 @@ import { authMiddleware, requireAdmin } from '../middleware/auth';
 
 const events = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>[]) {
+function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>[], includeRsvps = false) {
   const rsvpList = rsvps || [];
   return {
     ...e, _id: e.id,
     endDate: e.end_date, endTime: e.end_time,
     ageGroups: typeof e.age_groups === 'string' ? JSON.parse(e.age_groups as string) : e.age_groups,
     isPublic: !!e.is_public, isActive: !!e.is_active,
-    rsvps: rsvpList.map(r => ({
+    rsvps: includeRsvps ? rsvpList.map(r => ({
       userId: r.user_id, name: r.name, status: r.status,
       adults: r.adults, children: r.children, notes: r.notes,
-    })),
+    })) : undefined,
     attendingCount: rsvpList.filter(r => r.status === 'attending').length,
   };
 }

@@ -90,6 +90,8 @@ const YJRLPlayerPortal = () => {
     ? Math.round((p.attendanceRecords.filter(r => r.attended).length / p.attendanceRecords.length) * 100)
     : 100;
   const pathwayIdx = PATHWAY_LEVELS.findIndex(l => l.key === p.pathwayProgress?.level);
+  const playerTeamId = typeof p.teamId === 'object' ? p.teamId?._id : p.teamId;
+  const playerRoomId = playerTeamId ? `player:${playerTeamId}` : null;
 
   return (
     <YJRLLayout>
@@ -509,6 +511,7 @@ const YJRLPlayerPortal = () => {
             </div>
             <YJRLChat
               theme="player"
+              roomId={playerRoomId}
               roomName="Team Chat"
               teamName={p.teamId?.name || 'Yeppoon Seagulls'}
               userName={p.firstName || 'Player'}

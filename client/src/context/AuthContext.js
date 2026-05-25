@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api';
 
 const AuthContext = createContext(null);
@@ -21,17 +21,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const setSession = useCallback((token, userData) => {
+    if (token) localStorage.setItem('yjrl_token', token);
+    if (userData) setUser(userData);
+  }, []);
+
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    localStorage.setItem('yjrl_token', res.data.token);
-    setUser(res.data.user);
+    setSession(res.data.token, res.data.user);
     return res.data;
   };
 
   const register = async (data) => {
     const res = await api.post('/auth/register', data);
-    localStorage.setItem('yjrl_token', res.data.token);
-    setUser(res.data.user);
+    setSession(res.data.token, res.data.user);
     return res.data;
   };
 
@@ -41,7 +44,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, setSession }}>
       {children}
     </AuthContext.Provider>
   );

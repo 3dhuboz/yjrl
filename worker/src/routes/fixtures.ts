@@ -4,6 +4,19 @@ import { authMiddleware, requireAdmin } from '../middleware/auth';
 
 const fixtures = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+function isAdmin(c: any) {
+  const user = c.get('user');
+  return user.role === 'admin' || user.role === 'dev';
+}
+
+async function canManageFixture(c: any, fixture: Record<string, unknown>) {
+  if (isAdmin(c)) return true;
+  const user = c.get('user');
+  if (user.role !== 'coach' || !fixture.team_id) return false;
+  const team = await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND coach_id = ? AND is_active = 1').bind(fixture.team_id, user.id).first();
+  return !!team;
+}
+
 function formatFixture(f: Record<string, unknown>) {
   const isHome = !!f.is_home_game;
   const status = f.status as string;
@@ -53,6 +66,24 @@ fixtures.get('/', async (c) => {
   return c.json((result.results || []).map(formatFixture));
 });
 
+// GET /yjrl/ladder
+fixtures.get('/ladder', async (c) => {
+  const season = c.req.query('season') || new Date().getFullYear().toString();
+  const ageGroup = c.req.query('ageGroup');
+  let sql = `SELECT *, (wins * 2 + draws) AS points, (wins + losses + draws) AS played,
+             (points_for - points_against) AS points_diff
+             FROM teams WHERE is_active = 1 AND season = ?`;
+  const params: unknown[] = [season];
+  if (ageGroup) { sql += ' AND age_group = ?'; params.push(ageGroup); }
+  sql += ' ORDER BY (wins * 2 + draws) DESC, (points_for - points_against) DESC, wins DESC';
+  const result = await c.env.DB.prepare(sql).bind(...params).all();
+  return c.json((result.results || []).map(t => ({
+    ...t, _id: t.id, ageGroup: t.age_group, pointsFor: t.points_for, pointsAgainst: t.points_against,
+    pointsDiff: t.points_diff, coachName: t.coach_name,
+    colors: { primary: t.color_primary, secondary: t.color_secondary },
+  })));
+});
+
 // GET /yjrl/fixtures/:id
 fixtures.get('/:id', async (c) => {
   const f = await c.env.DB.prepare('SELECT * FROM fixtures WHERE id = ?').bind(c.req.param('id')).first();
@@ -92,6 +123,9 @@ fixtures.post('/', authMiddleware, async (c) => {
 fixtures.put('/:id', authMiddleware, async (c) => {
   const body = await c.req.json();
   const id = c.req.param('id');
+  const existing = await c.env.DB.prepare('SELECT * FROM fixtures WHERE id = ? AND is_active = 1').bind(id).first();
+  if (!existing) return c.json({ error: 'Fixture not found' }, 404);
+  if (!(await canManageFixture(c, existing))) return c.json({ error: 'Not allowed to update this fixture' }, 403);
 
   // Build dynamic update
   const fields: string[] = [];
@@ -175,24 +209,6 @@ fixtures.delete('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   await c.env.DB.prepare('UPDATE fixtures SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(c.req.param('id')).run();
   return c.json({ message: 'Fixture removed' });
-});
-
-// GET /yjrl/ladder — FIXED: real standings computation
-fixtures.get('/ladder', async (c) => {
-  const season = c.req.query('season') || new Date().getFullYear().toString();
-  const ageGroup = c.req.query('ageGroup');
-  let sql = `SELECT *, (wins * 2 + draws) AS points, (wins + losses + draws) AS played,
-             (points_for - points_against) AS points_diff
-             FROM teams WHERE is_active = 1 AND season = ?`;
-  const params: unknown[] = [season];
-  if (ageGroup) { sql += ' AND age_group = ?'; params.push(ageGroup); }
-  sql += ' ORDER BY (wins * 2 + draws) DESC, (points_for - points_against) DESC, wins DESC';
-  const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(t => ({
-    ...t, _id: t.id, ageGroup: t.age_group, pointsFor: t.points_for, pointsAgainst: t.points_against,
-    pointsDiff: t.points_diff, coachName: t.coach_name,
-    colors: { primary: t.color_primary, secondary: t.color_secondary },
-  })));
 });
 
 export default fixtures;

@@ -30,6 +30,12 @@ const YJRLLayout = ({ children }) => {
   const [portalOpen, setPortalOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const portalForRole = (role) => {
+    if (role === 'admin' || role === 'dev') return '/portal/admin';
+    if (role === 'coach') return '/portal/coach';
+    if (role === 'parent') return '/portal/parent';
+    return '/portal/player';
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -119,7 +125,7 @@ const YJRLLayout = ({ children }) => {
             {user ? (
               <>
                 <li>
-                  <Link to="/portal/player" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <Link to={portalForRole(user.role)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <User size={14} /> {user.firstName || 'My Portal'}
                   </Link>
                 </li>
@@ -179,7 +185,7 @@ const YJRLLayout = ({ children }) => {
               </Link>
             ))}
             <hr style={{ border: 'none', borderTop: '1px solid var(--yjrl-border)', margin: '0.5rem 0' }} />
-            {PORTAL_ITEMS.map(item => (
+            {PORTAL_ITEMS.filter(p => p.roles.includes('all') || (isAdmin && p.roles.includes('admin'))).map(item => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -237,7 +243,9 @@ const YJRLLayout = ({ children }) => {
           <div className="yjrl-footer-grid">
             <div className="yjrl-footer-brand">
               <Link to="/" className="yjrl-logo">
-                <div className="yjrl-logo-badge">🏉</div>
+                <div className="yjrl-logo-badge">
+                  <img src="/images/logo.png" alt="Yeppoon Seagulls JRL" />
+                </div>
                 <div className="yjrl-logo-text">
                   <strong>Yeppoon JRL</strong>
                   <span>Junior Rugby League</span>
@@ -264,9 +272,11 @@ const YJRLLayout = ({ children }) => {
             <div className="yjrl-footer-col">
               <h4>Club</h4>
               <ul>
-                {['About Us', 'History', 'Teams', 'Coaches', 'Sponsors'].map(l => (
-                  <li key={l}><a href="#">{l}</a></li>
-                ))}
+                <li><Link to="/">About Us</Link></li>
+                <li><Link to="/news">History</Link></li>
+                <li><Link to="/teams">Teams</Link></li>
+                <li><Link to="/teams">Coaches</Link></li>
+                <li><a href="mailto:yeppoonjrl@outlook.com?subject=Sponsorship%20enquiry">Sponsors</a></li>
               </ul>
             </div>
 
@@ -284,9 +294,9 @@ const YJRLLayout = ({ children }) => {
               <ul>
                 <li><Link to="/register">Join the Club</Link></li>
                 <li><Link to="/events">Events</Link></li>
-                <li><a href="#">Volunteer</a></li>
-                <li><a href="#">Sponsors</a></li>
-                <li><a href="mailto:info@yepponjrl.com.au">Contact Us</a></li>
+                <li><a href="mailto:yeppoonjrl@outlook.com?subject=Volunteer%20enquiry">Volunteer</a></li>
+                <li><a href="mailto:yeppoonjrl@outlook.com?subject=Sponsorship%20enquiry">Sponsors</a></li>
+                <li><a href="mailto:yeppoonjrl@outlook.com">Contact Us</a></li>
               </ul>
             </div>
           </div>
@@ -294,9 +304,9 @@ const YJRLLayout = ({ children }) => {
           <div className="yjrl-footer-bottom">
             <span>© {new Date().getFullYear()} Yeppoon Junior Rugby League. All rights reserved.</span>
             <div style={{ display: 'flex', gap: '1.5rem' }}>
-              <a href="#">Privacy Policy</a>
-              <a href="#">Terms of Use</a>
-              <a href="#">Child Safety</a>
+              <Link to="/legal/privacy">Privacy Policy</Link>
+              <Link to="/legal/terms">Terms of Use</Link>
+              <Link to="/legal/child-safety">Child Safety</Link>
             </div>
           </div>
         </div>

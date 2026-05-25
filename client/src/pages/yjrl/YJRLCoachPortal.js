@@ -45,7 +45,10 @@ const YJRLCoachPortal = () => {
       return api.get(`/yjrl/fixtures?teamId=${res.data.team._id}&upcoming=true&limit=5`);
     }).then(res => {
       if (res && Array.isArray(res.data)) setUpcoming(res.data);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {
+      setTeam(null);
+      setPlayers([]);
+    }).finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => {
@@ -56,7 +59,25 @@ const YJRLCoachPortal = () => {
 
   const season = new Date().getFullYear().toString();
 
+  if (loading) return <YJRLLayout><div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading your team...</span></div></YJRLLayout>;
+
+  if (!team) return (
+    <YJRLLayout>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '4rem 1.5rem', textAlign: 'center' }}>
+        <div className="yjrl-card" style={{ padding: '2rem' }}>
+          <Users size={40} style={{ color: 'var(--yjrl-gold)', marginBottom: '1rem' }} />
+          <h1 style={{ margin: '0 0 0.75rem', fontSize: '1.4rem', fontWeight: 900 }}>No Team Assigned</h1>
+          <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.6, margin: '0 0 1.5rem' }}>
+            Your coach account is active, but it is not linked to a team yet. Ask the club admin to assign your team before using the coach portal.
+          </p>
+          <Link to="/" className="yjrl-btn yjrl-btn-secondary">Back to Home</Link>
+        </div>
+      </div>
+    </YJRLLayout>
+  );
+
   const submitAttendance = async () => {
+    if (!team) return;
     const records = players.map(p => ({ playerId: p._id, attended: attendanceMap[p._id] ?? true }));
     try {
       await api.post(`/yjrl/teams/${team._id}/attendance`, { date: attendanceDate, type: attendanceType, records });
@@ -342,6 +363,7 @@ const YJRLCoachPortal = () => {
             </div>
             <YJRLChat
               theme="coach"
+              roomId="coach-all"
               roomName="Coaches Room"
               teamName="All Yeppoon JRL Coaches"
               userName={user?.firstName || 'Coach'}

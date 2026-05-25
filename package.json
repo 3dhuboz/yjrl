@@ -10,12 +10,14 @@
     "client": "cd client && npm start",
     "worker:dev": "cd worker && npm run dev",
     "worker:deploy": "cd worker && npm run deploy",
+    "worker:deploy:dry-run": "cd worker && npm run deploy:dry-run",
     "worker:db:migrate": "cd worker && npm run db:migrate",
     "worker:db:migrate:remote": "cd worker && npm run db:migrate:remote",
     "build": "cd client && npm run build",
+    "typecheck": "cd worker && npm run typecheck",
     "start": "cd server && npm start",
-    "install:all": "npm install && cd client && npm install && cd ../worker && npm install",
-    "postinstall": "cd client && npm install && cd ../worker && npm install"
+    "install:all": "npm install --ignore-scripts && npm --prefix client install && npm --prefix worker install",
+    "postinstall": "npm --prefix client install && npm --prefix worker install"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

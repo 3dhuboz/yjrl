@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronRight, ArrowLeft, User, Users, MapPin, Calendar } from 'lucide-react';
 import YJRLLayout from './YJRLLayout';
 import api from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './yjrl.css';
 
@@ -19,17 +20,21 @@ const STEPS = [
 const EARLY_BIRD_DISCOUNT = 20;
 
 const YJRLRegister = () => {
+  const { setSession } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     firstName: '', lastName: '', dateOfBirth: '', ageGroup: '', position: 'Not Sure Yet',
     guardianName: '', guardianPhone: '', guardianEmail: '',
+    password: '', confirmPassword: '',
     emergencyName: '', emergencyPhone: '', emergencyRelationship: '',
     medicalNotes: '', agreeToTerms: false, agreeToPhotoPolicy: false
   });
   const [submitted, setSubmitted] = useState(false);
+  const [successDetails, setSuccessDetails] = useState(null);
   const [fees, setFees] = useState({});
   const [earlyBirdActive, setEarlyBirdActive] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('paypal');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('offline');
+  const [paypalAvailable, setPaypalAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Load registration fees from API
@@ -37,6 +42,9 @@ const YJRLRegister = () => {
     api.get('/registration-fees').then(res => {
       setFees(res.data.fees);
       setEarlyBirdActive(res.data.earlyBirdActive);
+      const paypalEnabled = !!res.data.paymentOptions?.paypal;
+      setPaypalAvailable(paypalEnabled);
+      setSelectedPaymentMethod(paypalEnabled ? 'paypal' : 'offline');
     }).catch(() => {});
   }, []);
 
@@ -44,15 +52,17 @@ const YJRLRegister = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const regId = params.get('reg');
+    const state = params.get('state');
     const success = params.get('success');
     if (success === 'true' && regId) {
-      api.post(`/register-player/${regId}/capture`).then(res => {
-        if (res.data.token) localStorage.setItem('yjrl_token', res.data.token);
+      api.post(`/register-player/${regId}/capture`, { state }).then(res => {
+        if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
+        setSuccessDetails({ user: res.data.user });
         setStep(5); // success
         toast.success('Payment confirmed! Welcome to the Seagulls!');
       }).catch(() => toast.error('Payment capture failed. Please contact the club.'));
     }
-  }, []);
+  }, [setSession]);
 
   const isEarlyBird = earlyBirdActive;
   const fee = form.ageGroup ? fees[form.ageGroup] || 140 : null;
@@ -67,6 +77,9 @@ const YJRLRegister = () => {
     if (step === 2 && (!form.guardianName || !form.guardianPhone || !form.guardianEmail)) {
       toast.error('Please complete all guardian details'); return;
     }
+    if (step === 2 && (form.password.length < 8 || form.password !== form.confirmPassword)) {
+      toast.error('Please enter a matching password of at least 8 characters'); return;
+    }
     if (step === 3 && (!form.emergencyName || !form.emergencyPhone)) {
       toast.error('Please provide emergency contact details'); return;
     }
@@ -80,15 +93,19 @@ const YJRLRegister = () => {
       const res = await api.post('/register-player', {
         firstName: form.firstName,
         lastName: form.lastName,
+        email: form.guardianEmail,
+        password: form.password,
         dateOfBirth: form.dateOfBirth,
         ageGroup: form.ageGroup,
         position: form.position,
         guardianName: form.guardianName,
         guardianPhone: form.guardianPhone,
         guardianEmail: form.guardianEmail,
-        emergencyName: form.emergencyName,
-        emergencyPhone: form.emergencyPhone,
-        emergencyRelationship: form.emergencyRelationship,
+        emergencyContact: {
+          name: form.emergencyName,
+          phone: form.emergencyPhone,
+          relationship: form.emergencyRelationship
+        },
         medicalNotes: form.medicalNotes,
         agreeToTerms: form.agreeToTerms,
         agreeToPhotoPolicy: form.agreeToPhotoPolicy,
@@ -99,7 +116,8 @@ const YJRLRegister = () => {
         window.location.href = res.data.approvalUrl;
       } else {
         // Offline payment - show success
-        if (res.data.token) localStorage.setItem('yjrl_token', res.data.token);
+        if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
+        setSuccessDetails({ user: res.data.user });
         setStep(5); // success step
         toast.success('Registration submitted!');
       }
@@ -121,8 +139,9 @@ const YJRLRegister = () => {
           Registration Submitted!
         </h1>
         <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
-          Welcome to the Yeppoon Seagulls, <strong style={{ color: 'var(--yjrl-text)' }}>{form.firstName}</strong>!
-          Your registration has been received and a confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{form.guardianEmail}</strong>.
+          Welcome to the Yeppoon Seagulls{(form.firstName || successDetails?.user?.firstName) ? ', ' : ''}
+          <strong style={{ color: 'var(--yjrl-text)' }}>{form.firstName || successDetails?.user?.firstName || ''}</strong>!
+          Your registration has been received and a confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{form.guardianEmail || successDetails?.user?.email || 'your registered email'}</strong>.
         </p>
         <div style={{ background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left' }}>
           <h3 style={{ color: 'var(--yjrl-gold)', fontWeight: 800, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Next Steps</h3>
@@ -262,6 +281,14 @@ const YJRLRegister = () => {
                   <label className="yjrl-label">Email Address <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
                   <input type="email" className="yjrl-input" value={form.guardianEmail} onChange={e => update('guardianEmail', e.target.value)} placeholder="your@email.com" />
                 </div>
+                <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
+                  <label className="yjrl-label">Account Password <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
+                  <input type="password" className="yjrl-input" value={form.password} onChange={e => update('password', e.target.value)} placeholder="At least 8 characters" autoComplete="new-password" />
+                </div>
+                <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
+                  <label className="yjrl-label">Confirm Password <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
+                  <input type="password" className="yjrl-input" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} placeholder="Re-enter password" autoComplete="new-password" />
+                </div>
                 <div style={{ gridColumn: 'span 2', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: '8px', padding: '0.875rem 1rem', fontSize: '0.85rem', color: 'var(--yjrl-muted)', lineHeight: 1.6 }}>
                   <strong style={{ color: '#60a5fa' }}>Privacy Notice:</strong> Your personal information is collected solely for club registration, communication, and compliance purposes. We do not share your information with third parties without your consent.
                 </div>
@@ -335,18 +362,20 @@ const YJRLRegister = () => {
                 <div style={{ marginBottom: '1.5rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--yjrl-gold)', marginBottom: '0.75rem' }}>Payment Method</div>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <label style={{
-                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
-                      padding: '1rem', borderRadius: '10px',
-                      border: selectedPaymentMethod === 'paypal' ? '2px solid var(--yjrl-gold)' : '1px solid var(--yjrl-border)',
-                      background: selectedPaymentMethod === 'paypal' ? 'rgba(240,165,0,0.06)' : 'transparent'
-                    }}>
-                      <input type="radio" name="paymentMethod" value="paypal" checked={selectedPaymentMethod === 'paypal'} onChange={() => setSelectedPaymentMethod('paypal')} />
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>PayPal</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>Pay securely online now</div>
-                      </div>
-                    </label>
+                    {paypalAvailable && (
+                      <label style={{
+                        flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
+                        padding: '1rem', borderRadius: '10px',
+                        border: selectedPaymentMethod === 'paypal' ? '2px solid var(--yjrl-gold)' : '1px solid var(--yjrl-border)',
+                        background: selectedPaymentMethod === 'paypal' ? 'rgba(240,165,0,0.06)' : 'transparent'
+                      }}>
+                        <input type="radio" name="paymentMethod" value="paypal" checked={selectedPaymentMethod === 'paypal'} onChange={() => setSelectedPaymentMethod('paypal')} />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>PayPal</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>Pay securely online now</div>
+                        </div>
+                      </label>
+                    )}
                     <label style={{
                       flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
                       padding: '1rem', borderRadius: '10px',
@@ -365,7 +394,9 @@ const YJRLRegister = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--yjrl-muted)', lineHeight: 1.5 }}>
                     <input type="checkbox" style={{ marginTop: '0.15rem', flexShrink: 0 }} checked={form.agreeToTerms} onChange={e => update('agreeToTerms', e.target.checked)} />
-                    I agree to the Yeppoon Junior Rugby League Terms and Conditions, including the Code of Conduct for Players, Parents, and Spectators. <span style={{ color: 'var(--yjrl-red)' }}>*</span>
+                    <span>
+                      I agree to the Yeppoon Junior Rugby League <Link to="/legal/terms" style={{ color: 'var(--yjrl-blue)', fontWeight: 700 }}>Terms of Use</Link>, including the Code of Conduct for Players, Parents, and Spectators. <span style={{ color: 'var(--yjrl-red)' }}>*</span>
+                    </span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--yjrl-muted)', lineHeight: 1.5 }}>
                     <input type="checkbox" style={{ marginTop: '0.15rem', flexShrink: 0 }} checked={form.agreeToPhotoPolicy} onChange={e => update('agreeToPhotoPolicy', e.target.checked)} />
@@ -401,7 +432,7 @@ const YJRLRegister = () => {
             <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.25rem', color: '#60a5fa' }}>Already registered via PlayHQ?</div>
             <div style={{ fontSize: '0.825rem', color: 'var(--yjrl-muted)' }}>If you've already completed your registration through PlayHQ, you don't need to fill this form. Contact the club to get your player portal activated.</div>
           </div>
-          <a href="mailto:info@yepponjrl.com.au" className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm">Contact Club</a>
+          <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm">Contact Club</a>
         </div>
       </div>
     </YJRLLayout>
