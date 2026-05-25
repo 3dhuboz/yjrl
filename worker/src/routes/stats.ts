@@ -3,6 +3,10 @@ import type { Env, Variables } from '../types';
 
 const stats = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+function safeJuniorLabel(ageGroup: unknown) {
+  return `${ageGroup || 'Junior'} Player`;
+}
+
 // GET /yjrl/stats/overview
 stats.get('/overview', async (c) => {
   const season = c.req.query('season') || new Date().getFullYear().toString();
@@ -15,7 +19,7 @@ stats.get('/overview', async (c) => {
 
   // Top try scorers
   const topScorers = await c.env.DB.prepare(
-    `SELECT ps.tries, ps.season, p.id, p.first_name, p.last_name, p.age_group, p.photo, p.team_id,
+    `SELECT ps.tries, ps.season, p.id, p.age_group, p.team_id,
             t.name AS team_name, t.age_group AS team_age_group
      FROM player_stats ps
      JOIN players p ON ps.player_id = p.id
@@ -30,8 +34,9 @@ stats.get('/overview', async (c) => {
     fixtureCount: (fixtureCount as Record<string, unknown>)?.cnt || 0,
     upcomingCount: (upcomingCount as Record<string, unknown>)?.cnt || 0,
     topScorers: (topScorers.results || []).map(s => ({
-      _id: s.id, firstName: s.first_name, lastName: s.last_name,
-      ageGroup: s.age_group, photo: s.photo, tries: s.tries,
+      _id: s.id, firstName: safeJuniorLabel(s.age_group), lastName: '',
+      displayName: safeJuniorLabel(s.age_group),
+      ageGroup: s.age_group, photo: '', tries: s.tries,
       teamId: s.team_id ? { _id: s.team_id, name: s.team_name, ageGroup: s.team_age_group } : null,
     })),
   });
@@ -45,7 +50,7 @@ stats.get('/leaderboard', async (c) => {
   const validStats = ['tries', 'goals', 'tackles', 'run_metres', 'games_played'];
   const statCol = validStats.includes(stat) ? stat : stat === 'runMetres' ? 'run_metres' : stat === 'gamesPlayed' ? 'games_played' : 'tries';
 
-  let sql = `SELECT ps.*, p.id AS pid, p.first_name, p.last_name, p.age_group, p.photo, p.jersey_number, p.team_id,
+  let sql = `SELECT ps.*, p.id AS pid, p.age_group, p.team_id,
              t.name AS team_name
              FROM player_stats ps
              JOIN players p ON ps.player_id = p.id
@@ -57,8 +62,9 @@ stats.get('/leaderboard', async (c) => {
 
   const result = await c.env.DB.prepare(sql).bind(...params).all();
   return c.json((result.results || []).map(r => ({
-    _id: r.pid, firstName: r.first_name, lastName: r.last_name,
-    ageGroup: r.age_group, photo: r.photo, jerseyNumber: r.jersey_number,
+    _id: r.pid, firstName: safeJuniorLabel(r.age_group), lastName: '',
+    displayName: safeJuniorLabel(r.age_group),
+    ageGroup: r.age_group, photo: '', jerseyNumber: null,
     value: r[statCol], teamId: r.team_id ? { _id: r.team_id, name: r.team_name } : null,
   })));
 });

@@ -88,15 +88,11 @@ fixtures.get('/ladder', async (c) => {
 fixtures.get('/:id', async (c) => {
   const f = await c.env.DB.prepare('SELECT * FROM fixtures WHERE id = ?').bind(c.req.param('id')).first();
   if (!f) return c.json({ error: 'Fixture not found' }, 404);
-  const statsR = await c.env.DB.prepare('SELECT * FROM fixture_player_stats WHERE fixture_id = ?').bind(f.id).all();
   const formatted = formatFixture(f);
   return c.json({
     ...formatted,
-    playerStats: (statsR.results || []).map(s => ({
-      player: s.player_id, playerName: s.player_name,
-      tries: s.tries, goals: s.goals, fieldGoals: s.field_goals,
-      tackles: s.tackles, runMetres: s.run_metres, played: !!s.played,
-    })),
+    playerStats: [],
+    playerStatsHidden: true,
   });
 });
 
@@ -155,7 +151,7 @@ fixtures.put('/:id', authMiddleware, async (c) => {
   if (!fixture) return c.json({ error: 'Fixture not found' }, 404);
 
   // If completing a fixture, update team record and player stats
-  if (body.status === 'completed' && fixture.team_id) {
+  if (body.status === 'completed' && fixture.team_id && existing.status !== 'completed') {
     const isHome = !!fixture.is_home_game;
     const homeScore = (body.homeScore ?? body.home_score ?? fixture.home_score ?? 0) as number;
     const awayScore = (body.awayScore ?? body.away_score ?? fixture.away_score ?? 0) as number;
@@ -181,6 +177,10 @@ fixtures.put('/:id', authMiddleware, async (c) => {
     for (const stat of playerStats) {
       const playerId = stat.player || stat.playerId || stat.player_id;
       if (!playerId) continue;
+      const teamPlayer = await c.env.DB.prepare(
+        'SELECT id FROM players WHERE id = ? AND team_id = ? AND is_active = 1'
+      ).bind(playerId, fixture.team_id).first();
+      if (!teamPlayer) continue;
 
       // Save fixture player stats
       await c.env.DB.prepare(

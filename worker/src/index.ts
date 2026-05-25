@@ -38,7 +38,7 @@ function allowedOrigin(origin: string | undefined, env: Env): string | undefined
   ]);
 
   if (host === 'localhost' || host === '127.0.0.1') return origin;
-  if (host.endsWith('.pages.dev')) return origin;
+  if (host === 'yjrl.pages.dev' || host.endsWith('.yjrl.pages.dev')) return origin;
   return exactOrigins.has(origin) ? origin : undefined;
 }
 

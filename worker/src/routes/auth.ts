@@ -17,11 +17,24 @@ async function makeToken(userId: string, secret: string): Promise<string> {
 
 // POST /auth/register
 auth.post('/register', async (c) => {
-  const body = await c.req.json();
+  let body: Record<string, any>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
   const { firstName, lastName, email, password, role, phone } = body;
 
   if (!firstName || !email || !password) {
     return c.json({ error: 'First name, email, and password are required' }, 400);
+  }
+  if (typeof password !== 'string' || password.length < 8) {
+    return c.json({ error: 'Password must be at least 8 characters' }, 400);
+  }
+
+  const requestedRole = typeof role === 'string' ? role.toLowerCase().trim() : 'player';
+  if (['coach', 'admin', 'dev'].includes(requestedRole)) {
+    return c.json({ error: 'Adult and staff roles must be created by a verified club administrator' }, 403);
   }
 
   const emailNorm = email.toLowerCase().trim();
@@ -30,7 +43,7 @@ auth.post('/register', async (c) => {
 
   const id = crypto.randomUUID();
   const passwordHash = await hashPassword(password);
-  const validRole = ['player', 'parent', 'coach'].includes(role) ? role : 'player';
+  const validRole = requestedRole === 'parent' ? 'parent' : 'player';
 
   await c.env.DB.prepare(
     'INSERT INTO users (id, first_name, last_name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -45,7 +58,12 @@ auth.post('/register', async (c) => {
 
 // POST /auth/login
 auth.post('/login', async (c) => {
-  const body = await c.req.json();
+  let body: Record<string, any>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
   const { email, password } = body;
   if (!email || !password) return c.json({ error: 'Email and password required' }, 400);
 

@@ -46,10 +46,10 @@ teams.get('/:id', async (c) => {
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(c.req.param('id')).first();
   if (!team) return c.json({ error: 'Team not found' }, 404);
   const players = await c.env.DB.prepare(
-    'SELECT id, first_name, last_name, jersey_number, position, photo FROM players WHERE team_id = ? AND is_active = 1'
+    'SELECT COUNT(*) AS cnt FROM players WHERE team_id = ? AND is_active = 1'
   ).bind(team.id).all();
   const t = addVirtuals(team);
-  return c.json({ ...t, players: (players.results || []).map(p => ({ ...p, _id: p.id, firstName: p.first_name, lastName: p.last_name, jerseyNumber: p.jersey_number })) });
+  return c.json({ ...t, playerCount: players.results?.[0]?.cnt || 0, players: [] });
 });
 
 // POST /yjrl/teams

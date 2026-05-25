@@ -83,7 +83,12 @@ register.get('/registration-fees', async (c) => {
 
 // POST /api/register-player — create user, player, registration, and PayPal order
 register.post('/register-player', async (c) => {
-  const body = await c.req.json();
+  let body: Record<string, any>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
   const { firstName, lastName, email, password, dateOfBirth, ageGroup, position,
     guardianName, guardianPhone, guardianEmail, emergencyContact, emergencyName, emergencyPhone, emergencyRelationship, medicalNotes,
     paymentMethod } = body;

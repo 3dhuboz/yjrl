@@ -14,6 +14,13 @@ router.post('/register', async (req, res) => {
     if (!firstName || !email || !password) {
       return res.status(400).json({ error: 'First name, email, and password are required' });
     }
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    const requestedRole = typeof role === 'string' ? role.toLowerCase().trim() : 'player';
+    if (['coach', 'admin', 'dev'].includes(requestedRole)) {
+      return res.status(403).json({ error: 'Adult and staff roles must be created by a verified club administrator' });
+    }
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
 
@@ -22,7 +29,7 @@ router.post('/register', async (req, res) => {
       lastName: lastName || '',
       email: email.toLowerCase().trim(),
       password,
-      role: ['player', 'parent', 'coach'].includes(role) ? role : 'player'
+      role: requestedRole === 'parent' ? 'parent' : 'player'
     });
     await user.save();
 

@@ -66,7 +66,7 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
       setInput('');
       setShowEmoji(false);
       inputRef.current?.focus();
-    }).catch(() => toast.error('Failed to send message'));
+    }).catch(err => toast.error(err.response?.data?.error || 'Failed to send message'));
   };
 
   const addReaction = (msgId, emoji) => {
@@ -86,7 +86,7 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
     }
     api.post('/yjrl/chat', { room_id: roomId, message: text, user_avatar: avatar }).then(res => {
       setMessages(prev => [...prev, res.data]);
-    }).catch(() => toast.error('Failed to send message'));
+    }).catch(err => toast.error(err.response?.data?.error || 'Failed to send message'));
   };
 
   // Theme-specific styles

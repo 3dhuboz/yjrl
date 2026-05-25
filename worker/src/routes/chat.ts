@@ -53,12 +53,14 @@ async function canAccessRoom(c: any, roomId: string): Promise<boolean> {
 
   if (user.role === 'coach') {
     const team = await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND coach_id = ? AND is_active = 1').bind(teamId, user.id).first();
-    return !!team;
+    return type === 'parent' && !!team;
   }
 
   if (type === 'player') {
     const player = await c.env.DB.prepare('SELECT id FROM players WHERE user_id = ? AND team_id = ? AND is_active = 1').bind(user.id, teamId).first();
-    return !!player;
+    if (player) return true;
+    const child = await c.env.DB.prepare('SELECT id FROM players WHERE guardian_email = ? AND team_id = ? AND is_active = 1').bind(user.email, teamId).first();
+    return user.role === 'parent' && !!child;
   }
 
   if (type === 'parent') {
@@ -66,6 +68,17 @@ async function canAccessRoom(c: any, roomId: string): Promise<boolean> {
     return !!child;
   }
 
+  return false;
+}
+
+async function canPostRoom(c: any, roomId: string): Promise<boolean> {
+  if (!(await canAccessRoom(c, roomId))) return false;
+  const user = c.get('user');
+  if (roomId === 'coach-all') return user.role === 'coach' || user.role === 'admin' || user.role === 'dev';
+
+  const [type] = roomId.split(':');
+  if (type === 'player') return user.role === 'player';
+  if (type === 'parent') return ['parent', 'coach', 'admin', 'dev'].includes(user.role);
   return false;
 }
 
@@ -98,7 +111,9 @@ chat.post('/', authMiddleware, async (c) => {
   if (!room_id || !message) {
     return c.json({ error: 'room_id and message required' }, 400);
   }
-  if (!(await canAccessRoom(c, room_id))) return c.json({ error: 'Not allowed to post in this chat room' }, 403);
+  if (!(await canPostRoom(c, room_id))) {
+    return c.json({ error: 'Adults cannot post in junior player rooms. Use parent/team channels for club communication.' }, 403);
+  }
   if (message.length > MAX_MESSAGE_LENGTH) {
     return c.json({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} chars)` }, 400);
   }

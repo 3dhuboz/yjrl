@@ -21,7 +21,7 @@ function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>
 
 // GET /yjrl/events
 events.get('/', async (c) => {
-  let sql = 'SELECT * FROM events WHERE is_active = 1';
+  let sql = 'SELECT * FROM events WHERE is_active = 1 AND is_public = 1';
   const params: unknown[] = [];
   if (c.req.query('upcoming') === 'true') {
     sql += ' AND date >= ?'; params.push(new Date().toISOString().split('T')[0]);
@@ -42,7 +42,7 @@ events.get('/', async (c) => {
 
 // GET /yjrl/events/:id
 events.get('/:id', async (c) => {
-  const e = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(c.req.param('id')).first();
+  const e = await c.env.DB.prepare('SELECT * FROM events WHERE id = ? AND is_public = 1').bind(c.req.param('id')).first();
   if (!e) return c.json({ error: 'Event not found' }, 404);
   const rsvps = await c.env.DB.prepare('SELECT * FROM event_rsvps WHERE event_id = ?').bind(e.id).all();
   return c.json(formatEvent(e, rsvps.results || []));

@@ -32,10 +32,11 @@ const PAGES = {
     title: 'Child Safety',
     intro: 'Safeguarding expectations for players, families, coaches, volunteers, and administrators.',
     sections: [
-      ['Safe communication', 'Player and parent chat areas are access controlled. Junior player communication is time limited and moderated for inappropriate language.'],
-      ['Medical and emergency details', 'Medical and emergency contact information is collected so coaches and first aiders can respond appropriately during club activities.'],
-      ['Photography', 'Parents and guardians can choose whether to consent to club photography and filming during registration.'],
-      ['Concerns', 'Any safety, welfare, or conduct concern should be raised promptly with a coach, team manager, registrar, or club executive.']
+      ['Adult role approval', 'Coach, manager, volunteer, administrator, and other adult roles must be created or approved by authorised club administrators after appropriate child-safety checks and club onboarding.'],
+      ['Safe communication', 'Adults must not use private or one-to-one channels to communicate with junior players. Club communication should stay in approved team, parent, or administrator-visible channels and remain directly related to rugby league activities.'],
+      ['Child information', 'Junior player names, photos, stats, medical details, guardian contacts, and private event locations must be limited to people who need them for club operations and child safety.'],
+      ['Photography', 'Parents and guardians can choose whether to consent to club photography and filming during registration. A lack of consent means the player should not be identified or featured in public club media.'],
+      ['Concerns', 'Any safety, welfare, grooming, boundary, bullying, or conduct concern should be raised promptly with a club official. If a child is in immediate danger, call 000.']
     ]
   }
 };

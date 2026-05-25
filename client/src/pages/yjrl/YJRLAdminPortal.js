@@ -541,9 +541,9 @@ const YJRLAdminPortal = () => {
 
             <div className="yjrl-grid-3">
               {[
-                ['Authenticated rooms', 'Admin, coach, parent, and player access is checked before messages load.'],
+                ['Adult boundaries', 'Coaches use parent/team-adult rooms and cannot post in junior player rooms.'],
                 ['Player hours', 'Player rooms accept messages from 7am to 8pm AEST.'],
-                ['Message filtering', 'Blocked language is masked before messages are stored.']
+                ['Launch gate', 'Reporting, blocking, flagged queues, and immutable audit logs are still required before customer launch.']
               ].map(([title, detail]) => (
                 <div key={title} className="yjrl-card" style={{ padding: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>

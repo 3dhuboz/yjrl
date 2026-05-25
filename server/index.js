@@ -6,6 +6,10 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
+if (process.env.NODE_ENV === 'production' && process.env.ENABLE_LEGACY_API !== 'true') {
+  throw new Error('Legacy Express API is disabled in production. Deploy the Cloudflare Worker API instead.');
+}
+
 const app = express();
 
 // Trust proxy

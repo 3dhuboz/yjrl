@@ -1,5 +1,5 @@
-# Don't serve SPA for API routes — let them 404 properly
-/api/*  /api/:splat  404
+# Redirect API calls so stale bundles and direct /api requests do not receive the SPA.
+/api/*  https://yjrl-api.steve-700.workers.dev/api/:splat  307
 
-# SPA fallback — serve index.html for all other routes
+# SPA fallback: serve index.html for all other routes.
 /*  /index.html  200
