@@ -36,12 +36,14 @@ The production Worker and Pages deployment are live, and several critical issues
 - Admins can assign players to teams, and parents now receive team training/venue/coach details for linked children.
 - Child-related uploads no longer return public URLs while pending review; approved review issues the URL and rejected review removes the R2 object.
 - Player photo fields now require an approved reviewed upload for that player.
+- Approved media now streams through the Worker at `/api/media?key=...`, so child media no longer depends on the broken `uploads.yeppoonjrl.com.au` hostname.
+- A child-safety incident playbook was added in `CHILD_SAFETY_INCIDENT_PLAYBOOK.md` for report triage, evidence handling, adult suspension/revocation, and club launch sign-off.
 
 ## Verified Live
 
 - Worker deployed at `https://yjrl-api.steve-700.workers.dev`.
 - Latest Worker version verified in deploy output: `fa5d8f76-5958-4c6d-943e-939cfc9995e9`.
-- Latest Worker version verified after admin-safeguarding controls: `6fc1e60b-52c4-47ae-addc-285dd72804fc`.
+- Latest Worker version verified after admin-safeguarding controls: `26cf1cd3-e892-493e-a960-83a7a1fba625`.
 - Pages deployed at `https://yjrl.pages.dev`.
 - Latest Pages preview deployed after admin-safeguarding controls: `https://db6ec473.yjrl.pages.dev`.
 - `https://yjrl.pages.dev/api/registration-fees` now returns a 307 redirect to the Worker and resolves to JSON with `curl -L`.
@@ -53,18 +55,18 @@ The production Worker and Pages deployment are live, and several critical issues
 - Worker typecheck passes.
 - Client and Worker production dependency audits report zero vulnerabilities.
 - Live smoke test confirmed registration creates parent-child link, consent row, safety report, and audit records; temporary smoke records were cleaned from production D1.
-- Live smoke test confirmed adult invite creation, temporary-password return, expired approval rejection, unapproved coach assignment rejection, approved coach assignment, player team assignment, parent team details, pending upload URL/key withholding, unapproved photo rejection, rejected upload R2 removal, safety report close workflow, non-admin chat-room listing denial, and adult approval revocation; temporary smoke records were cleaned from production D1/R2.
+- Live smoke test confirmed adult invite creation, temporary-password return, expired approval rejection, unapproved coach assignment rejection, approved coach assignment, player team assignment, parent team details, pending upload URL/key withholding, unapproved photo rejection, reviewed Worker media serving, rejected upload R2 removal, safety report close workflow, non-admin chat-room listing denial, and adult approval revocation; temporary smoke records were cleaned from production D1/R2.
 
 ## Blocking Before Customer Launch
 
-- Add formal club incident playbooks for block, mute, takedown, evidence-preservation, escalation, and incident-resolution decisions.
+- Club committee must review, adapt, and sign off `CHILD_SAFETY_INCIDENT_PLAYBOOK.md`, including named reviewers and external reporting owners.
 - Make audit logging comprehensive across every admin mutation; current logging covers the highest-risk new flows but not every route.
 - Enforce media consent across news/story publishing and any future public player features; upload consent is enforced, public stats remain anonymised.
 - Continue splitting player response data into public, player, parent, coach, and admin DTOs so each role receives only what it needs.
 - Add image re-encoding or EXIF stripping; current upload hardening verifies signatures, extensions, size, consent, ownership, and review metadata.
 - Replace isolate-local rate limits with durable/risk-scored limits if abuse traffic appears.
 - Fix production domain routing: `yeppoonjrl.com.au` and `www.yeppoonjrl.com.au` are still served by an nginx host, not the Pages app.
-- Configure `uploads.yeppoonjrl.com.au` or change upload URLs to a working public asset host.
+- Optional: configure `uploads.yeppoonjrl.com.au` later for branded media URLs. The launch path now uses Worker-reviewed media URLs instead.
 - Add real club data: teams, fixtures, events, news, sponsors, and registration operating copy are currently empty or placeholder-light.
 - Configure and verify Resend before relying on email confirmations.
 - Configure and verify PayPal before claiming online payments are available; live registration is offline-payment only at audit time.

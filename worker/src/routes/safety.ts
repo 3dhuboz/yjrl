@@ -57,6 +57,11 @@ function randomTemporaryPassword() {
   return `YJRL-${[...bytes].map(byte => byte.toString(36).padStart(2, '0')).join('').slice(0, 18)}!`;
 }
 
+function reviewedMediaUrl(requestUrl: string, key: string) {
+  const url = new URL(requestUrl);
+  return `${url.origin}/api/media?key=${encodeURIComponent(key)}`;
+}
+
 // POST /yjrl/safety/reports
 safety.post('/reports', authMiddleware, async (c) => {
   const user = c.get('user');
@@ -189,8 +194,7 @@ safety.put('/uploads/review', authMiddleware, async (c) => {
   const existing = await c.env.DB.prepare('SELECT * FROM upload_records WHERE key = ?').bind(key).first();
   if (!existing) return c.json({ error: 'Upload record not found' }, 404);
 
-  const publicBase = c.env.UPLOADS_PUBLIC_URL?.replace(/\/+$/, '');
-  const approvedUrl = status === 'approved' && publicBase ? `${publicBase}/${key}` : null;
+  const approvedUrl = status === 'approved' ? reviewedMediaUrl(c.req.url, key) : null;
   if (status === 'rejected') {
     await c.env.UPLOADS.delete(key);
   }

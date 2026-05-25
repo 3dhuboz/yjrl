@@ -110,6 +110,28 @@ app.use('*', async (c, next) => {
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Public media is served only after the upload review gate approves it.
+app.get('/api/media', async (c) => {
+  const key = c.req.query('key');
+  if (!key) return c.json({ error: 'Media key required' }, 400);
+
+  const record = await c.env.DB.prepare(
+    'SELECT key, status, mime_type, byte_size FROM upload_records WHERE key = ? AND status = ?'
+  ).bind(key, 'approved').first();
+  if (!record) return c.json({ error: 'Media not found' }, 404);
+
+  const object = await c.env.UPLOADS.get(key);
+  if (!object) return c.json({ error: 'Media not found' }, 404);
+
+  const headers = new Headers();
+  headers.set('Content-Type', (record.mime_type as string) || object.httpMetadata?.contentType || 'application/octet-stream');
+  headers.set('Cache-Control', 'public, max-age=3600');
+  headers.set('Content-Disposition', 'inline');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  if (record.byte_size) headers.set('Content-Length', String(record.byte_size));
+  return new Response(object.body, { headers });
+});
+
 // Abuse-sensitive route limits. These are isolate-local guardrails; durable blocking can be added later.
 app.use('/api/auth/login', rateLimit('auth-login', 10, 15 * 60));
 app.use('/api/auth/register', rateLimit('auth-register', 5, 60 * 60));

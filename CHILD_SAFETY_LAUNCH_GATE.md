@@ -19,13 +19,15 @@ Protecting children from grooming, predatory behaviour, bullying, harassment, an
 - Adult role requests must be created or reviewed by club administrators and require verified Blue Card/WWCC details, future expiry, identity check, and safeguarding training before access is granted.
 - Approved coaches must be assigned to teams only through server-enforced adult approval checks.
 - Pending child-related uploads must not expose public URLs; rejected uploads must be removed from public storage.
+- Approved child media must be served through the Worker review endpoint or another gate that checks the upload is still approved before streaming it.
 - Player photo fields must reference approved reviewed media for that player.
 - Admins must be able to assign players to teams so parents receive accurate team, training, venue, and coach details.
+- The club must adopt and sign off the operational playbook in `CHILD_SAFETY_INCIDENT_PLAYBOOK.md` before opening the app to paying families.
 
 ## Must Be Completed Before Paying Customers
 
 - Parent-visible or administrator-visible communication model for any child-facing chat. No unobserved one-to-one adult-to-child messaging.
-- Formal club sign-off workflow for child-safety incident handling, including block, mute, delete, takedown, escalate, evidence-preservation, and incident-resolution decisions for chat, uploads, profiles, news, and events.
+- Club sign-off for `CHILD_SAFETY_INCIDENT_PLAYBOOK.md`, including named reviewers and external reporting responsibilities.
 - Comprehensive immutable audit logging for every admin edit and child-data access, building on the current auth, registration, upload, chat, report, and adult-approval audit events.
 - Consent enforcement for photos, videos, player stories, stats, team pages, news, uploads, and public sharing.
 - Data-minimised response shapes for public, player, parent, coach, and admin contexts. Medical, guardian, emergency, and coach-note data must be returned only to roles with a genuine need.

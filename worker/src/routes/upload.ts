@@ -15,6 +15,11 @@ const EXT_BY_TYPE: Record<string, string> = {
 };
 const PUBLIC_CHILD_CATEGORIES = new Set(['player', 'player-photo', 'team', 'news', 'fixture', 'achievement']);
 
+function reviewedMediaUrl(requestUrl: string, key: string) {
+  const url = new URL(requestUrl);
+  return `${url.origin}/api/media?key=${encodeURIComponent(key)}`;
+}
+
 function safeCategory(value: unknown) {
   const raw = String(value || 'general').toLowerCase().trim();
   return raw.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'general';
@@ -94,9 +99,8 @@ upload.post('/', authMiddleware, async (c) => {
     httpMetadata: { contentType: file.type },
   });
 
-  const publicBase = c.env.UPLOADS_PUBLIC_URL?.replace(/\/+$/, '');
   const status = consentRequired ? 'pending_review' : 'approved';
-  const url = status === 'approved' && publicBase ? `${publicBase}/${key}` : null;
+  const url = status === 'approved' ? reviewedMediaUrl(c.req.url, key) : null;
   await c.env.DB.prepare(
     `INSERT INTO upload_records
      (key, url, uploader_user_id, category, player_id, consent_required, consent_granted, status, mime_type, byte_size, sha256)
