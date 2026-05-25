@@ -38,12 +38,13 @@ The production Worker and Pages deployment are live, and several critical issues
 - Player photo fields now require an approved reviewed upload for that player.
 - Approved media now streams through the Worker at `/api/media?key=...`, so child media no longer depends on the broken `uploads.yeppoonjrl.com.au` hostname.
 - A child-safety incident playbook was added in `CHILD_SAFETY_INCIDENT_PLAYBOOK.md` for report triage, evidence handling, adult suspension/revocation, and club launch sign-off.
+- Existing verified parent accounts can now register additional children with the same email after password verification, so the parent portal "Register Another Child" workflow is no longer blocked by duplicate-email rejection.
 
 ## Verified Live
 
 - Worker deployed at `https://yjrl-api.steve-700.workers.dev`.
 - Latest Worker version verified in deploy output: `fa5d8f76-5958-4c6d-943e-939cfc9995e9`.
-- Latest Worker version verified after admin-safeguarding controls: `26cf1cd3-e892-493e-a960-83a7a1fba625`.
+- Latest Worker version verified after admin-safeguarding controls: `7f59935a-fcfc-4867-b3b4-8d41ce3538ed`.
 - Pages deployed at `https://yjrl.pages.dev`.
 - Latest Pages preview deployed after admin-safeguarding controls: `https://db6ec473.yjrl.pages.dev`.
 - `https://yjrl.pages.dev/api/registration-fees` now returns a 307 redirect to the Worker and resolves to JSON with `curl -L`.
@@ -56,6 +57,7 @@ The production Worker and Pages deployment are live, and several critical issues
 - Client and Worker production dependency audits report zero vulnerabilities.
 - Live smoke test confirmed registration creates parent-child link, consent row, safety report, and audit records; temporary smoke records were cleaned from production D1.
 - Live smoke test confirmed adult invite creation, temporary-password return, expired approval rejection, unapproved coach assignment rejection, approved coach assignment, player team assignment, parent team details, pending upload URL/key withholding, unapproved photo rejection, reviewed Worker media serving, rejected upload R2 removal, safety report close workflow, non-admin chat-room listing denial, and adult approval revocation; temporary smoke records were cleaned from production D1/R2.
+- Live smoke test confirmed a parent can register two children under one existing account, both verified parent-child links are created, `/my-children` returns both children, and using the wrong existing-account password is rejected with 401; temporary smoke records were cleaned from production D1.
 
 ## Blocking Before Customer Launch
 

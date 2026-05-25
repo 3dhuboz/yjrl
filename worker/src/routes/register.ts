@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
-import { hashPassword } from '../lib/password';
+import { hashPassword, verifyPassword } from '../lib/password';
 import { createOrder, captureOrder } from '../lib/paypal';
 import { sendEmail, registrationConfirmationEmail, adminRegistrationNotification } from '../lib/email';
 import { writeAudit } from '../lib/audit';
@@ -102,21 +102,39 @@ register.post('/register-player', async (c) => {
   }
 
   const emailNorm = email.toLowerCase().trim();
-  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(emailNorm).first();
-  if (existing) return c.json({ error: 'Email already registered' }, 400);
+  const guardianEmailNorm = String(guardianEmail || emailNorm).toLowerCase().trim();
+  const existing = await c.env.DB.prepare(
+    'SELECT id, first_name, last_name, email, password_hash, role, is_active FROM users WHERE email = ?'
+  ).bind(emailNorm).first();
+  let userId: string;
+  let userFirstName = firstName;
+  let userLastName = lastName;
+  let userRole = 'parent';
+
+  if (existing) {
+    if (!existing.is_active) return c.json({ error: 'This account is not active. Please contact the club.' }, 403);
+    const validPassword = await verifyPassword(String(password), existing.password_hash as string);
+    if (!validPassword) return c.json({ error: 'Email already registered. Sign in with the existing account password to add another child.' }, 401);
+    if (existing.role === 'player') {
+      return c.json({ error: 'This email belongs to a player account. Please use a parent or guardian account.' }, 400);
+    }
+    userId = existing.id as string;
+    userFirstName = existing.first_name as string;
+    userLastName = existing.last_name as string;
+    userRole = existing.role as string;
+  } else {
+    userId = crypto.randomUUID();
+    const passwordHash = await hashPassword(password);
+    await c.env.DB.prepare(
+      'INSERT INTO users (id, first_name, last_name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(userId, guardianName || firstName, lastName, emailNorm, passwordHash, 'parent', guardianPhone || '').run();
+  }
 
   // Calculate fee
   const baseFee = FEES[ageGroup] || 150;
   const now = new Date().toISOString().split('T')[0];
   const discount = now <= EARLY_BIRD_CUTOFF ? EARLY_BIRD_DISCOUNT : 0;
   const totalFee = baseFee - discount;
-
-  // Create user
-  const userId = crypto.randomUUID();
-  const passwordHash = await hashPassword(password);
-  await c.env.DB.prepare(
-    'INSERT INTO users (id, first_name, last_name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(userId, firstName, lastName, emailNorm, passwordHash, 'parent', guardianPhone || '').run();
 
   // Create player
   const playerId = crypto.randomUUID();
@@ -128,7 +146,7 @@ register.post('/register-player', async (c) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     playerId, userId, firstName, lastName, dateOfBirth || null, ageGroup, position || '',
-    guardianName || '', guardianPhone || '', guardianEmail || emailNorm,
+    guardianName || '', guardianPhone || '', guardianEmailNorm,
     emergency?.name || '', emergency?.phone || '', emergency?.relationship || '',
     medicalNotes || '', 'pending', new Date().getFullYear().toString()
   ).run();
@@ -145,7 +163,7 @@ register.post('/register-player', async (c) => {
       0,
       'registration',
       userId,
-      guardianName || `${firstName} ${lastName}`.trim(),
+      guardianName || `${userFirstName} ${userLastName}`.trim(),
     ),
     c.env.DB.prepare(
       `INSERT OR IGNORE INTO parent_child_links
@@ -173,7 +191,7 @@ register.post('/register-player', async (c) => {
     const playerName = `${firstName} ${lastName}`;
     if (c.env.RESEND_API_KEY) {
       const confirmEmail = registrationConfirmationEmail(playerName, ageGroup, totalFee);
-      await sendEmail(c.env.RESEND_API_KEY, c.env.FROM_EMAIL, { to: guardianEmail || emailNorm, ...confirmEmail });
+      await sendEmail(c.env.RESEND_API_KEY, c.env.FROM_EMAIL, { to: guardianEmailNorm, ...confirmEmail });
     }
 
     // Notify admin
@@ -182,14 +200,15 @@ register.post('/register-player', async (c) => {
       await sendEmail(c.env.RESEND_API_KEY, c.env.FROM_EMAIL, { to: c.env.ADMIN_EMAIL, ...adminEmail });
     }
 
-    await writeAudit(c.env, { id: userId, role: 'parent', firstName, lastName, email: emailNorm }, 'registration_created', 'registration', regId, {
+    await writeAudit(c.env, { id: userId, role: userRole, firstName: userFirstName, lastName: userLastName, email: emailNorm }, 'registration_created', 'registration', regId, {
       playerId,
       ageGroup,
       paymentMethod: 'offline',
       mediaConsent: !!body.agreeToPhotoPolicy,
+      existingParentAccount: !!existing,
     });
 
-    return c.json({ registrationId: regId, paymentMethod: 'offline', token, user: { _id: userId, firstName, lastName, email: emailNorm, role: 'parent' } }, 201);
+    return c.json({ registrationId: regId, paymentMethod: 'offline', token, user: { _id: userId, firstName: userFirstName, lastName: userLastName, email: emailNorm, role: userRole } }, 201);
   }
 
   // PayPal flow
@@ -212,11 +231,12 @@ register.post('/register-player', async (c) => {
   );
 
   await c.env.DB.prepare('UPDATE registrations SET paypal_order_id = ? WHERE id = ?').bind(orderId, regId).run();
-  await writeAudit(c.env, { id: userId, role: 'parent', firstName, lastName, email: emailNorm }, 'registration_created', 'registration', regId, {
+  await writeAudit(c.env, { id: userId, role: userRole, firstName: userFirstName, lastName: userLastName, email: emailNorm }, 'registration_created', 'registration', regId, {
     playerId,
     ageGroup,
     paymentMethod: 'paypal',
     mediaConsent: !!body.agreeToPhotoPolicy,
+    existingParentAccount: !!existing,
   });
 
   return c.json({ registrationId: regId, approvalUrl, orderId }, 201);
