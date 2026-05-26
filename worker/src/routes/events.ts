@@ -1,13 +1,25 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
 
 const events = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>[], includeRsvps = false) {
   const rsvpList = rsvps || [];
   return {
-    ...e, _id: e.id,
+    _id: e.id,
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    type: e.type,
+    date: e.date,
+    time: e.time,
+    venue: e.venue,
+    address: e.address,
+    capacity: e.capacity,
+    image: e.image,
+    color: e.color,
     endDate: e.end_date, endTime: e.end_time,
     ageGroups: typeof e.age_groups === 'string' ? JSON.parse(e.age_groups as string) : e.age_groups,
     isPublic: !!e.is_public, isActive: !!e.is_active,
@@ -65,6 +77,11 @@ events.post('/', authMiddleware, async (c) => {
     body.isPublic !== false ? 1 : 0, body.capacity || null,
     body.image || '', body.color || '#f0a500'
   ).run();
+  await writeAudit(c.env, c.get('user'), 'event_created', 'event', id, {
+    type: body.type || 'other',
+    date: body.date,
+    isPublic: body.isPublic !== false,
+  });
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(id).first();
   return c.json(formatEvent(event!), 201);
 });
@@ -92,6 +109,10 @@ events.put('/:id', authMiddleware, async (c) => {
   fields.push('updated_at = datetime(\'now\')');
   vals.push(id);
   await c.env.DB.prepare(`UPDATE events SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
+  await writeAudit(c.env, c.get('user'), 'event_updated', 'event', id, {
+    fields: Object.keys(body),
+    isPublic: body.isPublic,
+  });
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(id).first();
   if (!event) return c.json({ error: 'Event not found' }, 404);
   return c.json(formatEvent(event));
@@ -103,6 +124,9 @@ events.post('/:id/rsvp', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   const user = c.get('user');
   const name = `${user.firstName} ${user.lastName}`.trim();
+  const previousRsvp = await c.env.DB.prepare(
+    'SELECT status, adults, children, notes FROM event_rsvps WHERE event_id = ? AND user_id = ?'
+  ).bind(eventId, user.id).first();
   await c.env.DB.prepare(
     `INSERT INTO event_rsvps (event_id, user_id, name, status, adults, children, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -111,6 +135,14 @@ events.post('/:id/rsvp', authMiddleware, async (c) => {
     eventId, user.id, name, body.status || 'attending', body.adults || 1, body.children || 0, body.notes || '',
     body.status || 'attending', body.adults || 1, body.children || 0, body.notes || ''
   ).run();
+  await writeAudit(c.env, user, 'event_rsvp_saved', 'event', eventId, {
+    previousStatus: previousRsvp?.status || null,
+    status: body.status || 'attending',
+    changed: !previousRsvp || previousRsvp.status !== (body.status || 'attending'),
+    adults: body.adults || 1,
+    children: body.children || 0,
+    notesChanged: previousRsvp ? previousRsvp.notes !== (body.notes || '') : !!body.notes,
+  });
   // Return updated event
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(eventId).first();
   const rsvps = await c.env.DB.prepare('SELECT * FROM event_rsvps WHERE event_id = ?').bind(eventId).all();
@@ -120,7 +152,9 @@ events.post('/:id/rsvp', authMiddleware, async (c) => {
 // DELETE /yjrl/events/:id
 events.delete('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
-  await c.env.DB.prepare('UPDATE events SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(c.req.param('id')).run();
+  const id = c.req.param('id');
+  await c.env.DB.prepare('UPDATE events SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(id).run();
+  await writeAudit(c.env, c.get('user'), 'event_removed', 'event', id);
   return c.json({ message: 'Event removed' });
 });
 

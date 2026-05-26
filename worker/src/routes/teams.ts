@@ -1,17 +1,25 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
 
 const teams = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function addVirtuals(team: Record<string, unknown>, options: { includePrivateIds?: boolean } = {}) {
+function publicTeamDto(team: Record<string, unknown>, options: { includePrivateIds?: boolean } = {}) {
   const wins = (team.wins as number) || 0;
   const losses = (team.losses as number) || 0;
   const draws = (team.draws as number) || 0;
   return {
-    ...team,
     _id: team.id,
+    id: team.id,
+    name: team.name,
+    division: team.division,
+    season: team.season,
     played: wins + losses + draws,
+    wins,
+    losses,
+    draws,
+    byes: team.byes,
     points: wins * 2 + draws,
     pointsDiff: ((team.points_for as number) || 0) - ((team.points_against as number) || 0),
     ageGroup: team.age_group,
@@ -29,6 +37,8 @@ function addVirtuals(team: Record<string, unknown>, options: { includePrivateIds
       coachId: team.coach_id,
       assistantId: team.assistant_id,
       managerId: team.manager_id,
+      createdAt: team.created_at,
+      updatedAt: team.updated_at,
     } : {}),
   };
 }
@@ -63,7 +73,7 @@ teams.get('/', async (c) => {
   if (active !== 'false') { sql += ' AND is_active = 1'; }
   sql += ' ORDER BY age_group ASC';
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(team => addVirtuals(team)));
+  return c.json((result.results || []).map(team => publicTeamDto(team)));
 });
 
 // GET /yjrl/teams/:id
@@ -73,7 +83,7 @@ teams.get('/:id', async (c) => {
   const players = await c.env.DB.prepare(
     'SELECT COUNT(*) AS cnt FROM players WHERE team_id = ? AND is_active = 1'
   ).bind(team.id).all();
-  const t = addVirtuals(team);
+  const t = publicTeamDto(team);
   return c.json({ ...t, playerCount: players.results?.[0]?.cnt || 0, players: [] });
 });
 
@@ -100,8 +110,13 @@ teams.post('/', authMiddleware, async (c) => {
     body.colors?.secondary || body.color_secondary || '#f0a500',
     body.photo || ''
   ).run();
+  await writeAudit(c.env, c.get('user'), 'team_created', 'team', id, {
+    ageGroup: body.ageGroup || body.age_group || '',
+    season: body.season || new Date().getFullYear().toString(),
+    coachAssigned: !!coachId,
+  });
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
-  return c.json(addVirtuals(team!, { includePrivateIds: true }), 201);
+  return c.json(publicTeamDto(team!, { includePrivateIds: true }), 201);
 });
 
 // PUT /yjrl/teams/:id
@@ -109,6 +124,8 @@ teams.put('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
   const id = c.req.param('id');
+  const existingTeam = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
+  if (!existingTeam) return c.json({ error: 'Team not found' }, 404);
   const fields: string[] = [];
   const vals: unknown[] = [];
   const coachCandidate = body.coachId ?? body.coach_id ?? body.coach;
@@ -142,15 +159,26 @@ teams.put('/:id', authMiddleware, async (c) => {
   fields.push('updated_at = datetime(\'now\')');
   vals.push(id);
   await c.env.DB.prepare(`UPDATE teams SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
+  await writeAudit(c.env, c.get('user'), 'team_updated', 'team', id, {
+    name: existingTeam.name,
+    fields: Object.keys(body),
+    coachChanged: Object.prototype.hasOwnProperty.call(body, 'coachId') || Object.prototype.hasOwnProperty.call(body, 'coach_id') || Object.prototype.hasOwnProperty.call(body, 'coach'),
+    previousCoachId: existingTeam.coach_id || null,
+    newCoachId: body.coachId ?? body.coach_id ?? body.coach ?? existingTeam.coach_id ?? null,
+    previousActive: !!existingTeam.is_active,
+    newActive: body.isActive ?? body.is_active ?? !!existingTeam.is_active,
+  });
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
   if (!team) return c.json({ error: 'Team not found' }, 404);
-  return c.json(addVirtuals(team, { includePrivateIds: true }));
+  return c.json(publicTeamDto(team, { includePrivateIds: true }));
 });
 
 // DELETE /yjrl/teams/:id (soft delete)
 teams.delete('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
-  await c.env.DB.prepare('UPDATE teams SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(c.req.param('id')).run();
+  const id = c.req.param('id');
+  await c.env.DB.prepare('UPDATE teams SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(id).run();
+  await writeAudit(c.env, c.get('user'), 'team_deactivated', 'team', id);
   return c.json({ message: 'Team deactivated' });
 });
 

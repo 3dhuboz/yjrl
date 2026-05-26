@@ -23,6 +23,7 @@ stats.get('/overview', async (c) => {
             t.name AS team_name, t.age_group AS team_age_group
      FROM player_stats ps
      JOIN players p ON ps.player_id = p.id
+     JOIN player_consents pc ON pc.player_id = p.id AND pc.stats_public_consent = 1
      LEFT JOIN teams t ON p.team_id = t.id
      WHERE ps.season = ? AND ps.tries > 0 AND p.is_active = 1
      ORDER BY ps.tries DESC LIMIT 5`
@@ -33,11 +34,11 @@ stats.get('/overview', async (c) => {
     playerCount: (playerCount as Record<string, unknown>)?.cnt || 0,
     fixtureCount: (fixtureCount as Record<string, unknown>)?.cnt || 0,
     upcomingCount: (upcomingCount as Record<string, unknown>)?.cnt || 0,
-    topScorers: (topScorers.results || []).map(s => ({
-      _id: s.id, firstName: safeJuniorLabel(s.age_group), lastName: '',
+    topScorers: (topScorers.results || []).map((s, index) => ({
+      _id: `public-scorer-${index + 1}`, firstName: safeJuniorLabel(s.age_group), lastName: '',
       displayName: safeJuniorLabel(s.age_group),
       ageGroup: s.age_group, photo: '', tries: s.tries,
-      teamId: s.team_id ? { _id: s.team_id, name: s.team_name, ageGroup: s.team_age_group } : null,
+      teamId: s.team_id ? { name: s.team_name, ageGroup: s.team_age_group } : null,
     })),
   });
 });
@@ -54,6 +55,7 @@ stats.get('/leaderboard', async (c) => {
              t.name AS team_name
              FROM player_stats ps
              JOIN players p ON ps.player_id = p.id
+             JOIN player_consents pc ON pc.player_id = p.id AND pc.stats_public_consent = 1
              LEFT JOIN teams t ON p.team_id = t.id
              WHERE ps.season = ? AND p.is_active = 1 AND ps.${statCol} > 0`;
   const params: unknown[] = [season];
@@ -61,11 +63,11 @@ stats.get('/leaderboard', async (c) => {
   sql += ` ORDER BY ps.${statCol} DESC LIMIT 20`;
 
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(r => ({
-    _id: r.pid, firstName: safeJuniorLabel(r.age_group), lastName: '',
+  return c.json((result.results || []).map((r, index) => ({
+    _id: `public-leader-${index + 1}`, firstName: safeJuniorLabel(r.age_group), lastName: '',
     displayName: safeJuniorLabel(r.age_group),
     ageGroup: r.age_group, photo: '', jerseyNumber: null,
-    value: r[statCol], teamId: r.team_id ? { _id: r.team_id, name: r.team_name } : null,
+    value: r[statCol], teamId: r.team_id ? { name: r.team_name } : null,
   })));
 });
 

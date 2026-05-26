@@ -319,15 +319,20 @@ safety.post('/adult-approvals', authMiddleware, async (c) => {
   }
 
   const status = ['pending', 'approved', 'rejected', 'suspended', 'expired'].includes(body.status) ? body.status : 'pending';
+  const blueCardStatus = body.blueCardStatus || body.blue_card_status || 'not-provided';
+  const blueCardExpiry = body.blueCardExpiry || body.blue_card_expiry || null;
+  const identityChecked = !!(body.identityChecked || body.identity_checked);
+  const trainingCompleted = !!(body.safeguardingTrainingCompleted || body.safeguarding_training_completed);
   if (status === 'approved') {
-    const blueCardStatus = body.blueCardStatus || body.blue_card_status;
-    const identityChecked = !!(body.identityChecked || body.identity_checked);
-    const trainingCompleted = !!(body.safeguardingTrainingCompleted || body.safeguarding_training_completed);
-    const expiry = body.blueCardExpiry || body.blue_card_expiry;
-    if (blueCardStatus !== 'verified' || !identityChecked || !trainingCompleted || !isFutureDate(expiry)) {
+    if (blueCardStatus !== 'verified' || !identityChecked || !trainingCompleted || !isFutureDate(blueCardExpiry)) {
       return c.json({ error: 'Verified Blue Card, future expiry, identity check, and safeguarding training are required before approval' }, 400);
     }
   }
+  const [previousApproval, previousUser, affectedTeams] = await Promise.all([
+    c.env.DB.prepare('SELECT status, blue_card_status, blue_card_expiry, identity_checked, safeguarding_training_completed FROM adult_role_approvals WHERE user_id = ? AND requested_role = ?').bind(userId, requestedRole).first(),
+    c.env.DB.prepare('SELECT role, is_active FROM users WHERE id = ?').bind(userId).first(),
+    c.env.DB.prepare('SELECT id, name FROM teams WHERE coach_id = ?').bind(userId).all(),
+  ]);
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO adult_role_approvals (
@@ -352,10 +357,10 @@ safety.post('/adult-approvals', authMiddleware, async (c) => {
     requestedRole,
     status,
     body.blueCardReference || body.blue_card_reference || '',
-    body.blueCardStatus || body.blue_card_status || 'not-provided',
-    body.blueCardExpiry || body.blue_card_expiry || null,
-    body.identityChecked || body.identity_checked ? 1 : 0,
-    body.safeguardingTrainingCompleted || body.safeguarding_training_completed ? 1 : 0,
+    blueCardStatus,
+    blueCardExpiry,
+    identityChecked ? 1 : 0,
+    trainingCompleted ? 1 : 0,
     body.notes || '',
     admin.id,
     status,
@@ -376,7 +381,21 @@ safety.post('/adult-approvals', authMiddleware, async (c) => {
     ]);
   }
 
-  await writeAudit(c.env, admin, 'adult_role_approval_updated', 'user', userId, { requestedRole, status });
+  const updatedUser = await c.env.DB.prepare('SELECT role, is_active FROM users WHERE id = ?').bind(userId).first();
+  await writeAudit(c.env, admin, 'adult_role_approval_updated', 'user', userId, {
+    requestedRole,
+    previousStatus: previousApproval?.status || null,
+    status,
+    previousUserRole: previousUser?.role || null,
+    newUserRole: updatedUser?.role || null,
+    previousActive: previousUser ? !!previousUser.is_active : null,
+    newActive: updatedUser ? !!updatedUser.is_active : null,
+    blueCardStatus,
+    blueCardExpiry,
+    identityChecked,
+    safeguardingTrainingCompleted: trainingCompleted,
+    affectedTeams: (affectedTeams.results || []).map(team => ({ id: team.id, name: team.name })),
+  });
   const row = await c.env.DB.prepare(
     `SELECT ara.*, u.first_name, u.last_name, u.email, u.role
      FROM adult_role_approvals ara

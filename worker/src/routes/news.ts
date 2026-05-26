@@ -1,15 +1,29 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
 
 const news = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function formatArticle(a: Record<string, unknown>) {
+function formatArticle(a: Record<string, unknown>, options: { includePrivate?: boolean } = {}) {
   return {
-    ...a, _id: a.id,
-    authorName: a.author_name, publishDate: a.publish_date,
+    _id: a.id,
+    id: a.id,
+    title: a.title,
+    content: a.content,
+    excerpt: a.excerpt,
+    category: a.category,
+    authorName: a.author_name,
+    image: a.image,
+    publishDate: a.publish_date,
+    views: a.views,
     isActive: !!a.is_active, published: !!a.published, featured: !!a.featured,
     tags: typeof a.tags === 'string' ? JSON.parse(a.tags as string) : a.tags,
+    ...(options.includePrivate ? {
+      authorId: a.author_id,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
+    } : {}),
   };
 }
 
@@ -25,22 +39,22 @@ news.get('/', async (c) => {
   sql += ' ORDER BY publish_date DESC, created_at DESC';
   if (limit) { sql += ' LIMIT ?'; params.push(parseInt(limit)); }
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(formatArticle));
+  return c.json((result.results || []).map(article => formatArticle(article)));
 });
 
 // GET /yjrl/news/all — admin: all including drafts
 news.get('/all', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const result = await c.env.DB.prepare('SELECT * FROM news WHERE is_active = 1 ORDER BY created_at DESC').all();
-  return c.json((result.results || []).map(formatArticle));
+  return c.json((result.results || []).map(article => formatArticle(article, { includePrivate: true })));
 });
 
 // GET /yjrl/news/:id
 news.get('/:id', async (c) => {
   const id = c.req.param('id');
-  await c.env.DB.prepare('UPDATE news SET views = views + 1 WHERE id = ?').bind(id).run();
-  const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ?').bind(id).first();
+  const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ? AND is_active = 1 AND published = 1').bind(id).first();
   if (!article) return c.json({ error: 'Article not found' }, 404);
+  await c.env.DB.prepare('UPDATE news SET views = views + 1 WHERE id = ?').bind(id).run();
   return c.json(formatArticle(article));
 });
 
@@ -61,8 +75,13 @@ news.post('/', authMiddleware, async (c) => {
     JSON.stringify(body.tags || []),
     body.publishDate || body.publish_date || new Date().toISOString()
   ).run();
+  await writeAudit(c.env, user, 'news_created', 'news', id, {
+    category: body.category || 'news',
+    published: !!body.published,
+    featured: !!body.featured,
+  });
   const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ?').bind(id).first();
-  return c.json(formatArticle(article!), 201);
+  return c.json(formatArticle(article!, { includePrivate: true }), 201);
 });
 
 // PUT /yjrl/news/:id
@@ -87,15 +106,22 @@ news.put('/:id', authMiddleware, async (c) => {
   fields.push('updated_at = datetime(\'now\')');
   vals.push(id);
   await c.env.DB.prepare(`UPDATE news SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
+  await writeAudit(c.env, c.get('user'), 'news_updated', 'news', id, {
+    fields: Object.keys(body),
+    published: body.published,
+    featured: body.featured,
+  });
   const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ?').bind(id).first();
   if (!article) return c.json({ error: 'Article not found' }, 404);
-  return c.json(formatArticle(article));
+  return c.json(formatArticle(article, { includePrivate: true }));
 });
 
 // DELETE /yjrl/news/:id
 news.delete('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
-  await c.env.DB.prepare('UPDATE news SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(c.req.param('id')).run();
+  const id = c.req.param('id');
+  await c.env.DB.prepare('UPDATE news SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(id).run();
+  await writeAudit(c.env, c.get('user'), 'news_removed', 'news', id);
   return c.json({ message: 'Article removed' });
 });
 

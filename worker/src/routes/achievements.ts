@@ -1,11 +1,24 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
 
 const achievements = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 function format(a: Record<string, unknown>) {
-  return { ...a, _id: a.id, xpValue: a.xp_value, isActive: !!a.is_active };
+  return {
+    _id: a.id,
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    icon: a.icon,
+    category: a.category,
+    criteria: a.criteria,
+    rarity: a.rarity,
+    color: a.color,
+    xpValue: a.xp_value,
+    isActive: !!a.is_active,
+  };
 }
 
 // GET /yjrl/achievements
@@ -27,6 +40,10 @@ achievements.post('/', authMiddleware, async (c) => {
     body.rarity || 'common', body.color || '#f0a500',
     body.xpValue || body.xp_value || 10
   ).run();
+  await writeAudit(c.env, c.get('user'), 'achievement_created', 'achievement', id, {
+    category: body.category || 'milestone',
+    rarity: body.rarity || 'common',
+  });
   const a = await c.env.DB.prepare('SELECT * FROM achievements WHERE id = ?').bind(id).first();
   return c.json(format(a!), 201);
 });
@@ -49,6 +66,7 @@ achievements.put('/:id', authMiddleware, async (c) => {
   fields.push('updated_at = datetime(\'now\')');
   vals.push(id);
   await c.env.DB.prepare(`UPDATE achievements SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
+  await writeAudit(c.env, c.get('user'), 'achievement_updated', 'achievement', id, { fields: Object.keys(body) });
   const a = await c.env.DB.prepare('SELECT * FROM achievements WHERE id = ?').bind(id).first();
   if (!a) return c.json({ error: 'Achievement not found' }, 404);
   return c.json(format(a));

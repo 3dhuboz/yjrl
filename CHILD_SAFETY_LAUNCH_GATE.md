@@ -27,15 +27,18 @@ Protecting children from grooming, predatory behaviour, bullying, harassment, an
 - Admin launch readiness is visible at `/api/admin/readiness` and in the Admin Portal.
 - Safety reports require action notes before they can be actioned or closed.
 - Child-related media approval re-checks current media consent and requires reviewer notes before approval.
+- Public and role-based response DTOs must remain explicit and data-minimised; raw database rows must not be returned from child, team, fixture, event, news, achievement, or stats endpoints.
+- Public stats must require explicit stats-public consent and must not expose junior player database identifiers.
+- Core admin mutations must write audit events with enough state transition detail for safeguarding and operational review.
 
 ## Must Be Completed Before Paying Customers
 
 - Parent-visible or administrator-visible communication model for any child-facing chat. No unobserved one-to-one adult-to-child messaging.
 - Club sign-off for `CHILD_SAFETY_INCIDENT_PLAYBOOK.md`, including named reviewers and external reporting responsibilities.
 - Set `CHILD_SAFETY_SIGNOFF=approved` only after that sign-off is complete.
-- Comprehensive immutable audit logging for every admin edit and child-data access, building on the current auth, registration, upload, chat, report, and adult-approval audit events.
-- Consent enforcement for photos, videos, player stories, stats, team pages, news, uploads, and public sharing.
-- Data-minimised response shapes for public, player, parent, coach, and admin contexts. Medical, guardian, emergency, and coach-note data must be returned only to roles with a genuine need.
+- Immutable audit logging for child-data read access and compliance exports, building on the current admin mutation, auth, registration, upload, chat, report, attendance, and adult-approval audit events.
+- Consent enforcement for photos, videos, player stories, team pages, news, uploads, and public sharing. Public stats currently require explicit stats-public consent.
+- Ongoing regression review of data-minimised response shapes for public, player, parent, coach, and admin contexts. Medical, guardian, emergency, and coach-note data must be returned only to roles with a genuine need.
 - Upload hardening for image type verification, file size, file extension control, EXIF stripping or re-encoding, moderation, and team/player binding.
 - Durable rate limiting and abuse monitoring for login, registration, chat, upload, and report endpoints.
 - Legacy Express API must remain disabled in production unless it is separately hardened and approved.

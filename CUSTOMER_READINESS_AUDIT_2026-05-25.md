@@ -48,12 +48,16 @@ The production Worker and Pages deployment are live, and several critical issues
 - Child media approval now re-checks current consent and requires reviewer notes before approval.
 - Chat safety reporting now uses an in-app form with severity/details instead of a browser prompt.
 - Parent registration success and portal onboarding copy now reflect actual payment/team status instead of assuming every registration is complete.
+- Public/admin response DTOs for teams, fixtures, news, events, achievements, and player roster/detail views are now explicit, reducing accidental leakage of raw database columns.
+- Public stats endpoints now require `stats_public_consent` and use non-database public row identifiers.
+- Admin mutations across teams, fixtures, news, events, achievements, player changes, adult approvals, attendance, and admin auto-seeding now write richer audit events with key state transitions.
 
 ## Verified Live
 
 - Worker deployed at `https://yjrl-api.steve-700.workers.dev`.
 - Latest Worker version verified in deploy output: `fa5d8f76-5958-4c6d-943e-939cfc9995e9`.
 - Latest Worker version verified after payment/readiness controls: `22a4b6c5-d2e3-401a-8b8a-4fb9b63fdf69`.
+- Latest Worker version verified after privacy/audit DTO hardening: `4bf3a447-c76b-43c5-8a6e-957fa1e69178`.
 - Pages deployed at `https://yjrl.pages.dev`.
 - Latest Pages preview deployed after payment/readiness controls: `https://415492c4.yjrl.pages.dev`.
 - `https://yjrl.pages.dev/api/registration-fees` now returns a 307 redirect to the Worker and resolves to JSON with `curl -L`.
@@ -64,6 +68,8 @@ The production Worker and Pages deployment are live, and several critical issues
 - Client production build passes.
 - Worker typecheck passes.
 - Client and Worker production dependency audits report zero vulnerabilities.
+- Source verification confirmed public team, fixture, event, news, achievement, player roster, and stats responses are data-minimised DTOs rather than raw row spreads.
+- Live public endpoint smoke confirmed teams, fixtures, events, achievements, news, stats overview, and stats leaderboard return 200 without the audited raw sensitive field names; unauthenticated player roster access returns 401.
 - Live smoke test confirmed registration creates parent-child link, consent row, safety report, and audit records; temporary smoke records were cleaned from production D1.
 - Live smoke test confirmed adult invite creation, temporary-password return, expired approval rejection, unapproved coach assignment rejection, approved coach assignment, player team assignment, parent team details, pending upload URL/key withholding, unapproved photo rejection, reviewed Worker media serving, rejected upload R2 removal, safety report close workflow, non-admin chat-room listing denial, and adult approval revocation; temporary smoke records were cleaned from production D1/R2.
 - Live smoke test confirmed a parent can register two children under one existing account, both verified parent-child links are created, `/my-children` returns both children, and using the wrong existing-account password is rejected with 401; temporary smoke records were cleaned from production D1.
@@ -73,9 +79,9 @@ The production Worker and Pages deployment are live, and several critical issues
 ## Blocking Before Customer Launch
 
 - Club committee must review, adapt, and sign off `CHILD_SAFETY_INCIDENT_PLAYBOOK.md`, including named reviewers and external reporting owners.
-- Make audit logging comprehensive across every admin mutation; current logging covers the highest-risk new flows but not every route.
-- Enforce media consent across news/story publishing and any future public player features; upload consent is enforced, public stats remain anonymised.
-- Continue splitting player response data into public, player, parent, coach, and admin DTOs so each role receives only what it needs.
+- Extend immutable audit logging to child-data read access and compliance exports; admin mutation logging now covers the core launch routes but read-access audit remains a future hardening step.
+- Enforce media consent across news/story publishing and any future public player features; upload consent is enforced and public stats now require explicit stats-public consent.
+- Keep role-based response DTOs under regression review as features are added, so public, player, parent, coach, and admin contexts continue to receive only what they need.
 - Add image re-encoding or EXIF stripping; current upload hardening verifies signatures, extensions, size, consent, ownership, and review metadata.
 - Replace isolate-local rate limits with durable/risk-scored limits if abuse traffic appears.
 - Fix production domain routing: `yeppoonjrl.com.au` and `www.yeppoonjrl.com.au` are still not serving the Pages app (`/register` returned 403 during the latest check).

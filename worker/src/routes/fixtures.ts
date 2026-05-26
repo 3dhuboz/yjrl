@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { writeAudit } from '../lib/audit';
 
 const fixtures = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -17,7 +18,7 @@ async function canManageFixture(c: any, fixture: Record<string, unknown>) {
   return !!team;
 }
 
-function formatFixture(f: Record<string, unknown>) {
+function formatFixture(f: Record<string, unknown>, options: { includePrivate?: boolean } = {}) {
   const isHome = !!f.is_home_game;
   const status = f.status as string;
   let result: string | null = null;
@@ -28,16 +29,31 @@ function formatFixture(f: Record<string, unknown>) {
     else if (yjrlScore < oppScore) result = 'loss';
     else result = 'draw';
   }
-  return {
-    ...f, _id: f.id,
+  const dto: Record<string, unknown> = {
+    _id: f.id,
+    id: f.id,
     teamId: f.team_id, ageGroup: f.age_group,
+    season: f.season,
+    round: f.round,
     homeTeamName: f.home_team_name, awayTeamName: f.away_team_name,
     isHomeGame: isHome, homeScore: f.home_score, awayScore: f.away_score,
-    manOfMatch: f.man_of_match_id, manOfMatchName: f.man_of_match_name,
-    matchReport: f.match_report, isActive: !!f.is_active,
+    date: f.date,
+    time: f.time,
+    venue: f.venue,
+    status: f.status,
+    notes: f.notes,
+    isActive: !!f.is_active,
     opponent: isHome ? f.away_team_name : f.home_team_name,
     result,
   };
+  if (options.includePrivate) {
+    dto.manOfMatch = f.man_of_match_id;
+    dto.manOfMatchName = f.man_of_match_name;
+    dto.matchReport = f.match_report;
+    dto.createdAt = f.created_at;
+    dto.updatedAt = f.updated_at;
+  }
+  return dto;
 }
 
 // GET /yjrl/fixtures
@@ -63,7 +79,7 @@ fixtures.get('/', async (c) => {
   sql += upcoming === 'true' ? ' ORDER BY date ASC' : ' ORDER BY date DESC';
   if (limit) { sql += ' LIMIT ?'; params.push(parseInt(limit)); }
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(formatFixture));
+  return c.json((result.results || []).map((fixture) => formatFixture(fixture)));
 });
 
 // GET /yjrl/ladder
@@ -78,7 +94,9 @@ fixtures.get('/ladder', async (c) => {
   sql += ' ORDER BY (wins * 2 + draws) DESC, (points_for - points_against) DESC, wins DESC';
   const result = await c.env.DB.prepare(sql).bind(...params).all();
   return c.json((result.results || []).map(t => ({
-    ...t, _id: t.id, ageGroup: t.age_group, pointsFor: t.points_for, pointsAgainst: t.points_against,
+    _id: t.id, id: t.id, name: t.name, ageGroup: t.age_group, season: t.season,
+    wins: t.wins, losses: t.losses, draws: t.draws, points: t.points,
+    pointsFor: t.points_for, pointsAgainst: t.points_against,
     pointsDiff: t.points_diff, coachName: t.coach_name,
     colors: { primary: t.color_primary, secondary: t.color_secondary },
   })));
@@ -111,8 +129,13 @@ fixtures.post('/', authMiddleware, async (c) => {
     body.isHomeGame !== false ? 1 : 0, body.date, body.time || '',
     body.venue || 'Nev Skuse Oval, Yeppoon', body.status || 'scheduled', body.notes || ''
   ).run();
+  await writeAudit(c.env, c.get('user'), 'fixture_created', 'fixture', id, {
+    teamId: body.teamId || body.team_id || null,
+    ageGroup: body.ageGroup || body.age_group || '',
+    status: body.status || 'scheduled',
+  });
   const fixture = await c.env.DB.prepare('SELECT * FROM fixtures WHERE id = ?').bind(id).first();
-  return c.json(formatFixture(fixture!), 201);
+  return c.json(formatFixture(fixture!, { includePrivate: true }), 201);
 });
 
 // PUT /yjrl/fixtures/:id — update or enter result
@@ -145,6 +168,11 @@ fixtures.put('/:id', authMiddleware, async (c) => {
     fields.push('updated_at = datetime(\'now\')');
     vals.push(id);
     await c.env.DB.prepare(`UPDATE fixtures SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
+    await writeAudit(c.env, c.get('user'), 'fixture_updated', 'fixture', id, {
+      fields: Object.keys(body),
+      wasCompleted: existing.status === 'completed',
+      status: body.status || existing.status,
+    });
   }
 
   const fixture = await c.env.DB.prepare('SELECT * FROM fixtures WHERE id = ?').bind(id).first();
@@ -174,13 +202,22 @@ fixtures.put('/:id', authMiddleware, async (c) => {
     // Update player stats from fixture
     const season = (fixture.season || new Date().getFullYear().toString()) as string;
     const playerStats = body.playerStats || [];
+    const affectedPlayerIds: string[] = [];
+    const skippedPlayerIds: string[] = [];
     for (const stat of playerStats) {
       const playerId = stat.player || stat.playerId || stat.player_id;
-      if (!playerId) continue;
+      if (!playerId) {
+        skippedPlayerIds.push('missing-player-id');
+        continue;
+      }
       const teamPlayer = await c.env.DB.prepare(
         'SELECT id FROM players WHERE id = ? AND team_id = ? AND is_active = 1'
       ).bind(playerId, fixture.team_id).first();
-      if (!teamPlayer) continue;
+      if (!teamPlayer) {
+        skippedPlayerIds.push(String(playerId));
+        continue;
+      }
+      affectedPlayerIds.push(String(playerId));
 
       // Save fixture player stats
       await c.env.DB.prepare(
@@ -199,15 +236,26 @@ fixtures.put('/:id', authMiddleware, async (c) => {
         ).bind(playerId, season, stat.played !== false ? 1 : 0, stat.tries || 0, stat.goals || 0, stat.fieldGoals || stat.field_goals || 0, stat.tackles || 0, stat.runMetres || stat.run_metres || 0).run();
       }
     }
+    await writeAudit(c.env, c.get('user'), 'fixture_completed', 'fixture', id, {
+      teamId: fixture.team_id,
+      result,
+      homeScore,
+      awayScore,
+      playerStatsCount: playerStats.length,
+      affectedPlayerIds,
+      skippedPlayerIds,
+    });
   }
 
-  return c.json(formatFixture(fixture));
+  return c.json(formatFixture(fixture, { includePrivate: true }));
 });
 
 // DELETE /yjrl/fixtures/:id
 fixtures.delete('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
-  await c.env.DB.prepare('UPDATE fixtures SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(c.req.param('id')).run();
+  const id = c.req.param('id');
+  await c.env.DB.prepare('UPDATE fixtures SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(id).run();
+  await writeAudit(c.env, c.get('user'), 'fixture_removed', 'fixture', id);
   return c.json({ message: 'Fixture removed' });
 });
 

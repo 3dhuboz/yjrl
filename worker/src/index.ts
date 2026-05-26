@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import type { Env, Variables } from './types';
 import { hashPassword } from './lib/password';
 import { sendEmail, eventReminderEmail } from './lib/email';
+import { writeAudit } from './lib/audit';
 
 import authRoutes from './routes/auth';
 import teamsRoutes from './routes/teams';
@@ -99,6 +100,7 @@ app.use('*', async (c, next) => {
         await c.env.DB.prepare(
           'INSERT OR IGNORE INTO users (id, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)'
         ).bind(id, 'Admin', '', c.env.ADMIN_EMAIL.toLowerCase(), hash, 'admin').run();
+        await writeAudit(c.env, null, 'admin_seeded', 'user', id, { email: c.env.ADMIN_EMAIL.toLowerCase(), source: 'startup_env' });
         console.log('Admin user seeded');
       }
     } catch (e) {
