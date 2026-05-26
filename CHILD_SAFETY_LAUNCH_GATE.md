@@ -23,11 +23,16 @@ Protecting children from grooming, predatory behaviour, bullying, harassment, an
 - Player photo fields must reference approved reviewed media for that player.
 - Admins must be able to assign players to teams so parents receive accurate team, training, venue, and coach details.
 - The club must adopt and sign off the operational playbook in `CHILD_SAFETY_INCIDENT_PLAYBOOK.md` before opening the app to paying families.
+- Online PayPal registration is disabled in production until live PayPal is configured and `CHILD_SAFETY_SIGNOFF=approved` is set after club sign-off.
+- Admin launch readiness is visible at `/api/admin/readiness` and in the Admin Portal.
+- Safety reports require action notes before they can be actioned or closed.
+- Child-related media approval re-checks current media consent and requires reviewer notes before approval.
 
 ## Must Be Completed Before Paying Customers
 
 - Parent-visible or administrator-visible communication model for any child-facing chat. No unobserved one-to-one adult-to-child messaging.
 - Club sign-off for `CHILD_SAFETY_INCIDENT_PLAYBOOK.md`, including named reviewers and external reporting responsibilities.
+- Set `CHILD_SAFETY_SIGNOFF=approved` only after that sign-off is complete.
 - Comprehensive immutable audit logging for every admin edit and child-data access, building on the current auth, registration, upload, chat, report, and adult-approval audit events.
 - Consent enforcement for photos, videos, player stories, stats, team pages, news, uploads, and public sharing.
 - Data-minimised response shapes for public, player, parent, coach, and admin contexts. Medical, guardian, emergency, and coach-note data must be returned only to roles with a genuine need.

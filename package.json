@@ -1,7 +1,7 @@
 {
   "name": "yeppoon-junior-rugby-league",
   "version": "1.0.0",
-  "description": "Yeppoon Junior Rugby League — digital club hub with player portals, fixtures, gamification, and more",
+  "description": "Yeppoon Junior Rugby League digital club hub with player portals, fixtures, gamification, and more",
   "private": true,
   "scripts": {
     "dev": "concurrently \"npm run worker:dev\" \"npm run client\"",

@@ -121,7 +121,19 @@ safety.put('/reports/:id', authMiddleware, async (c) => {
   if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
 
   const id = c.req.param('id');
+  const existing = await c.env.DB.prepare('SELECT * FROM safety_reports WHERE id = ?').bind(id).first();
+  if (!existing) return c.json({ error: 'Report not found' }, 404);
+
   const status = ['open', 'triaged', 'actioned', 'closed'].includes(body.status) ? body.status : undefined;
+  const requestedActionTaken = body.actionTaken !== undefined || body.action_taken !== undefined;
+  const actionTaken = String(
+    requestedActionTaken ? (body.actionTaken || body.action_taken || '') : (existing.action_taken || '')
+  ).trim();
+  const assignedToUserId = body.assignedToUserId || body.assigned_to_user_id || existing.assigned_to_user_id || user.id;
+  if ((status === 'actioned' || status === 'closed') && actionTaken.length < 20) {
+    return c.json({ error: 'Action notes of at least 20 characters are required before a safety report can be actioned or closed' }, 400);
+  }
+
   const fields: string[] = [];
   const values: unknown[] = [];
   if (status) {
@@ -129,24 +141,23 @@ safety.put('/reports/:id', authMiddleware, async (c) => {
     values.push(status);
     if (status === 'closed' || status === 'actioned') fields.push('resolved_at = datetime(\'now\')');
   }
-  if (body.actionTaken !== undefined || body.action_taken !== undefined) {
+  if (requestedActionTaken) {
     fields.push('action_taken = ?');
-    values.push(body.actionTaken || body.action_taken || '');
+    values.push(actionTaken);
   }
-  if (body.assignedToUserId !== undefined || body.assigned_to_user_id !== undefined) {
+  if (body.assignedToUserId !== undefined || body.assigned_to_user_id !== undefined || status === 'actioned' || status === 'closed') {
     fields.push('assigned_to_user_id = ?');
-    values.push(body.assignedToUserId || body.assigned_to_user_id || null);
+    values.push(assignedToUserId || null);
   }
   if (fields.length === 0) return c.json({ error: 'No fields to update' }, 400);
 
   fields.push('updated_at = datetime(\'now\')');
   values.push(id);
   await c.env.DB.prepare(`UPDATE safety_reports SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
-  await writeAudit(c.env, user, 'safety_report_updated', 'safety_report', id, { status, actionTaken: body.actionTaken || body.action_taken || '' });
+  await writeAudit(c.env, user, 'safety_report_updated', 'safety_report', id, { status, actionTaken, assignedToUserId });
 
   const report = await c.env.DB.prepare('SELECT * FROM safety_reports WHERE id = ?').bind(id).first();
-  if (!report) return c.json({ error: 'Report not found' }, 404);
-  return c.json(formatReport(report));
+  return c.json(formatReport(report!));
 });
 
 // GET /yjrl/safety/audit-log
@@ -194,6 +205,19 @@ safety.put('/uploads/review', authMiddleware, async (c) => {
   const existing = await c.env.DB.prepare('SELECT * FROM upload_records WHERE key = ?').bind(key).first();
   if (!existing) return c.json({ error: 'Upload record not found' }, 404);
 
+  const reviewNotes = String(body.reviewNotes || body.review_notes || '').trim();
+  if (status === 'approved' && existing.player_id) {
+    if (reviewNotes.length < 10) {
+      return c.json({ error: 'Reviewer notes are required before approving child-related media' }, 400);
+    }
+    const consent = await c.env.DB.prepare(
+      'SELECT media_consent FROM player_consents WHERE player_id = ?'
+    ).bind(existing.player_id).first();
+    if (!consent?.media_consent) {
+      return c.json({ error: 'Current media consent is not recorded for this player' }, 400);
+    }
+  }
+
   const approvedUrl = status === 'approved' ? reviewedMediaUrl(c.req.url, key) : null;
   if (status === 'rejected') {
     await c.env.UPLOADS.delete(key);
@@ -206,6 +230,7 @@ safety.put('/uploads/review', authMiddleware, async (c) => {
     previousStatus: existing.status,
     category: existing.category,
     playerId: existing.player_id || null,
+    reviewNotes,
   });
 
   const row = await c.env.DB.prepare(

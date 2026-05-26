@@ -4,15 +4,15 @@ import api from '../../api';
 import toast from 'react-hot-toast';
 
 // Quick reactions for different themes
-const PLAYER_REACTIONS = ['🏉', '⚡', '🔥', '💪', '🎉', '👏', '😂', '🦅'];
-const PARENT_REACTIONS = ['👍', '❤️', '😊', '🙏', '👏', '💛'];
-const COACH_REACTIONS = ['👍', '✅', '💪', '📋', '🏆', '⭐'];
+const PLAYER_REACTIONS = ['Try', 'Fast', 'Fire', 'Strong', 'Win', 'Clap', 'Smile', 'SG'];
+const PARENT_REACTIONS = ['Agree', 'Thanks', 'Smile', 'Please', 'Clap', 'Support'];
+const COACH_REACTIONS = ['Agree', 'Done', 'Strong', 'Plan', 'Win', 'Star'];
 
 const PLAYER_QUICK_MSGS = [
-  { text: 'Go Seagulls! 🦅', emoji: '🦅' },
-  { text: 'Great game today!', emoji: '🏉' },
-  { text: 'See you at training!', emoji: '💪' },
-  { text: 'Let\'s gooo! ⚡', emoji: '⚡' },
+  { text: 'Go Seagulls!', emoji: 'SG' },
+  { text: 'Great game today!', emoji: 'Game' },
+  { text: 'See you at training!', emoji: 'Train' },
+  { text: 'Let us go!', emoji: 'Go' },
 ];
 
 const formatTime = (date) => {
@@ -24,11 +24,13 @@ const formatTime = (date) => {
   return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 };
 
-const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName = 'U14 Seagulls', userName = 'You', avatar = '🦅', onlineCount = 4 }) => {
+const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName = 'U14 Seagulls', userName = 'You', avatar = 'SG', onlineCount = 4 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [showReactions, setShowReactions] = useState(null);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState(null);
+  const [reportForm, setReportForm] = useState({ reason: '', description: '', severity: 'medium' });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -90,14 +92,24 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
   };
 
   const reportMessage = (msg) => {
-    const reason = window.prompt('Briefly describe the safety concern');
-    if (!reason || !reason.trim()) return;
-    api.post(`/yjrl/chat/${msg.id}/report`, {
-      reason: reason.trim(),
-      severity: 'medium',
-      description: `Reported from ${roomName}`
-    }).then(() => toast.success('Report sent to club administrators'))
-      .catch(err => toast.error(err.response?.data?.error || 'Unable to send report'));
+    setReportingMessage(msg);
+    setReportForm({ reason: '', description: '', severity: 'medium' });
+  };
+
+  const submitReport = () => {
+    const reason = reportForm.reason.trim();
+    if (!reason) {
+      toast.error('Please describe the safety concern');
+      return;
+    }
+    api.post(`/yjrl/chat/${reportingMessage.id}/report`, {
+      reason,
+      severity: reportForm.severity,
+      description: reportForm.description.trim() || `Reported from ${roomName}`
+    }).then(() => {
+      toast.success('Report sent to club administrators');
+      setReportingMessage(null);
+    }).catch(err => toast.error(err.response?.data?.error || 'Unable to send report'));
   };
 
   // Theme-specific styles
@@ -110,6 +122,7 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
     : { background: '#f8fafc', color: '#1e293b', border: '1px solid #e2e8f0' };
 
   return (
+    <>
     <div style={{
       display: 'flex', flexDirection: 'column',
       height: '600px', maxHeight: '70vh',
@@ -135,7 +148,7 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1.2rem'
           }}>
-            {isPlayer ? '🏉' : theme === 'parent' ? '👨‍👩‍👧‍👦' : '📋'}
+            {isPlayer ? 'Play' : theme === 'parent' ? 'Parents' : 'Plan'}
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{roomName}</div>
@@ -385,6 +398,61 @@ const YJRLChat = ({ theme = 'player', roomId, roomName = 'Team Chat', teamName =
         </button>
       </div>
     </div>
+    {reportingMessage && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chat-report-title"
+        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}
+      >
+        <div style={{ width: 'min(520px, 100%)', background: 'white', borderRadius: 10, border: '1px solid #e2e8f0', boxShadow: '0 20px 50px rgba(15,23,42,0.25)' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <div>
+              <h2 id="chat-report-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Report a safety concern</h2>
+              <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '0.25rem' }}>Reports go to club administrators for safeguarding review.</div>
+            </div>
+            <button type="button" onClick={() => setReportingMessage(null)} aria-label="Close report form" style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={18} /></button>
+          </div>
+          <div style={{ padding: '1.25rem', display: 'grid', gap: '0.85rem' }}>
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 700 }}>
+              Concern summary
+              <input
+                value={reportForm.reason}
+                onChange={event => setReportForm(prev => ({ ...prev, reason: event.target.value }))}
+                autoFocus
+                style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.65rem 0.75rem', fontSize: '0.9rem' }}
+                placeholder="What worried you?"
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 700 }}>
+              Details
+              <textarea
+                value={reportForm.description}
+                onChange={event => setReportForm(prev => ({ ...prev, description: event.target.value }))}
+                rows={4}
+                style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.65rem 0.75rem', fontSize: '0.9rem', resize: 'vertical' }}
+                placeholder="Add context for the safeguarding reviewer"
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 700 }}>
+              Severity
+              <select
+                value={reportForm.severity}
+                onChange={event => setReportForm(prev => ({ ...prev, severity: event.target.value }))}
+                style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.65rem 0.75rem', fontSize: '0.9rem' }}
+              >
+                {['low', 'medium', 'high', 'critical'].map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+          </div>
+          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => setReportingMessage(null)} style={{ border: '1px solid #cbd5e1', background: 'white', borderRadius: 8, padding: '0.6rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={submitReport} style={{ border: '1px solid #1d4ed8', background: '#1d4ed8', color: 'white', borderRadius: 8, padding: '0.6rem 0.9rem', fontWeight: 800, cursor: 'pointer' }}>Send report</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

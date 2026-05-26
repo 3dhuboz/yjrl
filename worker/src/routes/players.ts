@@ -113,12 +113,17 @@ players.get('/my-player', authMiddleware, async (c) => {
 // GET /yjrl/my-children (parent portal)
 players.get('/my-children', authMiddleware, async (c) => {
   const user = c.get('user');
+  const season = new Date().getFullYear().toString();
   const result = await c.env.DB.prepare(
     `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group,
             t.training_day AS team_training_day, t.training_time AS team_training_time,
-            t.training_venue AS team_training_venue, t.coach_name AS team_coach_name
+            t.training_venue AS team_training_venue, t.coach_name AS team_coach_name,
+            r.payment_status AS registration_payment_status,
+            r.fee_amount AS registration_fee_amount,
+            r.paid_at AS registration_paid_at
      FROM players p
      LEFT JOIN teams t ON p.team_id = t.id
+     LEFT JOIN registrations r ON r.player_id = p.id AND r.season = ?
      WHERE p.is_active = 1
        AND (
         p.user_id = ?
@@ -127,14 +132,17 @@ players.get('/my-children', authMiddleware, async (c) => {
           WHERE pcl.player_id = p.id AND pcl.parent_user_id = ? AND pcl.status = 'verified'
         )
        )`
-  ).bind(user.id, user.id).all();
+  ).bind(season, user.id, user.id).all();
   const children = [];
   for (const p of (result.results || [])) {
     const [statsR, attR] = await Promise.all([
       c.env.DB.prepare('SELECT * FROM player_stats WHERE player_id = ?').bind(p.id).all(),
       c.env.DB.prepare('SELECT * FROM attendance_records WHERE player_id = ? ORDER BY date DESC LIMIT 20').bind(p.id).all(),
     ]);
-    const formatted = formatPlayer(p, statsR.results || [], [], attR.results || []);
+    const formatted = formatPlayer(p, statsR.results || [], [], attR.results || []) as ReturnType<typeof formatPlayer> & Record<string, unknown>;
+    formatted.registrationPaymentStatus = p.registration_payment_status as string;
+    formatted.registrationFeeAmount = p.registration_fee_amount as number;
+    formatted.registrationPaidAt = p.registration_paid_at as string;
     if (p.team_id) {
       formatted.teamId = {
         _id: p.team_id,

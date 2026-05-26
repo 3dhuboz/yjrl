@@ -16,6 +16,7 @@ import chatRoutes from './routes/chat';
 import registerRoutes from './routes/register';
 import uploadRoutes from './routes/upload';
 import safetyRoutes from './routes/safety';
+import adminRoutes from './routes/admin';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -170,6 +171,7 @@ app.route('/api/yjrl/achievements', achievementsRoutes);
 app.route('/api/yjrl/stats', statsRoutes);
 app.route('/api/yjrl/chat', chatRoutes);
 app.route('/api/yjrl/safety', safetyRoutes);
+app.route('/api/admin', adminRoutes);
 app.route('/api', registerRoutes);
 app.route('/api/upload', uploadRoutes);
 

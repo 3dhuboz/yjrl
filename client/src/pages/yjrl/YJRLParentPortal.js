@@ -17,14 +17,16 @@ const EVENT_COLORS = {
   social: '#4ade80', presentation: '#a78bfa', 'photo-day': '#fb923c', other: '#94a3b8'
 };
 
-const ONBOARDING_STEPS = [
-  { id: 1, label: 'Registration Complete', done: true, icon: '✓' },
-  { id: 2, label: 'Uniform Ordered', done: true, icon: '✓' },
-  { id: 3, label: 'Medical Form Submitted', done: false, icon: '3' },
-  { id: 4, label: 'Emergency Contact Added', done: true, icon: '✓' },
-  { id: 5, label: 'Team Announced', done: true, icon: '✓' },
-  { id: 6, label: 'First Training Attended', done: false, icon: '6' },
-];
+function getOnboardingSteps(child, attendance, childTeamId) {
+  return [
+    { id: 1, label: 'Registration received', done: !!child },
+    { id: 2, label: 'Payment finalised', done: child?.registrationPaymentStatus === 'paid' || child?.registrationStatus === 'active' },
+    { id: 3, label: 'Emergency contact added', done: !!(child?.emergencyContact?.name && child?.emergencyContact?.phone) },
+    { id: 4, label: 'Team allocated', done: !!childTeamId },
+    { id: 5, label: 'Training details published', done: !!(child?.teamId?.trainingDay || child?.teamId?.trainingTime) },
+    { id: 6, label: 'First attendance recorded', done: attendance.length > 0 },
+  ];
+}
 
 const YJRLParentPortal = () => {
   const { user } = useAuth();
@@ -64,9 +66,10 @@ const YJRLParentPortal = () => {
     } catch (e) { toast.error('Failed to save RSVP'); }
   };
 
-  const childUpcoming = upcoming.filter(f => f.ageGroup === child?.ageGroup);
-  const onboardingDone = ONBOARDING_STEPS.filter(s => s.done).length;
   const childTeamId = typeof child?.teamId === 'object' ? child?.teamId?._id : child?.teamId;
+  const childUpcoming = upcoming.filter(f => f.ageGroup === child?.ageGroup);
+  const onboardingSteps = getOnboardingSteps(child, attendance, childTeamId);
+  const onboardingDone = onboardingSteps.filter(s => s.done).length;
   const parentRoomId = childTeamId ? `parent:${childTeamId}` : null;
 
   return (
@@ -78,7 +81,7 @@ const YJRLParentPortal = () => {
             <div style={{ background: 'rgba(192,132,252,0.08)', border: '1px solid rgba(192,132,252,0.2)', borderRadius: '10px', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
               <span style={{ fontSize: '0.875rem', color: '#c084fc' }}>
                 <LogIn size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                Demo mode — showing sample family data. Sign in to see your children's real information.
+                Sign in to see your children's registration, team, safety, and payment information.
               </span>
               <Link to="/login" className="yjrl-btn yjrl-btn-primary yjrl-btn-sm">Sign In</Link>
             </div>
@@ -125,9 +128,17 @@ const YJRLParentPortal = () => {
       </div>
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {!user && (
+          <div className="yjrl-card" style={{ maxWidth: 560, margin: '0 auto', padding: '1.5rem', textAlign: 'center' }}>
+            <LogIn size={34} style={{ color: 'var(--yjrl-gold)', marginBottom: '0.75rem' }} />
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 900 }}>Sign in required</h2>
+            <p style={{ margin: '0 0 1rem', color: 'var(--yjrl-muted)', lineHeight: 1.6 }}>Parent portal details are private to registered guardians.</p>
+            <Link to="/login" className="yjrl-btn yjrl-btn-primary">Sign In</Link>
+          </div>
+        )}
 
         {/* ── OVERVIEW ── */}
-        {tab === 'overview' && child && (
+        {user && tab === 'overview' && child && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             {/* Child Profile */}
             <div className="yjrl-card">
@@ -135,7 +146,7 @@ const YJRLParentPortal = () => {
                 <div className="yjrl-card-title"><Users size={16} /> {child.firstName}'s Profile</div>
                 {child.registrationStatus === 'active' && (
                   <span style={{ fontSize: '0.7rem', background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', padding: '0.2rem 0.6rem', borderRadius: '100px', fontWeight: 700 }}>
-                    ✓ Registered 2026
+                    Registered 2026
                   </span>
                 )}
               </div>
@@ -255,7 +266,7 @@ const YJRLParentPortal = () => {
         )}
 
         {/* ── SCHEDULE ── */}
-        {tab === 'schedule' && (
+        {user && tab === 'schedule' && (
           <div>
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
               {children.map((c, i) => (
@@ -289,7 +300,7 @@ const YJRLParentPortal = () => {
         )}
 
         {/* ── EVENTS & RSVP ── */}
-        {tab === 'events' && (
+        {user && tab === 'events' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {events.map(event => {
               const myRsvp = rsvpMap[event._id];
@@ -338,21 +349,21 @@ const YJRLParentPortal = () => {
         )}
 
         {/* ── ONBOARDING ── */}
-        {tab === 'onboarding' && (
+        {user && tab === 'onboarding' && (
           <div style={{ maxWidth: 600 }}>
             <div className="yjrl-card" style={{ marginBottom: '1.5rem' }}>
               <div className="yjrl-card-header">
                 <div className="yjrl-card-title">Getting Started Checklist</div>
-                <span style={{ fontSize: '0.875rem', color: 'var(--yjrl-muted)' }}>{onboardingDone}/{ONBOARDING_STEPS.length} complete</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--yjrl-muted)' }}>{onboardingDone}/{onboardingSteps.length} complete</span>
               </div>
               <div className="yjrl-card-body">
                 <div style={{ marginBottom: '1rem' }}>
                   <div className="yjrl-xp-bar">
-                    <div className="yjrl-xp-fill" style={{ width: `${(onboardingDone / ONBOARDING_STEPS.length) * 100}%` }} />
+                    <div className="yjrl-xp-fill" style={{ width: `${(onboardingDone / onboardingSteps.length) * 100}%` }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {ONBOARDING_STEPS.map(step => (
+                  {onboardingSteps.map(step => (
                     <div key={step.id} style={{
                       display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem',
                       borderRadius: '8px', background: step.done ? 'rgba(74,222,128,0.07)' : 'rgba(255,255,255,0.03)',
@@ -365,7 +376,7 @@ const YJRLParentPortal = () => {
                         fontSize: '0.75rem', fontWeight: 900,
                         color: step.done ? 'white' : 'var(--yjrl-muted)'
                       }}>
-                        {step.done ? '✓' : step.id}
+                        {step.done ? 'OK' : step.id}
                       </div>
                       <span style={{ fontWeight: step.done ? 600 : 400, color: step.done ? 'var(--yjrl-text)' : 'var(--yjrl-muted)', fontSize: '0.9rem' }}>
                         {step.label}
@@ -381,7 +392,7 @@ const YJRLParentPortal = () => {
               <div className="yjrl-card-header"><div className="yjrl-card-title"><Info size={16} /> Important Information</div></div>
               <div className="yjrl-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {[
-                  { icon: '🛡️', title: 'Child Safety', text: 'All coaches and volunteers hold current Working With Children Checks (Blue Card). Our Child Safety Policy is available at the clubhouse or via email.' },
+                  { icon: 'Safety', title: 'Child Safety', text: 'Adults in approved club roles must hold current Working With Children Checks (Blue Card) and complete club safeguarding approval before they work with junior teams.' },
                   { icon: '🚑', title: 'Medical & First Aid', text: 'First aid is available at all training sessions and games. Please ensure you have submitted your child\'s medical form and updated it if anything changes.' },
                   { icon: '👕', title: 'Uniform', text: 'All players are required to wear the club jersey, shorts, and socks for game day. Boots with moulded stops are recommended for juniors.' },
                   { icon: '📱', title: 'Communication', text: 'Team communications are managed through this portal. For urgent matters, contact your coach directly or call the club on 0432 357 532.' },
@@ -399,7 +410,7 @@ const YJRLParentPortal = () => {
           </div>
         )}
         {/* ── PARENTS CHAT ── */}
-        {tab === 'chat' && (
+        {user && tab === 'chat' && (
           <div style={{ maxWidth: 720, margin: '0 auto' }}>
             <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
               <div style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>

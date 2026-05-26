@@ -112,6 +112,10 @@ const YJRLAdminPortal = () => {
   const [lastInvite, setLastInvite] = useState(null);
   const [uploadRecords, setUploadRecords] = useState([]);
   const [auditLog, setAuditLog] = useState([]);
+  const [readiness, setReadiness] = useState(null);
+  const [readinessError, setReadinessError] = useState('');
+  const [safetyActionNotes, setSafetyActionNotes] = useState({});
+  const [uploadReviewNotes, setUploadReviewNotes] = useState({});
   const [loading, setLoading] = useState(true);
   const [teamModal, setTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
@@ -150,8 +154,9 @@ const YJRLAdminPortal = () => {
       api.get('/yjrl/safety/reports').catch(() => ({ data: [] })),
       api.get('/yjrl/safety/adult-approvals').catch(() => ({ data: [] })),
       api.get('/yjrl/safety/uploads').catch(() => ({ data: [] })),
-      api.get('/yjrl/safety/audit-log?limit=50').catch(() => ({ data: [] }))
-    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes, aaRes, uRes, aRes]) => {
+      api.get('/yjrl/safety/audit-log?limit=50').catch(() => ({ data: [] })),
+      api.get('/admin/readiness').catch(error => ({ data: null, error }))
+    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes, aaRes, uRes, aRes, readyRes]) => {
       if (!alive) return;
       if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
       setTeams(Array.isArray(tRes.data) ? tRes.data : []);
@@ -163,6 +168,8 @@ const YJRLAdminPortal = () => {
       setAdultApprovals(Array.isArray(aaRes.data) ? aaRes.data : []);
       setUploadRecords(Array.isArray(uRes.data) ? uRes.data : []);
       setAuditLog(Array.isArray(aRes.data) ? aRes.data : []);
+      setReadiness(readyRes.data || null);
+      setReadinessError(readyRes.error ? 'Launch readiness check could not be loaded.' : '');
     }).finally(() => {
       if (alive) setLoading(false);
     });
@@ -192,6 +199,7 @@ const YJRLAdminPortal = () => {
   };
 
   const deleteTeam = async (id) => {
+    if (!window.confirm('Deactivate this team? Existing records stay in the system.')) return;
     try {
       await api.delete(`/yjrl/teams/${id}`);
       setTeams(prev => prev.filter(team => (team._id || team.id) !== id));
@@ -232,6 +240,7 @@ const YJRLAdminPortal = () => {
   };
 
   const deleteFixture = async (id) => {
+    if (!window.confirm('Remove this fixture from the schedule?')) return;
     try {
       await api.delete(`/yjrl/fixtures/${id}`);
       setFixtures(prev => prev.filter(fixture => (fixture._id || fixture.id) !== id));
@@ -289,6 +298,7 @@ const YJRLAdminPortal = () => {
   };
 
   const deleteNews = async (id) => {
+    if (!window.confirm('Remove this news article from the public site?')) return;
     try {
       await api.delete(`/yjrl/news/${id}`);
       setNews(prev => prev.filter(article => article._id !== id));
@@ -314,13 +324,19 @@ const YJRLAdminPortal = () => {
   const updateSafetyReport = async (report, status) => {
     try {
       const id = report._id || report.id;
-      const actionTaken = {
-        triaged: 'Report triaged by club admin',
-        actioned: 'Action taken by club admin',
-        closed: 'Report closed by club admin'
-      }[status] || '';
-      const res = await api.put(`/yjrl/safety/reports/${id}`, { status, actionTaken });
+      const note = (safetyActionNotes[id] || report.action_taken || '').trim();
+      if ((status === 'actioned' || status === 'closed') && note.length < 20) {
+        toast.error('Add action notes before marking a report actioned or closed');
+        return;
+      }
+      const actionTaken = status === 'triaged' && !note ? 'Report triaged for review by club admin.' : note;
+      const res = await api.put(`/yjrl/safety/reports/${id}`, {
+        status,
+        actionTaken,
+        assignedToUserId: user?._id || user?.id
+      });
       setSafetyReports(prev => prev.map(item => ((item._id || item.id) === id ? res.data : item)));
+      setSafetyActionNotes(prev => ({ ...prev, [id]: '' }));
       toast.success(`Report marked ${status}`);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to update safety report');
@@ -329,8 +345,14 @@ const YJRLAdminPortal = () => {
 
   const reviewUpload = async (record, status) => {
     try {
-      const res = await api.put('/yjrl/safety/uploads/review', { key: record.key, status });
+      const note = (uploadReviewNotes[record.key] || '').trim();
+      if (status === 'approved' && (record.playerId || record.player_id) && note.length < 10) {
+        toast.error('Add reviewer notes before approving child media');
+        return;
+      }
+      const res = await api.put('/yjrl/safety/uploads/review', { key: record.key, status, reviewNotes: note });
       setUploadRecords(prev => prev.map(item => (item.key === record.key ? res.data : item)));
+      setUploadReviewNotes(prev => ({ ...prev, [record.key]: '' }));
       toast.success(`Upload ${status.replace('_', ' ')}`);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to review upload');
@@ -441,6 +463,40 @@ const YJRLAdminPortal = () => {
                   <span className="yjrl-stat-label">{item.label}</span>
                 </div>
               ))}
+            </div>
+
+            <div className="yjrl-card">
+              <div className="yjrl-card-header">
+                <div className="yjrl-card-title"><Shield size={16} /> Customer Launch Readiness</div>
+                {readiness && (
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    color: readiness.readyForPaidLaunch ? '#166534' : '#991b1b',
+                    background: readiness.readyForPaidLaunch ? '#dcfce7' : '#fee2e2',
+                    border: `1px solid ${readiness.readyForPaidLaunch ? '#86efac' : '#fecaca'}`,
+                    borderRadius: 999,
+                    padding: '0.25rem 0.65rem'
+                  }}>
+                    {readiness.readyForPaidLaunch ? 'Ready' : `${readiness.blockingCount || 0} blocker${readiness.blockingCount === 1 ? '' : 's'}`}
+                  </span>
+                )}
+              </div>
+              <div className="yjrl-card-body" style={{ display: 'grid', gap: '0.75rem' }}>
+                {readinessError && <div style={{ color: '#b91c1c', fontWeight: 700 }}>{readinessError}</div>}
+                {readiness?.checks?.map(item => {
+                  const color = item.status === 'pass' ? '#166534' : item.status === 'warn' ? '#92400e' : item.status === 'not_required' ? '#475569' : '#991b1b';
+                  const bg = item.status === 'pass' ? '#dcfce7' : item.status === 'warn' ? '#fef3c7' : item.status === 'not_required' ? '#f1f5f9' : '#fee2e2';
+                  return (
+                    <div key={item.id} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{item.label}</div>
+                      <span style={{ justifySelf: 'start', color, background: bg, borderRadius: 999, padding: '0.2rem 0.55rem', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>{String(item.status).replace('_', ' ')}</span>
+                      <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>{item.detail}</div>
+                    </div>
+                  );
+                })}
+                {!readiness && !readinessError && <div style={{ color: 'var(--yjrl-muted)' }}>Readiness checks are loading.</div>}
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -699,10 +755,20 @@ const YJRLAdminPortal = () => {
                       <td style={{ textTransform: 'capitalize' }}>{report.status}</td>
                       <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(report.created_at)}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'grid', gap: '0.45rem', minWidth: 220 }}>
+                          <textarea
+                            className="yjrl-input"
+                            rows={2}
+                            value={safetyActionNotes[report._id || report.id] ?? ''}
+                            placeholder="Action notes required before actioning or closing"
+                            onChange={event => setSafetyActionNotes(prev => ({ ...prev, [report._id || report.id]: event.target.value }))}
+                            style={{ resize: 'vertical', fontSize: '0.78rem' }}
+                          />
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                           {report.status === 'open' && <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => updateSafetyReport(report, 'triaged')}>Triage</button>}
                           {report.status !== 'actioned' && report.status !== 'closed' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => updateSafetyReport(report, 'actioned')}>Actioned</button>}
                           {report.status !== 'closed' && <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => updateSafetyReport(report, 'closed')}>Close</button>}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -806,9 +872,18 @@ const YJRLAdminPortal = () => {
                       <td style={{ textTransform: 'capitalize', fontWeight: 700 }}>{String(record.status || '').replace('_', ' ')}</td>
                       <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(record.created_at)}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          {record.status !== 'approved' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
-                          {record.status !== 'rejected' && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>Reject</button>}
+                        <div style={{ display: 'grid', gap: '0.45rem', minWidth: 220 }}>
+                          <input
+                            className="yjrl-input"
+                            value={uploadReviewNotes[record.key] || ''}
+                            placeholder="Reviewer note for child media"
+                            onChange={event => setUploadReviewNotes(prev => ({ ...prev, [record.key]: event.target.value }))}
+                            style={{ fontSize: '0.78rem' }}
+                          />
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            {record.status !== 'approved' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
+                            {record.status !== 'rejected' && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>Reject</button>}
+                          </div>
                         </div>
                       </td>
                     </tr>

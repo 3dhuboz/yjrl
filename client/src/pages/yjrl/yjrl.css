@@ -196,6 +196,8 @@
 .yjrl-dot.future { background: #e2e8f0; border: 1px solid #cbd5e1; }
 
 .yjrl-table { width: 100%; border-collapse: collapse; }
+.yjrl-card > .yjrl-table { display: block; overflow-x: auto; }
+.yjrl-card > .yjrl-table thead, .yjrl-card > .yjrl-table tbody { display: table; width: 100%; min-width: 720px; }
 .yjrl-table th { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--yjrl-muted); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--yjrl-border); }
 .yjrl-table td { padding: 0.875rem 1rem; font-size: 0.9rem; color: var(--yjrl-text); border-bottom: 1px solid var(--yjrl-border-light); vertical-align: middle; }
 .yjrl-table tr:last-child td { border-bottom: none; }

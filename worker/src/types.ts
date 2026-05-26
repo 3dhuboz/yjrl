@@ -11,6 +11,14 @@ export interface Env {
   PAYPAL_CLIENT_SECRET?: string;
   PAYPAL_MODE?: string; // 'sandbox' | 'live'
   RESEND_API_KEY?: string;
+  FRONTEND_URL?: string;
+  API_PUBLIC_URL?: string;
+  CHILD_SAFETY_SIGNOFF?: string;
+  CLICKSEND_USERNAME?: string;
+  CLICKSEND_API_KEY?: string;
+  CLICKSEND_REQUIRED?: string;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_REQUIRED?: string;
   FROM_EMAIL: string;
   ENVIRONMENT: string;
   ALLOWED_ORIGINS?: string;

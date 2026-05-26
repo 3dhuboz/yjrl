@@ -39,17 +39,26 @@ The production Worker and Pages deployment are live, and several critical issues
 - Approved media now streams through the Worker at `/api/media?key=...`, so child media no longer depends on the broken `uploads.yeppoonjrl.com.au` hostname.
 - A child-safety incident playbook was added in `CHILD_SAFETY_INCIDENT_PLAYBOOK.md` for report triage, evidence handling, adult suspension/revocation, and club launch sign-off.
 - Existing verified parent accounts can now register additional children with the same email after password verification, so the parent portal "Register Another Child" workflow is no longer blocked by duplicate-email rejection.
+- PayPal registration now fails closed when live PayPal and child-safety sign-off are not ready; it no longer silently downgrades selected PayPal registrations into offline registrations.
+- PayPal order creation now happens before registration rows are committed, preventing half-created player registrations when PayPal is unavailable.
+- PayPal create/capture calls now use request IDs, validate approval URLs, and treat already-captured orders as reconcilable where PayPal returns that state.
+- Offline and paid email templates are split, so offline families are told payment is still required and paid families are not asked to pay twice.
+- Admin launch readiness checks were added for D1, R2, PayPal live mode, Resend, frontend/API domains, child-safety sign-off, high/critical reports, media review, ClickSend, and OpenRouter.
+- Admin safety reports now require meaningful action notes before actioning or closing.
+- Child media approval now re-checks current consent and requires reviewer notes before approval.
+- Chat safety reporting now uses an in-app form with severity/details instead of a browser prompt.
+- Parent registration success and portal onboarding copy now reflect actual payment/team status instead of assuming every registration is complete.
 
 ## Verified Live
 
 - Worker deployed at `https://yjrl-api.steve-700.workers.dev`.
 - Latest Worker version verified in deploy output: `fa5d8f76-5958-4c6d-943e-939cfc9995e9`.
-- Latest Worker version verified after admin-safeguarding controls: `7f59935a-fcfc-4867-b3b4-8d41ce3538ed`.
+- Latest Worker version verified after payment/readiness controls: `22a4b6c5-d2e3-401a-8b8a-4fb9b63fdf69`.
 - Pages deployed at `https://yjrl.pages.dev`.
-- Latest Pages preview deployed after admin-safeguarding controls: `https://db6ec473.yjrl.pages.dev`.
+- Latest Pages preview deployed after payment/readiness controls: `https://415492c4.yjrl.pages.dev`.
 - `https://yjrl.pages.dev/api/registration-fees` now returns a 307 redirect to the Worker and resolves to JSON with `curl -L`.
 - Production bundle uses `https://yjrl-api.steve-700.workers.dev/api`.
-- Latest Pages bundle verified as `assets/index-DkXoscPG.js`.
+- Latest Pages bundle verified as `assets/index-Cc7wLkWO.js`.
 - `OPTIONS` from `https://not-yjrl.pages.dev` no longer receives an allowed origin.
 - `OPTIONS` from `https://cb4d03c7.yjrl.pages.dev` receives its matching allowed origin.
 - Client production build passes.
@@ -58,6 +67,8 @@ The production Worker and Pages deployment are live, and several critical issues
 - Live smoke test confirmed registration creates parent-child link, consent row, safety report, and audit records; temporary smoke records were cleaned from production D1.
 - Live smoke test confirmed adult invite creation, temporary-password return, expired approval rejection, unapproved coach assignment rejection, approved coach assignment, player team assignment, parent team details, pending upload URL/key withholding, unapproved photo rejection, reviewed Worker media serving, rejected upload R2 removal, safety report close workflow, non-admin chat-room listing denial, and adult approval revocation; temporary smoke records were cleaned from production D1/R2.
 - Live smoke test confirmed a parent can register two children under one existing account, both verified parent-child links are created, `/my-children` returns both children, and using the wrong existing-account password is rejected with 401; temporary smoke records were cleaned from production D1.
+- Live smoke test confirmed `/registration-fees` hides PayPal until launch sign-off, direct PayPal registration returns 503 with no customer registration created, offline registration still succeeds and issues a parent token, and temporary smoke records were cleaned from production D1.
+- `https://415492c4.yjrl.pages.dev/register` and `https://yjrl.pages.dev/register` return the deployed app.
 
 ## Blocking Before Customer Launch
 
@@ -67,11 +78,11 @@ The production Worker and Pages deployment are live, and several critical issues
 - Continue splitting player response data into public, player, parent, coach, and admin DTOs so each role receives only what it needs.
 - Add image re-encoding or EXIF stripping; current upload hardening verifies signatures, extensions, size, consent, ownership, and review metadata.
 - Replace isolate-local rate limits with durable/risk-scored limits if abuse traffic appears.
-- Fix production domain routing: `yeppoonjrl.com.au` and `www.yeppoonjrl.com.au` are still served by an nginx host, not the Pages app.
+- Fix production domain routing: `yeppoonjrl.com.au` and `www.yeppoonjrl.com.au` are still not serving the Pages app (`/register` returned 403 during the latest check).
 - Optional: configure `uploads.yeppoonjrl.com.au` later for branded media URLs. The launch path now uses Worker-reviewed media URLs instead.
 - Add real club data: teams, fixtures, events, news, sponsors, and registration operating copy are currently empty or placeholder-light.
 - Configure and verify Resend before relying on email confirmations.
-- Configure and verify PayPal before claiming online payments are available; live registration is offline-payment only at audit time.
+- Configure live PayPal and set `CHILD_SAFETY_SIGNOFF=approved` only after club child-safety sign-off before claiming online payments are available; live registration is offline-payment only at audit time.
 
 ## Child Safety References
 

@@ -57,7 +57,14 @@ const YJRLRegister = () => {
     if (success === 'true' && regId) {
       api.post(`/register-player/${regId}/capture`, { state }).then(res => {
         if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
-        setSuccessDetails({ user: res.data.user });
+        setSuccessDetails({
+          user: res.data.user,
+          paymentMethod: res.data.paymentMethod || 'paypal',
+          paymentStatus: res.data.paymentStatus || 'paid',
+          amount: res.data.amount,
+          ageGroup: res.data.ageGroup,
+          playerName: res.data.playerName
+        });
         setStep(5); // success
         toast.success('Payment confirmed! Welcome to the Seagulls!');
       }).catch(() => toast.error('Payment capture failed. Please contact the club.'));
@@ -117,7 +124,14 @@ const YJRLRegister = () => {
       } else {
         // Offline payment - show success
         if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
-        setSuccessDetails({ user: res.data.user });
+        setSuccessDetails({
+          user: res.data.user,
+          paymentMethod: res.data.paymentMethod || 'offline',
+          paymentStatus: res.data.paymentStatus || 'offline',
+          amount: res.data.amount || finalFee,
+          ageGroup: res.data.ageGroup || form.ageGroup,
+          playerName: res.data.playerName || `${form.firstName} ${form.lastName}`.trim()
+        });
         setStep(5); // success step
         toast.success('Registration submitted!');
       }
@@ -128,31 +142,40 @@ const YJRLRegister = () => {
     }
   };
 
+  const successIsPaid = successDetails?.paymentStatus === 'paid';
+  const successPlayerName = successDetails?.playerName || form.firstName || 'your player';
+  const successEmail = form.guardianEmail || successDetails?.user?.email || 'your registered email';
+  const successAmount = successDetails?.amount ?? finalFee;
+  const nextSteps = successIsPaid ? [
+    'Payment has been received and recorded',
+    'Our registrar will complete the club review and team allocation',
+    'Complete PlayHQ registration if the club has not already matched it',
+    'Watch the parent portal for team, training, and uniform updates'
+  ] : [
+    'Our registrar will review your application within 48 hours',
+    'Payment is still required before registration is finalised',
+    Number.isFinite(Number(successAmount)) ? `Complete payment of $${Number(successAmount).toFixed(2)} to finalise your registration` : 'The club will confirm the amount due',
+    'Your child will be assigned to a team after club review',
+    'Welcome pack including uniform details will be sent to you'
+  ];
+
   if (submitted || step === 5) return (
     <YJRLLayout>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '5rem 1.5rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>🏉</div>
         <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '2px solid rgba(74,222,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#4ade80' }}>
           <CheckCircle size={36} />
         </div>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.75rem', color: '#4ade80' }}>
-          Registration Submitted!
+          {successIsPaid ? 'Payment Confirmed!' : 'Registration Submitted!'}
         </h1>
         <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
-          Welcome to the Yeppoon Seagulls{(form.firstName || successDetails?.user?.firstName) ? ', ' : ''}
-          <strong style={{ color: 'var(--yjrl-text)' }}>{form.firstName || successDetails?.user?.firstName || ''}</strong>!
-          Your registration has been received and a confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{form.guardianEmail || successDetails?.user?.email || 'your registered email'}</strong>.
+          Welcome to the Yeppoon Seagulls. <strong style={{ color: 'var(--yjrl-text)' }}>{successPlayerName}</strong>'s registration has been received.
+          {successIsPaid ? ' Payment has been confirmed.' : ' Payment is still required before final approval.'} A confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{successEmail}</strong>.
         </p>
         <div style={{ background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left' }}>
           <h3 style={{ color: 'var(--yjrl-gold)', fontWeight: 800, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Next Steps</h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {[
-              'Our registrar will review your application within 48 hours',
-              'You will receive a confirmation email with payment details',
-              `Complete payment of $${finalFee} to finalise your registration`,
-              'Your child will be assigned to a team and training schedule',
-              'Welcome pack including uniform details will be sent to you'
-            ].map((step, i) => (
+            {nextSteps.map((step, i) => (
               <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.875rem', color: 'var(--yjrl-muted)' }}>
                 <span style={{ color: 'var(--yjrl-gold)', fontWeight: 800, minWidth: 18 }}>{i + 1}.</span>
                 {step}
@@ -234,7 +257,7 @@ const YJRLRegister = () => {
           <div className="yjrl-card-body">
             {/* ── Step 1: Player ── */}
             {step === 1 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                 {[['First Name', 'firstName', 'text', true], ['Last Name', 'lastName', 'text', true]].map(([label, key, type, required]) => (
                   <div key={key} className="yjrl-form-group" style={{ marginBottom: 0 }}>
                     <label className="yjrl-label">{label} {required && <span style={{ color: 'var(--yjrl-red)' }}>*</span>}</label>
@@ -257,7 +280,7 @@ const YJRLRegister = () => {
                     </div>
                   )}
                 </div>
-                <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
+                <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
                   <label className="yjrl-label">Preferred Position</label>
                   <select className="yjrl-input" value={form.position} onChange={e => update('position', e.target.value)}>
                     {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
@@ -268,8 +291,8 @@ const YJRLRegister = () => {
 
             {/* ── Step 2: Guardian ── */}
             {step === 2 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
                   <label className="yjrl-label">Guardian / Parent Name <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
                   <input type="text" className="yjrl-input" value={form.guardianName} onChange={e => update('guardianName', e.target.value)} placeholder="Full name" />
                 </div>
@@ -289,15 +312,15 @@ const YJRLRegister = () => {
                   <label className="yjrl-label">Confirm Password <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
                   <input type="password" className="yjrl-input" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} placeholder="Re-enter password" autoComplete="new-password" />
                 </div>
-                <div style={{ gridColumn: 'span 2', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: '8px', padding: '0.875rem 1rem', fontSize: '0.85rem', color: 'var(--yjrl-muted)', lineHeight: 1.6 }}>
-                  <strong style={{ color: '#60a5fa' }}>Privacy Notice:</strong> Your personal information is collected solely for club registration, communication, and compliance purposes. We do not share your information with third parties without your consent.
+                <div style={{ gridColumn: '1 / -1', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: '8px', padding: '0.875rem 1rem', fontSize: '0.85rem', color: 'var(--yjrl-muted)', lineHeight: 1.6 }}>
+                  <strong style={{ color: '#60a5fa' }}>Privacy Notice:</strong> We use registration details for club operations, competition administration, payment processing, communications, safety, and legal compliance.
                 </div>
               </div>
             )}
 
             {/* ── Step 3: Medical ── */}
             {step === 3 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                 <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                   <label className="yjrl-label">Emergency Contact Name <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
                   <input type="text" className="yjrl-input" value={form.emergencyName} onChange={e => update('emergencyName', e.target.value)} placeholder="Full name" />
@@ -310,7 +333,7 @@ const YJRLRegister = () => {
                   <label className="yjrl-label">Relationship to Player</label>
                   <input type="text" className="yjrl-input" value={form.emergencyRelationship} onChange={e => update('emergencyRelationship', e.target.value)} placeholder="e.g. Mother, Father, Grandparent" />
                 </div>
-                <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
+                <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
                   <label className="yjrl-label">Medical Notes / Conditions</label>
                   <textarea
                     className="yjrl-input"
@@ -327,7 +350,7 @@ const YJRLRegister = () => {
             {/* ── Step 4: Confirmation ── */}
             {step === 4 && (
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--yjrl-gold)', marginBottom: '0.75rem' }}>Player</div>
                     {[['Name', `${form.firstName} ${form.lastName}`], ['DOB', form.dateOfBirth], ['Age Group', form.ageGroup], ['Position', form.position]].map(([l, v]) => (
@@ -361,10 +384,10 @@ const YJRLRegister = () => {
                 {/* Payment Method Selector */}
                 <div style={{ marginBottom: '1.5rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--yjrl-gold)', marginBottom: '0.75rem' }}>Payment Method</div>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     {paypalAvailable && (
                       <label style={{
-                        flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
+                        flex: '1 1 220px', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
                         padding: '1rem', borderRadius: '10px',
                         border: selectedPaymentMethod === 'paypal' ? '2px solid var(--yjrl-gold)' : '1px solid var(--yjrl-border)',
                         background: selectedPaymentMethod === 'paypal' ? 'rgba(240,165,0,0.06)' : 'transparent'
@@ -377,7 +400,7 @@ const YJRLRegister = () => {
                       </label>
                     )}
                     <label style={{
-                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
+                      flex: '1 1 220px', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
                       padding: '1rem', borderRadius: '10px',
                       border: selectedPaymentMethod === 'offline' ? '2px solid var(--yjrl-gold)' : '1px solid var(--yjrl-border)',
                       background: selectedPaymentMethod === 'offline' ? 'rgba(240,165,0,0.06)' : 'transparent'

@@ -8,6 +8,8 @@ ENVIRONMENT = "production"
 FROM_EMAIL = "noreply@yeppoonjrl.com.au"
 ALLOWED_ORIGINS = "https://yeppoonjrl.com.au,https://www.yeppoonjrl.com.au"
 UPLOADS_PUBLIC_URL = "https://uploads.yeppoonjrl.com.au"
+FRONTEND_URL = "https://yeppoonjrl.com.au"
+API_PUBLIC_URL = "https://yjrl-api.steve-700.workers.dev/api"
 
 # D1 Database
 [[d1_databases]]
@@ -32,3 +34,6 @@ crons = ["0 22 * * *"]
 # PAYPAL_CLIENT_SECRET
 # PAYPAL_MODE (sandbox or live)
 # RESEND_API_KEY
+# CHILD_SAFETY_SIGNOFF (set to approved only after club launch sign-off)
+# CLICKSEND_USERNAME / CLICKSEND_API_KEY if SMS is required
+# OPENROUTER_API_KEY if AI features are required
