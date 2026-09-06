@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import type { Env, Variables, AuthUser } from '../types';
 import { hashPassword, verifyPassword } from '../lib/password';
-import { createOrder, captureOrder } from '../lib/paypal';
+import { createOrder, captureOrder, resumeOrder } from '../lib/paypal';
 import { sendEmail, registrationOfflineEmail, registrationPaidEmail, adminRegistrationNotification } from '../lib/email';
 import { writeAudit } from '../lib/audit';
 import * as jose from 'jose';
 import seasonConfig from '../../../shared/season.json';
+import { validateRegistration } from '../../../shared/registration';
 
 const register = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -53,12 +54,12 @@ async function signCheckoutState(secret: string, registrationId: string, userId:
     .sign(key);
 }
 
-async function verifyCheckoutState(secret: string, state: string | undefined, registrationId: string) {
-  if (!state) return false;
+async function verifyCheckoutState(secret: string, state: unknown, reg: Record<string, unknown>) {
+  if (typeof state !== 'string' || !state) return false;
   try {
     const key = new TextEncoder().encode(secret);
-    const { payload } = await jose.jwtVerify(state, key);
-    return payload.registrationId === registrationId;
+    const { payload } = await jose.jwtVerify(state, key, { algorithms: ['HS256'] });
+    return payload.registrationId === reg.id && payload.userId === reg.user_id && payload.amount === Number(reg.fee_amount);
   } catch {
     return false;
   }
@@ -149,7 +150,7 @@ function checkoutFrontendUrl(env: Env, request: Request) {
 
 async function findExistingSeasonRegistration(env: Env, userId: string, firstName: string, lastName: string, dateOfBirth: string, season: string) {
   return env.DB.prepare(
-    `SELECT r.id, r.payment_status, r.paypal_order_id, p.id AS player_id
+    `SELECT r.*, p.first_name, p.last_name, p.id AS player_id
      FROM players p
      JOIN registrations r ON r.player_id = p.id
      WHERE p.user_id = ?
@@ -173,16 +174,16 @@ async function sendRegistrationEmails(
   guardianName: string,
   amount: number,
   paymentStatus: 'paid' | 'offline',
-) {
-  if (!env.RESEND_API_KEY) {
-    await writeAudit(env, null, 'email_skipped', 'registration', registrationId, { reason: 'RESEND_API_KEY missing', paymentStatus });
-    return;
+) : Promise<'sent' | 'unavailable' | 'failed'> {
+  if (!env.RESEND_API_KEY || !env.FROM_EMAIL) {
+    await writeAudit(env, null, 'email_skipped', 'registration', registrationId, { reason: 'Email provider or sender not configured', paymentStatus });
+    return 'unavailable';
   }
 
   const parentEmail = paymentStatus === 'paid'
     ? registrationPaidEmail(playerName, ageGroup, amount)
     : registrationOfflineEmail(playerName, ageGroup, amount);
-  const sentParent = await sendEmail(env.RESEND_API_KEY, env.FROM_EMAIL, { to: guardianEmail, ...parentEmail });
+  const sentParent = await sendEmail(env.RESEND_API_KEY, env.FROM_EMAIL, { to: guardianEmail, ...parentEmail }, `registration/${registrationId}/${paymentStatus}/parent`);
   if (!sentParent) {
     await writeAudit(env, null, 'email_failed', 'registration', registrationId, { to: guardianEmail, paymentStatus });
   }
@@ -194,11 +195,12 @@ async function sendRegistrationEmails(
       guardianName || 'N/A',
       paymentStatus === 'paid' ? 'Paid online' : 'Awaiting offline payment',
     );
-    const sentAdmin = await sendEmail(env.RESEND_API_KEY, env.FROM_EMAIL, { to: adminEmail, ...adminNotice });
+    const sentAdmin = await sendEmail(env.RESEND_API_KEY, env.FROM_EMAIL, { to: adminEmail, ...adminNotice }, `registration/${registrationId}/${paymentStatus}/admin`);
     if (!sentAdmin) {
       await writeAudit(env, null, 'email_failed', 'registration', registrationId, { to: adminEmail, paymentStatus, recipient: 'admin' });
     }
   }
+  return sentParent ? 'sent' : 'failed';
 }
 
 register.get('/registration-fees', async (c) => {
@@ -217,31 +219,25 @@ register.get('/registration-fees', async (c) => {
 });
 
 register.post('/register-player', async (c) => {
-  let body: Record<string, any>;
+  let raw: unknown;
   try {
-    body = await c.req.json();
+    raw = await c.req.json();
   } catch {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
+  const validated = validateRegistration(raw, SEASON, Object.keys(FEES));
+  if (!validated.data) {
+    const staleSeason = raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as Record<string, unknown>).season !== SEASON;
+    return c.json({ error: validated.error, step: validated.step }, staleSeason ? 409 : 400);
+  }
+  const body = validated.data;
+
   const {
     firstName, lastName, email, password, dateOfBirth, ageGroup, position,
-    guardianName, guardianPhone, guardianEmail, emergencyContact, emergencyName, emergencyPhone, emergencyRelationship, medicalNotes,
+    guardianName, guardianPhone, guardianEmail, emergencyContact, medicalNotes,
     paymentMethod,
   } = body;
-
-  if (!firstName || !lastName || !email || !password || !ageGroup) {
-    return c.json({ error: 'Missing required fields' }, 400);
-  }
-  if (String(password).length < 8) {
-    return c.json({ error: 'Password must be at least 8 characters' }, 400);
-  }
-  if (body.season !== SEASON) {
-    return c.json({ error: 'Season details have changed. Please refresh this page before submitting your registration.' }, 409);
-  }
-  if (typeof ageGroup !== 'string' || !Object.hasOwn(FEES, ageGroup)) {
-    return c.json({ error: 'Please select an available age group.' }, 400);
-  }
 
   const requestedPaymentMethod = paymentMethod === 'paypal' ? 'paypal' : 'offline';
   if (requestedPaymentMethod === 'paypal' && !paypalReadyForCustomers(c.env)) {
@@ -270,10 +266,23 @@ register.post('/register-player', async (c) => {
 
     const duplicate = await findExistingSeasonRegistration(c.env, user.id, firstName, lastName, dateOfBirth || '', season);
     if (duplicate) {
+      const pendingPaypal = duplicate.payment_status === 'pending' && !!duplicate.paypal_order_id;
       return c.json({
         error: 'This player already has a registration for this season. Please use the parent portal or contact the club before submitting again.',
         registrationId: duplicate.id,
         paymentStatus: duplicate.payment_status,
+        ...(pendingPaypal ? {
+          checkoutState: await signCheckoutState(c.env.JWT_SECRET, String(duplicate.id), user.id, Number(duplicate.fee_amount)),
+        } : {}),
+        ...(['offline', 'paid'].includes(String(duplicate.payment_status)) ? {
+          registration: {
+            registrationId: duplicate.id, season: duplicate.season, amount: Number(duplicate.fee_amount),
+            paymentStatus: duplicate.payment_status, paymentMethod: duplicate.paypal_order_id ? 'paypal' : 'offline',
+            ageGroup: duplicate.age_group, playerName: `${duplicate.first_name} ${duplicate.last_name}`.trim(),
+            emailStatus: 'not_attempted', alreadyReceived: true,
+            token: await issueToken(c.env, user.id), user: userResponse(user),
+          },
+        } : {}),
       }, 409);
     }
   } else {
@@ -294,9 +303,12 @@ register.post('/register-player', async (c) => {
   const baseFee = FEES[ageGroup];
   const discount = earlyBirdActive() ? EARLY_BIRD_DISCOUNT : 0;
   const totalFee = baseFee - discount;
+  if (body.quotedAmount !== totalFee) {
+    return c.json({ error: 'The registration fee has changed. Please review the updated fee before submitting.', code: 'fees_changed' }, 409);
+  }
   const playerId = crypto.randomUUID();
   const regId = crypto.randomUUID();
-  const emergency = emergencyContact || { name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship };
+  const emergency = emergencyContact;
   const playerName = `${firstName} ${lastName}`.trim();
   const formData = JSON.stringify({ ...registrationSnapshot(body, requestedPaymentMethod), season, amount: totalFee });
 
@@ -312,7 +324,7 @@ register.post('/register-player', async (c) => {
         'AUD',
         `YJRL ${ageGroup} Registration - ${playerName}`,
         `${frontendUrl}/register?success=true&reg=${regId}&state=${encodeURIComponent(checkoutState)}`,
-        `${frontendUrl}/register?cancelled=true&reg=${regId}`,
+        `${frontendUrl}/register?cancelled=true&reg=${regId}&state=${encodeURIComponent(checkoutState)}`,
         regId,
       );
     } catch (error) {
@@ -375,7 +387,18 @@ register.post('/register-player', async (c) => {
     ).bind(regId, playerId, user.id, season, ageGroup, totalFee, discount, 'pending', paypalOrder!.orderId, formData));
   }
 
-  await c.env.DB.batch(writes);
+  const identity = JSON.stringify([emailNorm, normalise(firstName), normalise(lastName), dateOfBirth, season]);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity));
+  const identityKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  writes.push(c.env.DB.prepare('INSERT INTO registration_claims (identity_key, registration_id) VALUES (?, ?)').bind(identityKey, regId));
+  try {
+    await c.env.DB.batch(writes);
+  } catch (error) {
+    if (/UNIQUE constraint failed/i.test(error instanceof Error ? error.message : String(error))) {
+      return c.json({ error: 'A registration using these details already exists or is being saved. Retry once with the same account password to recover it; if this message continues, contact the club.' }, 409);
+    }
+    throw error;
+  }
 
   await writeAudit(c.env, authUserFrom(user), 'registration_created', 'registration', regId, {
     playerId,
@@ -389,12 +412,13 @@ register.post('/register-player', async (c) => {
 
   if (requestedPaymentMethod === 'offline') {
     const token = await issueToken(c.env, user.id);
-    await sendRegistrationEmails(c.env, regId, guardianEmailNorm, c.env.ADMIN_EMAIL, playerName, ageGroup, guardianName || 'N/A', totalFee, 'offline');
+    const emailStatus = await sendRegistrationEmails(c.env, regId, guardianEmailNorm, c.env.ADMIN_EMAIL, playerName, ageGroup, guardianName || 'N/A', totalFee, 'offline');
     return c.json({
       registrationId: regId,
       season,
       paymentMethod: 'offline',
       paymentStatus: 'offline',
+      emailStatus,
       amount: totalFee,
       ageGroup,
       playerName,
@@ -416,46 +440,81 @@ register.post('/register-player', async (c) => {
   }, 201);
 });
 
+register.post('/register-player/:id/resume', async (c) => {
+  let body: { state?: unknown } | null = null;
+  try { body = await c.req.json(); } catch {}
+  const reg = await c.env.DB.prepare('SELECT * FROM registrations WHERE id = ?').bind(c.req.param('id')).first();
+  if (!reg || !(await verifyCheckoutState(c.env.JWT_SECRET, body?.state, reg))) {
+    return c.json({ error: 'This checkout link is invalid or has expired. Sign in or contact the club with your registration reference.' }, 403);
+  }
+  const user = await c.env.DB.prepare('SELECT is_active FROM users WHERE id = ?').bind(reg.user_id).first();
+  if (!user?.is_active) return c.json({ error: 'This account is not active. Please contact the club.' }, 403);
+  if (reg.payment_status === 'paid') return c.json({ captureRequired: true });
+  if (reg.payment_status !== 'pending' || !reg.paypal_order_id) return c.json({ error: 'This registration cannot be paid through this link. Please contact the club.' }, 409);
+  if (!paypalReadyForCustomers(c.env)) return c.json({ error: 'Online payment is not currently available. Please contact the club.' }, 503);
+  try {
+    return c.json(await resumeOrder(c.env, String(reg.paypal_order_id)));
+  } catch {
+    return c.json({ error: 'Checkout could not be reopened. Your registration is saved. Try again or contact the club with your reference.' }, 502);
+  }
+});
+
 register.post('/register-player/:id/capture', async (c) => {
   const regId = c.req.param('id');
-  let body: { state?: string } = {};
+  let body: { state?: unknown } | null = null;
   try { body = await c.req.json(); } catch {}
 
   const reg = await c.env.DB.prepare('SELECT * FROM registrations WHERE id = ?').bind(regId).first();
   if (!reg) return c.json({ error: 'Registration not found' }, 404);
   if (!reg.paypal_order_id) return c.json({ error: 'No PayPal order' }, 400);
-  if (!(await verifyCheckoutState(c.env.JWT_SECRET, body.state, regId))) {
+  if (!(await verifyCheckoutState(c.env.JWT_SECRET, body?.state, reg))) {
     return c.json({ error: 'Invalid or expired checkout state' }, 403);
   }
 
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(reg.user_id).first<ExistingUser>();
   if (!user) return c.json({ error: 'Registration account not found' }, 404);
+  if (!user.is_active) return c.json({ error: 'This account is not active. Please contact the club.' }, 403);
+  if (reg.payment_status !== 'pending' && reg.payment_status !== 'paid') return c.json({ error: 'This registration is not awaiting online payment. Please contact the club.' }, 409);
 
+  let newlyPaid = false;
   if (reg.payment_status !== 'paid') {
     if (!paypalReadyForCustomers(c.env)) {
       return c.json({ error: 'Online payment is not currently available. Please contact the club.' }, 503);
     }
     const paypalEnv = c.env as Env & { PAYPAL_CLIENT_ID: string; PAYPAL_CLIENT_SECRET: string; PAYPAL_MODE?: string };
-    const { status, captureId } = await captureOrder(paypalEnv, reg.paypal_order_id as string, regId);
-    if (status !== 'COMPLETED') return c.json({ error: `Payment not completed: ${status}` }, 400);
+    let capture;
+    try {
+      capture = await captureOrder(paypalEnv, reg.paypal_order_id as string, regId);
+    } catch {
+      return c.json({ error: 'Payment could not be confirmed. Your registration is saved. Retry confirmation before starting another payment.' }, 502);
+    }
+    const { status, captureId, amount } = capture;
+    if (status !== 'COMPLETED' || !captureId || amount?.currency_code !== 'AUD' || Number(amount.value) !== Number(reg.fee_amount)) {
+      return c.json({ error: 'Payment has not been confirmed for the registration amount. Please contact the club with your reference.' }, 409);
+    }
 
-    await c.env.DB.batch([
-      c.env.DB.prepare('UPDATE registrations SET payment_status = ?, paypal_capture_id = ?, paid_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE id = ? AND payment_status <> ?').bind('paid', captureId || '', regId, 'paid'),
-      c.env.DB.prepare('UPDATE players SET registration_status = ? WHERE id = ?').bind('active', reg.player_id),
+    const paidWrites = await c.env.DB.batch([
+      c.env.DB.prepare('UPDATE registrations SET payment_status = ?, paypal_capture_id = ?, paid_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE id = ? AND payment_status = ?').bind('paid', captureId || '', regId, 'pending'),
     ]);
-    await writeAudit(c.env, authUserFrom(user), 'registration_paid', 'registration', regId, {
+    newlyPaid = paidWrites[0].meta.changes > 0;
+    if (!newlyPaid) {
+      const current = await c.env.DB.prepare('SELECT payment_status FROM registrations WHERE id = ?').bind(regId).first();
+      if (current?.payment_status !== 'paid') return c.json({ error: 'The registration status changed during payment confirmation. Please contact the club with your reference.' }, 409);
+    }
+    if (newlyPaid) await writeAudit(c.env, authUserFrom(user), 'registration_paid', 'registration', regId, {
       playerId: reg.player_id,
       captureId: captureId || '',
     });
   }
 
   const token = await issueToken(c.env, reg.user_id as string);
+  let emailStatus: 'sent' | 'unavailable' | 'failed' | 'not_attempted' = 'not_attempted';
   let capturedPlayerName = '';
   const player = await c.env.DB.prepare('SELECT * FROM players WHERE id = ?').bind(reg.player_id).first();
   if (player) {
     capturedPlayerName = `${player.first_name} ${player.last_name}`.trim();
     const guardianEmail = (player.guardian_email || user.email) as string;
-    await sendRegistrationEmails(
+    if (newlyPaid) emailStatus = await sendRegistrationEmails(
       c.env,
       regId,
       guardianEmail,
@@ -469,6 +528,8 @@ register.post('/register-player/:id/capture', async (c) => {
   }
 
   return c.json({
+    registrationId: regId,
+    emailStatus,
     status: 'paid',
     season: reg.season,
     paymentStatus: 'paid',

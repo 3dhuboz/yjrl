@@ -4,10 +4,12 @@
 
 - Start with `SEASON_2027_READINESS.md` for the latest checkpoint, live observations and remaining launch work.
 - `shared/season.json`: season and early-bird settings shared by client and Worker.
+- `shared/registration.ts`: shared form/server field validation and explicit consent checks.
 - `worker/src/routes/register.ts`: registration, fee quote, duplicate detection and payment capture.
 - `client/src/pages/yjrl/YJRLRegister.js` and `client/src/registrationFees.mjs`: sign-up form and validated fee loading.
 - `worker/src/routes/players.ts`: parent child/payment lookup and season statistics.
 - `worker/tests/registration.test.mjs`: isolated API/database and fee-contract regression coverage.
+- `worker/migrations/0004_registration_claims.sql`: apply before releasing the new registration Worker; protects concurrent submissions.
 - Run `npm test`, `npm run typecheck` and `npm run build` through `headsnap run yjrl -- ...`; all execution stays under `/srv/headsnap/workspaces`.
 - Preserve the existing Cloudflare Pages/Worker architecture and historical migrations. The legacy Express server is not the production API.
 

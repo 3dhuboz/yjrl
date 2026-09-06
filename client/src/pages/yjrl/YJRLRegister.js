@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronRight, ArrowLeft, User, Users, MapPin, Calendar } from 'lucide-react';
 import YJRLLayout from './YJRLLayout';
@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import './yjrl.css';
 import seasonConfig from '../../../../shared/season.json';
 import { validateRegistrationFees, registrationFee } from '../../registrationFees.mjs';
+import { validateRegistration } from '../../../../shared/registration';
+import { checkoutFromSearch, confirmationEmailMessage } from '../../registrationCheckout.mjs';
 
 const POSITIONS = ['Not Sure Yet', 'Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row'];
 
@@ -28,8 +30,12 @@ const YJRLRegister = () => {
     emergencyName: '', emergencyPhone: '', emergencyRelationship: '',
     medicalNotes: '', agreeToTerms: false, agreeToPhotoPolicy: false
   });
-  const [submitted, setSubmitted] = useState(false);
   const [successDetails, setSuccessDetails] = useState(null);
+  const [checkout, setCheckout] = useState(() => checkoutFromSearch(window.location.search));
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const checkoutStarted = useRef(false);
+  const submitInFlight = useRef(false);
   const [registrationDetails, setRegistrationDetails] = useState(null);
   const [feesLoading, setFeesLoading] = useState(true);
   const [feesError, setFeesError] = useState('');
@@ -57,28 +63,39 @@ const YJRLRegister = () => {
   }, []);
   useEffect(() => { loadFees(); }, [loadFees]);
 
-  // Handle PayPal return
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const regId = params.get('reg');
-    const state = params.get('state');
-    const success = params.get('success');
-    if (success === 'true' && regId) {
-      api.post(`/register-player/${regId}/capture`, { state }).then(res => {
-        if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
-        setSuccessDetails({
-          user: res.data.user,
-          paymentMethod: res.data.paymentMethod || 'paypal',
-          paymentStatus: res.data.paymentStatus || 'paid',
-          amount: res.data.amount,
-          ageGroup: res.data.ageGroup,
-          playerName: res.data.playerName
-        });
-        setStep(5); // success
-        toast.success('Payment confirmed! Welcome to the Seagulls!');
-      }).catch(() => toast.error('Payment capture failed. Please contact the club.'));
-    }
+  const showReceipt = useCallback(data => {
+    if (data.token && data.user) setSession(data.token, data.user);
+    setSuccessDetails(data);
+    setStep(5);
+    setCheckout(null);
+    window.history.replaceState(null, '', window.location.pathname);
   }, [setSession]);
+
+  const recoverCheckout = useCallback(async () => {
+    if (!checkout?.registrationId || !checkout?.state) return;
+    setCheckoutBusy(true);
+    setCheckoutError('');
+    try {
+      const options = { skipAuthRedirect: true, timeout: 30000 };
+      const path = `/register-player/${encodeURIComponent(checkout.registrationId)}`;
+      let res = await api.post(`${path}/${checkout.action}`, { state: checkout.state }, options);
+      if (res.data.approvalUrl) { window.location.assign(res.data.approvalUrl); return; }
+      if (res.data.captureRequired) res = await api.post(`${path}/capture`, { state: checkout.state }, options);
+      if (res.data.paymentStatus !== 'paid') throw new Error('Payment has not been confirmed. Please contact the club with your reference.');
+      showReceipt(res.data);
+    } catch (error) {
+      setCheckoutError(error.response?.data?.error || 'We could not confirm payment. Your registration is saved. Try again before starting another payment.');
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }, [checkout, showReceipt]);
+
+  useEffect(() => {
+    if (checkout?.action === 'capture' && !checkoutStarted.current) {
+      checkoutStarted.current = true;
+      recoverCheckout();
+    }
+  }, [checkout, recoverCheckout]);
 
   const isEarlyBird = registrationDetails?.earlyBirdActive === true;
   const earlyBirdDiscount = registrationDetails?.earlyBirdDiscount ?? 0;
@@ -90,70 +107,51 @@ const YJRLRegister = () => {
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
+  const formPayload = () => ({
+    ...form, season: registrationDetails?.season, email: form.guardianEmail,
+    emergencyContact: { name: form.emergencyName, phone: form.emergencyPhone, relationship: form.emergencyRelationship },
+    paymentMethod: selectedPaymentMethod,
+    quotedAmount: finalFee,
+  });
+
   const nextStep = () => {
     if (!feesReady) { toast.error('Please load the registration fees and select an age group.'); return; }
-    if (step === 1 && (!form.firstName || !form.lastName || !form.dateOfBirth || !form.ageGroup)) {
-      toast.error('Please complete all required fields'); return;
-    }
-    if (step === 2 && (!form.guardianName || !form.guardianPhone || !form.guardianEmail)) {
-      toast.error('Please complete all guardian details'); return;
-    }
+    const validation = validateRegistration(formPayload(), seasonConfig.season, ageGroups, step);
+    if (validation.error) { toast.error(validation.error); return; }
     if (step === 2 && (form.password.length < 8 || form.password !== form.confirmPassword)) {
       toast.error('Please enter a matching password of at least 8 characters'); return;
-    }
-    if (step === 3 && (!form.emergencyName || !form.emergencyPhone)) {
-      toast.error('Please provide emergency contact details'); return;
     }
     setStep(prev => prev + 1);
   };
 
   const handleSubmit = async () => {
-    if (!feesReady || submitting) return;
-    if (!form.agreeToTerms) { toast.error('Please agree to the terms and conditions'); return; }
+    if (!feesReady || submitInFlight.current) return;
+    const validation = validateRegistration(formPayload(), seasonConfig.season, ageGroups);
+    if (validation.error) { setStep(validation.step); toast.error(validation.error); return; }
+    submitInFlight.current = true;
     setSubmitting(true);
     try {
-      const res = await api.post('/register-player', {
-        season: registrationDetails.season,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.guardianEmail,
-        password: form.password,
-        dateOfBirth: form.dateOfBirth,
-        ageGroup: form.ageGroup,
-        position: form.position,
-        guardianName: form.guardianName,
-        guardianPhone: form.guardianPhone,
-        guardianEmail: form.guardianEmail,
-        emergencyContact: {
-          name: form.emergencyName,
-          phone: form.emergencyPhone,
-          relationship: form.emergencyRelationship
-        },
-        medicalNotes: form.medicalNotes,
-        agreeToTerms: form.agreeToTerms,
-        agreeToPhotoPolicy: form.agreeToPhotoPolicy,
-        paymentMethod: selectedPaymentMethod
-      });
+      const res = await api.post('/register-player', validation.data, { skipAuthRedirect: true, timeout: 30000 });
       if (res.data.approvalUrl) {
         // Redirect to PayPal
         window.location.href = res.data.approvalUrl;
       } else {
         // Offline payment - show success
-        if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
-        setSuccessDetails({
-          user: res.data.user,
-          paymentMethod: res.data.paymentMethod || 'offline',
-          paymentStatus: res.data.paymentStatus || 'offline',
-          amount: res.data.amount ?? finalFee,
-          ageGroup: res.data.ageGroup || form.ageGroup,
-          playerName: res.data.playerName || `${form.firstName} ${form.lastName}`.trim()
-        });
-        setStep(5); // success step
+        showReceipt(res.data);
         toast.success('Registration submitted!');
       }
     } catch (err) {
+      if (err.response?.data?.code === 'fees_changed') { setStep(1); loadFees(); }
+      if (err.response?.data?.registration) { showReceipt(err.response.data.registration); return; }
+      if (err.response?.data?.checkoutState) {
+        setCheckout({ registrationId: err.response.data.registrationId, state: err.response.data.checkoutState, action: 'resume' });
+        return;
+      }
+      if (err.response?.data?.step) setStep(err.response.data.step);
+      if (err.response?.status === 401) setStep(2);
       toast.error(err.response?.data?.error || 'Registration failed');
     } finally {
+      submitInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -168,26 +166,48 @@ const YJRLRegister = () => {
     'Complete PlayHQ registration if the club has not already matched it',
     'Watch the parent portal for team, training, and uniform updates'
   ] : [
-    'Our registrar will review your application within 48 hours',
+    'Our registrar will review your application',
     'Payment is still required before registration is finalised',
     Number.isFinite(Number(successAmount)) ? `Complete payment of $${Number(successAmount).toFixed(2)} to finalise your registration` : 'The club will confirm the amount due',
     'Your child will be assigned to a team after club review',
-    'Welcome pack including uniform details will be sent to you'
+    'Check the parent portal for team, training and uniform updates'
   ];
 
-  if (submitted || step === 5) return (
+  if (checkout && step !== 5) return (
+    <YJRLLayout>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '3rem 1.5rem' }}>
+        <h1>{checkout.action === 'resume' ? 'Complete your payment' : 'Confirming your payment'}</h1>
+        <p style={{ lineHeight: 1.7 }}>Your registration details are saved. Payment still needs confirmation before the registrar can finalise your application.</p>
+        {checkout.registrationId && <p style={{ overflowWrap: 'anywhere' }}>Registration reference: <strong>{checkout.registrationId}</strong></p>}
+        {checkoutBusy && <p role="status">Checking with PayPal…</p>}
+        {checkoutError && <p role="alert">{checkoutError}</p>}
+        {(!checkout.state || !checkout.registrationId) && <p role="alert">This checkout link is incomplete. Contact the club for help finding your registration.</p>}
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button className="yjrl-btn yjrl-btn-primary" disabled={checkoutBusy || !checkout.state || !checkout.registrationId} onClick={recoverCheckout}>
+            {checkout.action === 'resume' ? 'Continue with PayPal' : 'Retry confirmation'}
+          </button>
+          <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-secondary">Contact Club</a>
+          <Link to="/portal/parent" className="yjrl-btn yjrl-btn-secondary">Parent Portal</Link>
+        </div>
+      </div>
+    </YJRLLayout>
+  );
+
+  if (step === 5) return (
     <YJRLLayout>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '5rem 1.5rem', textAlign: 'center' }}>
         <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '2px solid rgba(74,222,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#4ade80' }}>
           <CheckCircle size={36} />
         </div>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.75rem', color: '#4ade80' }}>
-          {successIsPaid ? 'Payment Confirmed!' : 'Registration Submitted!'}
+          {successDetails?.alreadyReceived ? 'Registration Already Received' : successIsPaid ? 'Payment Confirmed!' : 'Registration Submitted!'}
         </h1>
         <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
           Welcome to the Yeppoon Seagulls. <strong style={{ color: 'var(--yjrl-text)' }}>{successPlayerName}</strong>'s registration has been received.
-          {successIsPaid ? ' Payment has been confirmed.' : ' Payment is still required before final approval.'} A confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{successEmail}</strong>.
+          {successIsPaid ? ' Payment has been confirmed.' : ' Payment is still required before final approval.'}
         </p>
+        <p>{confirmationEmailMessage(successDetails?.emailStatus, successEmail)}</p>
+        <p style={{ overflowWrap: 'anywhere' }}>Registration reference: <strong>{successDetails?.registrationId}</strong></p>
         <div style={{ background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left' }}>
           <h3 style={{ color: 'var(--yjrl-gold)', fontWeight: 800, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Next Steps</h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

@@ -6,7 +6,7 @@ interface EmailOptions {
   html: string;
 }
 
-export async function sendEmail(apiKey: string, from: string, options: EmailOptions): Promise<boolean> {
+export async function sendEmail(apiKey: string, from: string, options: EmailOptions, idempotencyKey?: string): Promise<boolean> {
   if (!apiKey) return false;
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -14,6 +14,7 @@ export async function sendEmail(apiKey: string, from: string, options: EmailOpti
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from,
@@ -21,6 +22,7 @@ export async function sendEmail(apiKey: string, from: string, options: EmailOpti
         subject: options.subject,
         html: options.html,
       }),
+      signal: AbortSignal.timeout(5000),
     });
     return res.ok;
   } catch {

@@ -56,6 +56,13 @@ admin.get('/readiness', authMiddleware, async (c) => {
     checks.push(check('r2', 'R2 uploads bucket', 'fail', 'Uploads bucket probe failed.'));
   }
 
+  try {
+    await c.env.DB.prepare('SELECT 1 FROM registration_claims LIMIT 1').first();
+    checks.push(check('registration_duplicates', 'Duplicate registration protection', 'pass', 'Registration duplicate protection is available.'));
+  } catch {
+    checks.push(check('registration_duplicates', 'Duplicate registration protection', 'fail', 'Apply the registration claims migration before opening sign-ups.'));
+  }
+
   checks.push(paypalReady(c.env)
     ? check('paypal', 'PayPal live payments', 'pass', 'Live PayPal credentials are configured.')
     : check('paypal', 'PayPal live payments', 'fail', 'PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, and PAYPAL_MODE=live are required before online payments.'));
