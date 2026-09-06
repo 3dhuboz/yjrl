@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -53,8 +54,8 @@ const YJRLParentPortal = () => {
   }, [user]);
 
   const child = children[selectedChild] || children[0];
-  const season = new Date().getFullYear().toString();
-  const childStats = child?.stats?.find(s => s.season === season) || child?.stats?.[0] || {};
+  const season = seasonConfig.season;
+  const childStats = child?.stats?.find(s => s.season === season) || {};
   const attendance = child?.attendanceRecords || [];
   const attendRate = attendance.length ? Math.round(attendance.filter(r => r.attended).length / attendance.length * 100) : 100;
 
@@ -146,7 +147,7 @@ const YJRLParentPortal = () => {
                 <div className="yjrl-card-title"><Users size={16} /> {child.firstName}'s Profile</div>
                 {child.registrationStatus === 'active' && (
                   <span style={{ fontSize: '0.7rem', background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', padding: '0.2rem 0.6rem', borderRadius: '100px', fontWeight: 700 }}>
-                    Registered 2026
+                    Registered {child.registrationYear}
                   </span>
                 )}
               </div>

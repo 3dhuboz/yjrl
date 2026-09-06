@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useState } from 'react';
 import { Calendar, MapPin, Shield, Users } from 'lucide-react';
 import api from '../../api';
@@ -10,7 +11,7 @@ const YJRLTeams = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/yjrl/teams')
+    api.get(`/yjrl/teams?season=${seasonConfig.season}`)
       .then(res => {
         if (Array.isArray(res.data)) setTeams(res.data);
       })
@@ -23,7 +24,7 @@ const YJRLTeams = () => {
       <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3.5rem 1.5rem 2rem', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem' }}>
-            2026 Season
+            {seasonConfig.season} Season
           </div>
           <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.5rem', color: 'white' }}>
             Teams

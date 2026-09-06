@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -49,9 +50,9 @@ const YJRLHome = () => {
     setLoading(true);
     Promise.all([
       api.get('/yjrl/news?limit=3&published=true').catch(() => ({ data: [] })),
-      api.get('/yjrl/fixtures?upcoming=true&limit=3').catch(() => ({ data: [] })),
-      api.get('/yjrl/teams').catch(() => ({ data: [] })),
-      api.get('/yjrl/stats/overview').catch(() => ({ data: {} }))
+      api.get(`/yjrl/fixtures?season=${seasonConfig.season}&upcoming=true&limit=3`).catch(() => ({ data: [] })),
+      api.get(`/yjrl/teams?season=${seasonConfig.season}`).catch(() => ({ data: [] })),
+      api.get(`/yjrl/stats/overview?season=${seasonConfig.season}`).catch(() => ({ data: {} }))
     ]).then(([nRes, fRes, tRes, sRes]) => {
       if (Array.isArray(nRes.data)) setNews(nRes.data);
       if (Array.isArray(fRes.data)) setFixtures(fRes.data);
@@ -72,7 +73,7 @@ const YJRLHome = () => {
         <div className="yjrl-hero-content">
           <div>
             <div className="yjrl-hero-badge">
-              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> 2026 Season — Go Seagulls!
+              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> {seasonConfig.season} Season — Go Seagulls!
             </div>
             <h1>
               Yeppoon<br />
@@ -146,9 +147,9 @@ const YJRLHome = () => {
                 borderRadius: '16px', padding: '2.5rem', textAlign: 'center'
               }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Season 2026 Underway</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Getting ready for {seasonConfig.season}</div>
                 <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Check the full fixture schedule and follow your team all season long.
+                  Fixtures will appear here when the club publishes the season draw.
                 </div>
                 <Link to="/fixtures" className="yjrl-btn yjrl-btn-primary">View All Fixtures</Link>
               </div>
@@ -249,7 +250,7 @@ const YJRLHome = () => {
       <section className="yjrl-section" style={{ background: 'white' }}>
         <div className="yjrl-section-inner">
           <div className="yjrl-section-header">
-            <div className="yjrl-section-label">2026 Season</div>
+            <div className="yjrl-section-label">{seasonConfig.season} Season</div>
             <h2 className="yjrl-section-title">Our Teams</h2>
             <p className="yjrl-section-desc">From Mini Mod to Seniors — there's a place for every player at Yeppoon JRL.</p>
           </div>

@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import {
   Users, Calendar, CheckCircle, Clipboard, Star, Plus, Edit,
@@ -57,7 +58,7 @@ const YJRLCoachPortal = () => {
     setAttendanceMap(init);
   }, [players]);
 
-  const season = new Date().getFullYear().toString();
+  const season = seasonConfig.season;
 
   if (loading) return <YJRLLayout><div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading your team...</span></div></YJRLLayout>;
 
@@ -146,7 +147,7 @@ const YJRLCoachPortal = () => {
                 </thead>
                 <tbody>
                   {players.map(p => {
-                    const s = p.stats?.find(x => x.season === season) || p.stats?.[0] || {};
+                    const s = p.stats?.find(x => x.season === season) || {};
                     return (
                       <tr key={p._id}>
                         <td style={{ fontWeight: 800, color: 'var(--yjrl-gold)' }}>#{p.jerseyNumber}</td>

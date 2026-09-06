@@ -5,6 +5,7 @@ import { createOrder, captureOrder } from '../lib/paypal';
 import { sendEmail, registrationOfflineEmail, registrationPaidEmail, adminRegistrationNotification } from '../lib/email';
 import { writeAudit } from '../lib/audit';
 import * as jose from 'jose';
+import seasonConfig from '../../../shared/season.json';
 
 const register = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -13,8 +14,13 @@ const FEES: Record<string, number> = {
   U12: 180, U13: 180, U14: 200, U15: 200, U16: 220,
   U17: 220, U18: 220, Womens: 200, Mens: 250,
 };
-const EARLY_BIRD_DISCOUNT = 20;
-const EARLY_BIRD_CUTOFF = '2026-02-28';
+const { season: SEASON, earlyBirdDiscount: EARLY_BIRD_DISCOUNT } = seasonConfig;
+// Leave the new season's offer disabled until the club confirms a cutoff date.
+const EARLY_BIRD_CUTOFF: string | null = seasonConfig.earlyBirdCutoff;
+
+function earlyBirdActive() {
+  return !!EARLY_BIRD_CUTOFF && new Date().toISOString().split('T')[0] <= EARLY_BIRD_CUTOFF;
+}
 
 type ExistingUser = {
   id: string;
@@ -196,13 +202,13 @@ async function sendRegistrationEmails(
 }
 
 register.get('/registration-fees', async (c) => {
-  const now = new Date().toISOString().split('T')[0];
-  const earlyBirdActive = now <= EARLY_BIRD_CUTOFF;
+  c.header('Cache-Control', 'no-store');
   return c.json({
+    season: SEASON,
     fees: FEES,
     earlyBirdDiscount: EARLY_BIRD_DISCOUNT,
     earlyBirdCutoff: EARLY_BIRD_CUTOFF,
-    earlyBirdActive,
+    earlyBirdActive: earlyBirdActive(),
     paymentOptions: {
       paypal: paypalReadyForCustomers(c.env),
       offline: true,
@@ -230,6 +236,12 @@ register.post('/register-player', async (c) => {
   if (String(password).length < 8) {
     return c.json({ error: 'Password must be at least 8 characters' }, 400);
   }
+  if (body.season !== SEASON) {
+    return c.json({ error: 'Season details have changed. Please refresh this page before submitting your registration.' }, 409);
+  }
+  if (typeof ageGroup !== 'string' || !Object.hasOwn(FEES, ageGroup)) {
+    return c.json({ error: 'Please select an available age group.' }, 400);
+  }
 
   const requestedPaymentMethod = paymentMethod === 'paypal' ? 'paypal' : 'offline';
   if (requestedPaymentMethod === 'paypal' && !paypalReadyForCustomers(c.env)) {
@@ -238,7 +250,7 @@ register.post('/register-player', async (c) => {
 
   const emailNorm = normalise(email);
   const guardianEmailNorm = normalise(guardianEmail || emailNorm);
-  const season = new Date().getFullYear().toString();
+  const season = SEASON;
   const existing = await c.env.DB.prepare(
     'SELECT id, first_name, last_name, email, password_hash, role, is_active FROM users WHERE email = ?'
   ).bind(emailNorm).first<ExistingUser>();
@@ -279,15 +291,14 @@ register.post('/register-player', async (c) => {
     isNewUser = true;
   }
 
-  const baseFee = FEES[ageGroup] || 150;
-  const now = new Date().toISOString().split('T')[0];
-  const discount = now <= EARLY_BIRD_CUTOFF ? EARLY_BIRD_DISCOUNT : 0;
+  const baseFee = FEES[ageGroup];
+  const discount = earlyBirdActive() ? EARLY_BIRD_DISCOUNT : 0;
   const totalFee = baseFee - discount;
   const playerId = crypto.randomUUID();
   const regId = crypto.randomUUID();
   const emergency = emergencyContact || { name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship };
   const playerName = `${firstName} ${lastName}`.trim();
-  const formData = JSON.stringify({ ...registrationSnapshot(body, requestedPaymentMethod), amount: totalFee });
+  const formData = JSON.stringify({ ...registrationSnapshot(body, requestedPaymentMethod), season, amount: totalFee });
 
   let paypalOrder: { orderId: string; approvalUrl: string } | null = null;
   if (requestedPaymentMethod === 'paypal') {
@@ -369,6 +380,7 @@ register.post('/register-player', async (c) => {
   await writeAudit(c.env, authUserFrom(user), 'registration_created', 'registration', regId, {
     playerId,
     ageGroup,
+    season,
     paymentMethod: requestedPaymentMethod,
     paymentStatus: requestedPaymentMethod === 'offline' ? 'offline' : 'pending',
     mediaConsent: !!body.agreeToPhotoPolicy,
@@ -380,6 +392,7 @@ register.post('/register-player', async (c) => {
     await sendRegistrationEmails(c.env, regId, guardianEmailNorm, c.env.ADMIN_EMAIL, playerName, ageGroup, guardianName || 'N/A', totalFee, 'offline');
     return c.json({
       registrationId: regId,
+      season,
       paymentMethod: 'offline',
       paymentStatus: 'offline',
       amount: totalFee,
@@ -392,6 +405,7 @@ register.post('/register-player', async (c) => {
 
   return c.json({
     registrationId: regId,
+    season,
     approvalUrl: paypalOrder!.approvalUrl,
     orderId: paypalOrder!.orderId,
     paymentMethod: 'paypal',
@@ -456,6 +470,7 @@ register.post('/register-player/:id/capture', async (c) => {
 
   return c.json({
     status: 'paid',
+    season: reg.season,
     paymentStatus: 'paid',
     paymentMethod: 'paypal',
     amount: Number(reg.fee_amount || 0),

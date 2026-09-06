@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, Filter, ChevronUp, ChevronDown, TrendingUp } from 'lucide-react';
 import api from '../../api';
@@ -5,7 +6,7 @@ import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
 
 const AGE_GROUPS = ['All', 'U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens'];
-const SEASON = new Date().getFullYear().toString();
+const SEASON = seasonConfig.season;
 
 const ResultBadge = ({ fixture }) => {
   if (fixture.status !== 'completed') return null;

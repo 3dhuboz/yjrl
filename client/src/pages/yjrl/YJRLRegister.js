@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronRight, ArrowLeft, User, Users, MapPin, Calendar } from 'lucide-react';
 import YJRLLayout from './YJRLLayout';
@@ -6,8 +6,9 @@ import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './yjrl.css';
+import seasonConfig from '../../../../shared/season.json';
+import { validateRegistrationFees, registrationFee } from '../../registrationFees.mjs';
 
-const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
 const POSITIONS = ['Not Sure Yet', 'Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row'];
 
 const STEPS = [
@@ -16,8 +17,6 @@ const STEPS = [
   { id: 3, label: 'Medical & Emergency' },
   { id: 4, label: 'Confirmation' },
 ];
-
-const EARLY_BIRD_DISCOUNT = 20;
 
 const YJRLRegister = () => {
   const { setSession } = useAuth();
@@ -31,22 +30,32 @@ const YJRLRegister = () => {
   });
   const [submitted, setSubmitted] = useState(false);
   const [successDetails, setSuccessDetails] = useState(null);
-  const [fees, setFees] = useState({});
-  const [earlyBirdActive, setEarlyBirdActive] = useState(false);
+  const [registrationDetails, setRegistrationDetails] = useState(null);
+  const [feesLoading, setFeesLoading] = useState(true);
+  const [feesError, setFeesError] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('offline');
   const [paypalAvailable, setPaypalAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Load registration fees from API
-  useEffect(() => {
-    api.get('/registration-fees').then(res => {
-      setFees(res.data.fees);
-      setEarlyBirdActive(res.data.earlyBirdActive);
-      const paypalEnabled = !!res.data.paymentOptions?.paypal;
+  const loadFees = useCallback(async () => {
+    setFeesLoading(true);
+    setFeesError('');
+    setRegistrationDetails(null);
+    try {
+      const res = await api.get('/registration-fees');
+      const details = validateRegistrationFees(res.data, seasonConfig.season);
+      setRegistrationDetails(details);
+      const paypalEnabled = details.paymentOptions.paypal;
       setPaypalAvailable(paypalEnabled);
       setSelectedPaymentMethod(paypalEnabled ? 'paypal' : 'offline');
-    }).catch(() => {});
+    } catch (error) {
+      setFeesError(error.isAxiosError ? 'Registration fees could not be loaded. Please try again.' : error.message || 'Registration fees could not be loaded. Please try again.');
+    } finally {
+      setFeesLoading(false);
+    }
   }, []);
+  useEffect(() => { loadFees(); }, [loadFees]);
 
   // Handle PayPal return
   useEffect(() => {
@@ -71,13 +80,18 @@ const YJRLRegister = () => {
     }
   }, [setSession]);
 
-  const isEarlyBird = earlyBirdActive;
-  const fee = form.ageGroup ? fees[form.ageGroup] || 140 : null;
-  const finalFee = fee && isEarlyBird ? fee - EARLY_BIRD_DISCOUNT : fee;
+  const isEarlyBird = registrationDetails?.earlyBirdActive === true;
+  const earlyBirdDiscount = registrationDetails?.earlyBirdDiscount ?? 0;
+  const fees = registrationDetails?.fees || {};
+  const ageGroups = Object.keys(fees);
+  const fee = Object.hasOwn(fees, form.ageGroup) ? fees[form.ageGroup] : null;
+  const finalFee = registrationFee(registrationDetails, form.ageGroup);
+  const feesReady = !feesLoading && !feesError && finalFee !== null;
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const nextStep = () => {
+    if (!feesReady) { toast.error('Please load the registration fees and select an age group.'); return; }
     if (step === 1 && (!form.firstName || !form.lastName || !form.dateOfBirth || !form.ageGroup)) {
       toast.error('Please complete all required fields'); return;
     }
@@ -94,10 +108,12 @@ const YJRLRegister = () => {
   };
 
   const handleSubmit = async () => {
+    if (!feesReady || submitting) return;
     if (!form.agreeToTerms) { toast.error('Please agree to the terms and conditions'); return; }
     setSubmitting(true);
     try {
       const res = await api.post('/register-player', {
+        season: registrationDetails.season,
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.guardianEmail,
@@ -128,7 +144,7 @@ const YJRLRegister = () => {
           user: res.data.user,
           paymentMethod: res.data.paymentMethod || 'offline',
           paymentStatus: res.data.paymentStatus || 'offline',
-          amount: res.data.amount || finalFee,
+          amount: res.data.amount ?? finalFee,
           ageGroup: res.data.ageGroup || form.ageGroup,
           playerName: res.data.playerName || `${form.firstName} ${form.lastName}`.trim()
         });
@@ -203,18 +219,25 @@ const YJRLRegister = () => {
             Join the Club
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', margin: 0 }}>
-            Register for the {new Date().getFullYear()} Yeppoon Junior Rugby League season.
+            Register for the {seasonConfig.season} Yeppoon Junior Rugby League season.
           </p>
 
           {isEarlyBird && (
             <div style={{ marginTop: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(240,165,0,0.12)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem', color: 'var(--yjrl-gold)', fontWeight: 600 }}>
-              🎉 Early Bird Discount Active — Save ${EARLY_BIRD_DISCOUNT} on registration!
+              🎉 Early Bird Discount Active — Save ${earlyBirdDiscount} on registration!
             </div>
           )}
         </div>
       </div>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+        {feesLoading && <p role="status">Loading registration fees…</p>}
+        {feesError && (
+          <div role="alert" className="yjrl-card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <p style={{ margin: '0 0 1rem' }}>{feesError}</p>
+            <button type="button" className="yjrl-btn yjrl-btn-secondary" onClick={loadFees}>Try again</button>
+          </div>
+        )}
         {/* Step Indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '2.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
           {STEPS.map((s, i) => (
@@ -242,13 +265,13 @@ const YJRLRegister = () => {
         <div className="yjrl-card">
           <div className="yjrl-card-header">
             <div className="yjrl-card-title">Step {step}: {STEPS[step - 1].label}</div>
-            {form.ageGroup && fee && (
+            {fee !== null && (
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--yjrl-gold)' }}>
                   ${finalFee}
                 </div>
                 {isEarlyBird && (
-                  <div style={{ fontSize: '0.7rem', color: '#4ade80', textDecoration: 'line-through' }}>${fee} (${EARLY_BIRD_DISCOUNT} off)</div>
+                  <div style={{ fontSize: '0.7rem', color: '#4ade80', textDecoration: 'line-through' }}>${fee} (${earlyBirdDiscount} off)</div>
                 )}
               </div>
             )}
@@ -270,13 +293,13 @@ const YJRLRegister = () => {
                 </div>
                 <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                   <label className="yjrl-label">Age Group <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
-                  <select className="yjrl-input" value={form.ageGroup} onChange={e => update('ageGroup', e.target.value)}>
+                  <select className="yjrl-input" value={form.ageGroup} disabled={!registrationDetails} onChange={e => update('ageGroup', e.target.value)}>
                     <option value="">— Select Age Group —</option>
-                    {AGE_GROUPS.map(ag => <option key={ag} value={ag}>{ag}</option>)}
+                    {ageGroups.map(ag => <option key={ag} value={ag}>{ag}</option>)}
                   </select>
-                  {form.ageGroup && fee && (
+                  {fee !== null && (
                     <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: '0.4rem' }}>
-                      Registration fee: ${isEarlyBird ? finalFee : fee} {isEarlyBird && `(early bird -$${EARLY_BIRD_DISCOUNT})`}
+                      Registration fee: ${finalFee} {isEarlyBird && `(early bird -$${earlyBirdDiscount})`}
                     </div>
                   )}
                 </div>
@@ -371,11 +394,11 @@ const YJRLRegister = () => {
                   </div>
                 </div>
 
-                {form.ageGroup && (
+                {finalFee !== null && (
                   <div style={{ background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 700 }}>Registration Fee — {form.ageGroup}</div>
-                      {isEarlyBird && <div style={{ fontSize: '0.8rem', color: '#4ade80' }}>Early bird discount applied (-${EARLY_BIRD_DISCOUNT})</div>}
+                      {isEarlyBird && <div style={{ fontSize: '0.8rem', color: '#4ade80' }}>Early bird discount applied (-${earlyBirdDiscount})</div>}
                     </div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--yjrl-gold)' }}>${finalFee}</div>
                   </div>
@@ -438,11 +461,11 @@ const YJRLRegister = () => {
               </button>
             ) : <div />}
             {step < 4 ? (
-              <button className="yjrl-btn yjrl-btn-primary" onClick={nextStep}>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={nextStep} disabled={!feesReady}>
                 Next <ChevronRight size={15} />
               </button>
             ) : (
-              <button className="yjrl-btn yjrl-btn-primary" onClick={handleSubmit} disabled={!form.agreeToTerms || submitting}>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={handleSubmit} disabled={!feesReady || !form.agreeToTerms || submitting}>
                 <CheckCircle size={15} /> {submitting ? 'Submitting...' : 'Submit Registration'}
               </button>
             )}

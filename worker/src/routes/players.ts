@@ -1,3 +1,4 @@
+import seasonConfig from '../../../shared/season.json';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin, requireCoachOrAdmin } from '../middleware/auth';
@@ -50,7 +51,7 @@ function formatPlayer(
   attendance?: Record<string, unknown>[],
   options: { scope?: 'admin' | 'parent' | 'player' | 'coach'; includeCoachNotes?: boolean } = {},
 ) {
-  const season = new Date().getFullYear().toString();
+  const season = seasonConfig.season;
   const statsList = formatStats(stats);
   const currentStats = statsList.find(s => s.season === season) || { season, gamesPlayed: 0, tries: 0, goals: 0, fieldGoals: 0, tackles: 0, runMetres: 0, manOfMatch: 0 };
   const total = attendance?.length || 0;
@@ -190,7 +191,6 @@ players.get('/my-player', authMiddleware, async (c) => {
 // GET /yjrl/my-children (parent portal)
 players.get('/my-children', authMiddleware, async (c) => {
   const user = c.get('user');
-  const season = new Date().getFullYear().toString();
   const result = await c.env.DB.prepare(
     `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group,
             t.training_day AS team_training_day, t.training_time AS team_training_time,
@@ -200,7 +200,7 @@ players.get('/my-children', authMiddleware, async (c) => {
             r.paid_at AS registration_paid_at
      FROM players p
      LEFT JOIN teams t ON p.team_id = t.id
-     LEFT JOIN registrations r ON r.player_id = p.id AND r.season = ?
+     LEFT JOIN registrations r ON r.player_id = p.id AND r.season = p.registration_year
      WHERE p.is_active = 1
        AND (
         p.user_id = ?
@@ -209,7 +209,7 @@ players.get('/my-children', authMiddleware, async (c) => {
           WHERE pcl.player_id = p.id AND pcl.parent_user_id = ? AND pcl.status = 'verified'
         )
        )`
-  ).bind(season, user.id, user.id).all();
+  ).bind(user.id, user.id).all();
   const children = [];
   for (const p of (result.results || [])) {
     const [statsR, attR] = await Promise.all([
@@ -306,7 +306,7 @@ players.post('/', authMiddleware, async (c) => {
     body.emergencyContact?.relationship || body.emergency_relationship || '',
     body.medicalNotes || body.medical_notes || '',
     body.registrationStatus || body.registration_status || 'pending',
-    body.registrationYear || body.registration_year || new Date().getFullYear().toString(),
+    body.registrationYear || body.registration_year || seasonConfig.season,
     body.playHQId || body.playhq_id || '', body.coachNotes || body.coach_notes || '',
     body.pathwayProgress?.level || body.pathway_level || 'grassroots',
     body.pathwayProgress?.notes || body.pathway_notes || '', body.photo || ''

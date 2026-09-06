@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users, Trophy, Calendar, Newspaper, Plus, Edit, Trash2, Save,
@@ -10,7 +11,7 @@ import api from '../../api';
 import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
 
-const SEASON = new Date().getFullYear().toString();
+const SEASON = seasonConfig.season;
 
 const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
 const STATUS_OPTIONS = ['pending', 'active', 'inactive', 'transferred'];

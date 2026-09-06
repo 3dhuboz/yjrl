@@ -1,3 +1,4 @@
+import seasonConfig from '../../../shared/season.json';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
@@ -84,7 +85,7 @@ fixtures.get('/', async (c) => {
 
 // GET /yjrl/ladder
 fixtures.get('/ladder', async (c) => {
-  const season = c.req.query('season') || new Date().getFullYear().toString();
+  const season = c.req.query('season') || seasonConfig.season;
   const ageGroup = c.req.query('ageGroup');
   let sql = `SELECT *, (wins * 2 + draws) AS points, (wins + losses + draws) AS played,
              (points_for - points_against) AS points_diff
@@ -124,7 +125,7 @@ fixtures.post('/', authMiddleware, async (c) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, body.teamId || body.team_id || null, body.ageGroup || body.age_group,
-    body.season || new Date().getFullYear().toString(), body.round,
+    body.season || seasonConfig.season, body.round,
     body.homeTeamName || body.home_team_name, body.awayTeamName || body.away_team_name,
     body.isHomeGame !== false ? 1 : 0, body.date, body.time || '',
     body.venue || 'Nev Skuse Oval, Yeppoon', body.status || 'scheduled', body.notes || ''
@@ -200,7 +201,7 @@ fixtures.put('/:id', authMiddleware, async (c) => {
     ).run();
 
     // Update player stats from fixture
-    const season = (fixture.season || new Date().getFullYear().toString()) as string;
+    const season = (fixture.season || seasonConfig.season) as string;
     const playerStats = body.playerStats || [];
     const affectedPlayerIds: string[] = [];
     const skippedPlayerIds: string[] = [];

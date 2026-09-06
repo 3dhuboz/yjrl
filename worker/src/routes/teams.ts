@@ -1,3 +1,4 @@
+import seasonConfig from '../../../shared/season.json';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
@@ -100,7 +101,7 @@ teams.post('/', authMiddleware, async (c) => {
     `INSERT INTO teams (id, name, age_group, division, season, coach_id, coach_name, assistant_id, assistant_name, manager_id, manager_name, training_day, training_time, training_venue, color_primary, color_secondary, photo)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    id, body.name, body.ageGroup || body.age_group || '', body.division || '', body.season || new Date().getFullYear().toString(),
+    id, body.name, body.ageGroup || body.age_group || '', body.division || '', body.season || seasonConfig.season,
     coachId, body.coachName || body.coach_name || '',
     body.assistantId || body.assistant || body.assistant_id || null, body.assistantName || body.assistant_name || '',
     body.managerId || body.manager || body.manager_id || null, body.managerName || body.manager_name || '',
@@ -112,7 +113,7 @@ teams.post('/', authMiddleware, async (c) => {
   ).run();
   await writeAudit(c.env, c.get('user'), 'team_created', 'team', id, {
     ageGroup: body.ageGroup || body.age_group || '',
-    season: body.season || new Date().getFullYear().toString(),
+    season: body.season || seasonConfig.season,
     coachAssigned: !!coachId,
   });
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
