@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import InstallPrompt from './components/InstallPrompt';
@@ -13,6 +13,7 @@ import YJRLRegister from './pages/yjrl/YJRLRegister';
 import adultAccount from '../../shared/adultAccount.json';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
 import YJRLParentPortal from './pages/yjrl/YJRLParentPortal';
+import YJRLShop from './pages/yjrl/YJRLShop';
 import YJRLAdminPortal from './pages/yjrl/YJRLAdminPortal';
 import './pages/yjrl/yjrl.css';
 
@@ -20,6 +21,7 @@ import './pages/yjrl/yjrl.css';
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [adultConfirmed, setAdultConfirmed] = useState(false);
@@ -33,7 +35,9 @@ const Login = () => {
     try {
       const session = await login(email, password, adultConfirmed);
       const role = session.user?.role;
-      if (role === 'admin' || role === 'dev') navigate('/portal/admin');
+      const shopReturn = location.state?.shopReturn;
+      if (['parent', 'coach', 'admin', 'dev'].includes(role) && typeof shopReturn === 'string' && /^\/shop(?:\?|$)/.test(shopReturn)) navigate(shopReturn);
+      else if (role === 'admin' || role === 'dev') navigate('/portal/admin');
       else if (role === 'coach') navigate('/portal/coach');
       else if (role === 'parent') navigate('/portal/parent');
       else navigate('/login');
@@ -180,6 +184,7 @@ const AppRoutes = () => (
     <Route path="/portal/player" element={<Navigate to="/portal/parent" replace />} />
     <Route path="/portal/coach" element={<ProtectedRoute roles={['coach']}><YJRLCoachPortal /></ProtectedRoute>} />
     <Route path="/portal/parent" element={<ProtectedRoute roles={['parent', 'coach']}><YJRLParentPortal /></ProtectedRoute>} />
+    <Route path="/shop" element={<YJRLShop />} />
     <Route path="/portal/admin" element={<ProtectedRoute adminOnly><YJRLAdminPortal /></ProtectedRoute>} />
 
     {/* Legacy routes — redirect /yjrl/* to root */}

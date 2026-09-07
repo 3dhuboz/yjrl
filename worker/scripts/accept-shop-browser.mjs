@@ -1,0 +1,80 @@
+// Real browser acceptance, synthetic content, isolated review service only.
+import assert from 'node:assert/strict';
+import { readFileSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire('/opt/node-v24.18.0-linux-x64/lib/node_modules/@playwright/cli/package.json');
+const { chromium } = require('playwright');
+const base = 'https://yjrl-review.steve-700.workers.dev';
+const secrets = JSON.parse(readFileSync('/home/steve/.local/share/yjrl/review-secrets.json', 'utf8'));
+const bootstrap = await fetch(base, { headers: { Authorization: `Basic ${Buffer.from(`yjrl-review:${secrets.REVIEW_ACCESS_PASSWORD}`).toString('base64')}` } });
+assert.equal(bootstrap.status, 200);
+const cookie = bootstrap.headers.get('set-cookie').split(';')[0];
+let token;
+async function api(path, method = 'GET', body) {
+  const response = await fetch(`${base}/api${path}`, { method, headers: { Cookie: cookie, ...(token ? { Authorization: `Bearer ${token}` } : {}), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  assert.ok(response.ok, `${method} ${path}: ${response.status} ${response.ok ? '' : await response.text()}`);
+  return response.json();
+}
+token = (await api('/auth/login', 'POST', { email: secrets.ADMIN_EMAIL, password: secrets.ADMIN_PASSWORD, adultConfirmed: true })).token;
+const port = readFileSync('/srv/headsnap/browser-profiles/yjrl/DevToolsActivePort', 'utf8').split('\n')[0];
+const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const split = cookie.indexOf('=');
+await context.addCookies([{ name: cookie.slice(0, split), value: cookie.slice(split + 1), domain: new URL(base).hostname, path: '/', secure: true, httpOnly: true, sameSite: 'Strict' }]);
+await context.addInitScript(value => localStorage.setItem('yjrl_token', value), token);
+const page = await context.newPage();
+const errors = []; page.on('pageerror', error => errors.push(error.message));
+const name = `Synthetic shop ${Date.now().toString(36)}`;
+const before = (await api('/yjrl/shop/admin')).settings;
+let productId;
+mkdirSync('.wrangler/shop-browser', { recursive: true });
+try {
+  await page.goto(`${base}/portal/admin`); await page.getByRole('button', { name: 'Shop', exact: true }).click();
+  await page.getByRole('button', { name: 'Add Product', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Product name', exact: true }).fill(name);
+  await page.getByRole('spinbutton', { name: 'Price (AUD)', exact: true }).fill('25.00');
+  await page.getByRole('textbox', { name: 'Sizes / colours', exact: true }).fill('Size 10 / Blue\nSize 12 / Blue');
+  await page.getByRole('button', { name: 'Save Product', exact: true }).click(); await page.locator('.yjrl-modal').waitFor({ state: 'hidden' });
+  const product = (await api('/yjrl/shop/admin')).products.find(item => item.name === name); assert.ok(product); productId = product.id;
+  assert.ok(!(await api('/yjrl/shop')).products.some(item => item.id === productId));
+  await page.locator('.yjrl-card').filter({ has: page.getByRole('heading', { name, exact: true }) }).getByRole('button', { name: 'Edit Product' }).click();
+  await page.getByLabel('Available to order', { exact: true }).check(); await page.getByLabel('Publish product on the website').check();
+  await page.getByRole('button', { name: 'Save Product', exact: true }).click(); await page.locator('.yjrl-modal').waitFor({ state: 'hidden' });
+  await page.getByRole('textbox', { name: 'Collection details', exact: true }).fill('Synthetic review collection counter, Tuesday afternoon.');
+  await page.getByRole('textbox', { name: 'Shop policies', exact: true }).fill('Synthetic review only; no real product, payment or collection.');
+  await page.getByLabel('Open shop orders').check(); await page.getByRole('button', { name: 'Save Shop Settings', exact: true }).click();
+  await page.getByText('Shop orders are open', { exact: true }).waitFor();
+  await page.goto(`${base}/shop`); await page.getByRole('heading', { name, exact: true }).waitFor();
+  await page.getByRole('combobox', { name: `Size / colour for ${name}`, exact: true }).selectOption('Size 12 / Blue');
+  await page.getByRole('button', { name: 'Add to Basket', exact: true }).click();
+  await page.getByRole('spinbutton', { name: `Quantity for ${name}`, exact: true }).fill('2');
+  await page.getByRole('textbox', { name: 'Order contact name', exact: true }).fill(name);
+  await page.getByRole('textbox', { name: 'Order contact phone', exact: true }).fill('0400000000');
+  assert.equal(await page.getByRole('combobox', { name: 'Shop payment method' }).locator('option').count(), 1);
+  await page.getByLabel('I agree to the shop policies and collection arrangements.').check();
+  await page.getByRole('button', { name: 'Place Order — Pay on Collection', exact: true }).click();
+  await page.getByRole('heading', { name: 'Your order is saved', exact: true }).waitFor();
+  const orderId = new URL(page.url()).searchParams.get('order'); assert.ok(orderId);
+  const receipt = await api(`/yjrl/shop/orders/${orderId}`); assert.equal(receipt.totalCents, 5000); assert.equal(receipt.paymentStatus, 'unpaid'); assert.equal(receipt.items[0].option, 'Size 12 / Blue');
+  await page.reload(); await page.getByRole('heading', { name: 'Your order is saved', exact: true }).waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await page.screenshot({ path: '.wrangler/shop-browser/shop-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`${base}/portal/admin`); await page.getByRole('button', { name: 'Shop', exact: true }).click();
+  const card = page.locator('.yjrl-card').filter({ hasText: orderId });
+  assert.equal(await card.getByRole('button', { name: 'Mark Collected' }).count(), 0);
+  page.once('dialog', dialog => dialog.accept()); await card.getByRole('button', { name: 'Record Collection Payment' }).click();
+  await card.getByRole('button', { name: 'Mark Collected' }).click();
+  await card.getByText('Pay on collection · Paid · fulfilled', { exact: true }).waitFor();
+  assert.equal((await api('/yjrl/shop/admin')).orders.find(item => item.id === orderId).status, 'fulfilled');
+  await page.screenshot({ path: '.wrangler/shop-browser/admin-shop.png', fullPage: true });
+  assert.deepEqual(errors, []);
+  console.log(JSON.stringify({ result: 'passed', environment: 'isolated review', checks: ['draft/public catalogue', 'admin variants and pricing', 'shop opening configuration', 'basket quantities and sizes', 'unconfigured online option hidden', 'collection order receipt and reload', 'mobile layout', 'payment recording then collection', 'no browser exceptions'], realPayments: false, emailsSent: false }));
+} catch (error) {
+  console.error('Browser exceptions:', errors); await page.screenshot({ path: '.wrangler/shop-browser/failure.png', fullPage: true }); throw error;
+} finally {
+  await api('/yjrl/shop/settings', 'PUT', before);
+  if (productId) await api('/yjrl/shop/products/' + productId, 'DELETE');
+  await context.close(); await browser.close();
+}

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Home, Calendar, Trophy, Newspaper, Users, LogIn, LogOut,
-  Menu, X, ChevronDown, User, Shield, Heart, Mail
+  Menu, X, ChevronDown, User, Shield, Heart, Mail, ShoppingBag
 } from 'lucide-react';
 import './yjrl.css';
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/teams', label: 'Teams', icon: Users },
   { to: '/news', label: 'News', icon: Newspaper },
   { to: '/events', label: 'Events', icon: Heart },
+  { to: '/shop', label: 'Shop', icon: ShoppingBag },
 ];
 
 const PORTAL_ITEMS = [
@@ -293,6 +294,7 @@ const YJRLLayout = ({ children }) => {
               <ul>
                 <li><Link to="/register">Join the Club</Link></li>
                 <li><Link to="/events">Events</Link></li>
+                <li><Link to="/shop">Uniforms & Merchandise</Link></li>
                 <li><a href="mailto:yeppoonjrl@outlook.com?subject=Volunteer%20enquiry">Volunteer</a></li>
                 <li><a href="mailto:yeppoonjrl@outlook.com?subject=Sponsorship%20enquiry">Sponsors</a></li>
                 <li><a href="mailto:yeppoonjrl@outlook.com">Contact Us</a></li>

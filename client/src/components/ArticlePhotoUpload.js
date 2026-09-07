@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from '../api';
 import MediaReviewPreview from './MediaReviewPreview';
 
-export default function ArticlePhotoUpload({ players, onApproved, onRecords, onBusy }) {
+export default function ArticlePhotoUpload({ players, onApproved, onRecords, onBusy, purpose = 'article' }) {
   const [record, setRecord] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -34,9 +34,9 @@ export default function ArticlePhotoUpload({ players, onApproved, onRecords, onB
     finally { setBusy(false); onBusy(false); }
   };
   return <div className="article-photo-upload">
-    <label className="yjrl-label" htmlFor="article-photo-file">Upload article photo</label>
+    <label className="yjrl-label" htmlFor="article-photo-file">Upload {purpose} photo</label>
     <input id="article-photo-file" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; upload(file); }} />
-    <p>JPG, PNG or WebP, up to 5 MB. Upload, preview and approve the photo here before adding it to your article.</p>
+    <p>JPG, PNG or WebP, up to 5 MB. Upload, preview and approve the photo here before adding it to your {purpose}.</p>
     {busy && <p role="status">Saving photo…</p>}
     {error && <p role="alert" className="yjrl-form-error">{error}</p>}
     {record && <div>
@@ -48,7 +48,7 @@ export default function ArticlePhotoUpload({ players, onApproved, onRecords, onB
         <label className="admin-check"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /> I have identified every child shown.</label></div>}
       <label className="yjrl-label" htmlFor="article-photo-notes">Photo description / review notes</label><input id="article-photo-notes" className="yjrl-input" value={notes} maxLength={2000} placeholder="Describe the photo and confirm it is suitable to publish" onChange={e => setNotes(e.target.value)} />
       <button type="button" className="yjrl-btn yjrl-btn-primary" style={{ marginTop: 12 }} disabled={busy || viewed !== record.sha256 || !classification || notes.trim().length < 10 || (classification === 'children' && (!confirmed || !ids.length))} onClick={approve}>Approve & use photo</button>
-      <p>The uploaded photo stays private until approved. It remains available in Upload Review if you close this article.</p>
+      <p>The uploaded photo stays private until approved. It remains available in Upload Review if you close this {purpose}.</p>
     </div>}
   </div>;
 }

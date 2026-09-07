@@ -41,9 +41,9 @@ const YJRLFixtures = () => {
     }).finally(() => setLoading(false));
   }, []);
 
-  const now = new Date();
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' });
   const upcoming = fixtures
-    .filter(f => f.status === 'scheduled' && new Date(f.date) >= now)
+    .filter(f => f.status === 'scheduled' && String(f.date || '').slice(0, 10) >= today)
     .filter(f => ageFilter === 'All' || f.ageGroup === ageFilter)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 

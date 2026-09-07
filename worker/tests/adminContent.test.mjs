@@ -86,3 +86,13 @@ test('manual player entry stays pending and creates no login, payment or consent
   for (const table of ['registrations', 'player_consents', 'parent_child_links']) assert.equal(env.DB.sqlite.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n, 0);
   assert.equal((await send(players, env, admin, '/', 'POST', { ...details, firstName: '' })).status, 400);
 });
+
+
+test('ongoing multi-day events remain on the upcoming calendar', async t => {
+  const env = environment(t), admin = await actor(env, 'admin', 'admin');
+  const future = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const past = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const res = await send(events, env, admin, '/', 'POST', { title: 'Ongoing event', date: past, endDate: future, isPublic: true });
+  assert.equal(res.status, 201);
+  assert.equal((await (await events.request('/?upcoming=true', {}, env)).json()).length, 1);
+});

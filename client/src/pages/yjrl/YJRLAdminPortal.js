@@ -1,3 +1,4 @@
+import AdminShop from '../../components/AdminShop';
 import AdminAddPlayer from '../../components/AdminAddPlayer';
 import ArticlePhotoUpload from '../../components/ArticlePhotoUpload';
 import { fixtureError } from '../../../../shared/fixture';
@@ -485,6 +486,7 @@ const YJRLAdminPortal = () => {
               ['teams', 'Teams'],
               ['fixtures', 'Fixtures'],
               ['events', 'Events'],
+              ['shop', 'Shop'],
               ['news', 'News'],
               ['players', 'Players'],
               ['moderation', 'Chat Safety']
@@ -697,6 +699,7 @@ const YJRLAdminPortal = () => {
         )}
 
         {tab === 'events' && <AdminEvents />}
+        {tab === 'shop' && <AdminShop players={players} />}
         {tab === 'news' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>

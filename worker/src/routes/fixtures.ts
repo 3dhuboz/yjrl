@@ -76,7 +76,7 @@ fixtures.get('/', async (c) => {
   if (teamId) { sql += ' AND team_id = ?'; params.push(teamId); }
   if (upcoming === 'true') {
     sql += ' AND date >= ? AND status = ?';
-    params.push(new Date().toISOString().split('T')[0]);
+    params.push(new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' }));
     params.push('scheduled');
   } else if (status) {
     sql += ' AND status = ?'; params.push(status);

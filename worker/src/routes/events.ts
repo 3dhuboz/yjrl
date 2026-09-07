@@ -39,7 +39,7 @@ events.get('/', async (c) => {
   let sql = 'SELECT * FROM events WHERE is_active = 1 AND is_public = 1';
   const params: unknown[] = [];
   if (c.req.query('upcoming') === 'true') {
-    sql += ' AND date >= ?'; params.push(new Date().toISOString().split('T')[0]);
+    sql += " AND COALESCE(NULLIF(end_date, ''), date) >= ?"; params.push(new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' }));
   }
   if (c.req.query('type')) { sql += ' AND type = ?'; params.push(c.req.query('type')!); }
   const limit = c.req.query('limit');

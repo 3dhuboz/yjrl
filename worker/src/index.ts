@@ -21,6 +21,7 @@ import uploadRoutes from './routes/upload';
 import safetyRoutes from './routes/safety';
 import adminRoutes from './routes/admin';
 import mediaRoutes from './routes/media';
+import shopRoutes from './routes/shop';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -125,6 +126,10 @@ app.route('/api/yjrl/fixtures', fixturesRoutes);
 app.get('/api/yjrl/ladder', async (c) => {
   return fixturesRoutes.fetch(new Request(new URL(`/ladder?${new URL(c.req.url).searchParams}`, c.req.url), c.req.raw), c.env);
 });
+app.use('/api/yjrl/shop/orders', rateLimit('shop-order', 20, 15 * 60));
+app.use('/api/yjrl/shop/orders/:id/pay', rateLimit('shop-payment', 30, 15 * 60));
+app.use('/api/yjrl/shop/orders/:id/capture', rateLimit('shop-payment', 30, 15 * 60));
+app.route('/api/yjrl/shop', shopRoutes);
 app.route('/api/yjrl/news', newsRoutes);
 app.route('/api/yjrl/events', eventsRoutes);
 app.route('/api/yjrl/achievements', achievementsRoutes);
