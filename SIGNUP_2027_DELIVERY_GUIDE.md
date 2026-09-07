@@ -93,3 +93,13 @@ Created isolated `yjrl-review-db` (`bf4d3aa4-b8c7-4dda-810e-e58070b1a6db`) and p
 The review-only Worker entry point protects both static assets and API routes with password access and an eight-hour Secure/HttpOnly session. Missing protection fails closed. Its frontend uses same-origin `/api`, its credentials are separate, and email/payment providers/cron are absent. Production keeps its existing Pages + Worker architecture and closed opening settings.
 
 63 tests passed in `hs-20260907035215-3292621-41ca92e1`; typecheck passed in `hs-20260907035216-3292887-8be77553`; review client build passed in `hs-20260907035242-3296195-bcf0ea5b`. Next: deploy this exact committed review source, set its isolated secrets, verify access and provider behaviour, then promote with production opening closed.
+
+## Review acceptance and promotion checkpoint — 7 September 2026, 03:59 UTC
+
+Review source `51712ce` is live at https://yjrl-review.steve-700.workers.dev behind password access. Initial review Worker version `1b79ac47-cbd3-44ff-ad7b-28370ba68129` was followed by isolated secret configuration. Anonymous access returns 401. The first upload attempt failed only because the Pages wildcard rewrite is incompatible with Worker Assets; the review staging helper now excludes it and rejects builds referencing the production API.
+
+Real staged acceptance passed in `hs-20260907035703-3308085-c9d18063`: administrator login/readiness, synthetic 2027 registration and duplicate rejection, guardian reads/auditing, Cloudflare Images PNG→WebP conversion with removed synthetic metadata, private preview, review/approval, stale-review rejection, consent withdrawal and R2 object deletion. No email or payment was sent. JPEG EXIF/orientation, broader browser and provider checks remain outstanding.
+
+Both production and review R2 buckets have no custom domains and managed public access disabled. Production’s historical migration journal is empty; `stage-production-migrations.mjs` exposes only migrations 0004 onward so neither the old schema nor seed is replayed. Pending migrations 0004–0008 were verified. Pre-migration recovery bookmark: `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` (`hs-20260907035723-3308785-7c9a8a70`).
+
+Next: apply the five incremental production migrations, publish the Worker with opening controls closed, deploy the matching Pages build and verify public closure.

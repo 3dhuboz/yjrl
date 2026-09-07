@@ -19,6 +19,8 @@ API_PUBLIC_URL = "https://yjrl-api.steve-700.workers.dev/api"
 binding = "DB"
 database_name = "yjrl-db"
 database_id = "690424d2-5985-4576-9d4c-62e643ae5ed3"
+# Existing baseline predates the migration journal. Never replay the legacy seed.
+migrations_dir = ".wrangler/production-migrations"
 
 # R2 Storage
 [[r2_buckets]]
