@@ -6,8 +6,8 @@ Steve authorised working through the remaining work sequentially and deploying c
 
 | Step | Deliverable | Acceptance | Status |
 | --- | --- | --- | --- |
-| 1 | Establish incremental deployment | Register this workspace with the host deployment wrapper; prepare isolated review resources and a repeatable release/rollback procedure; deploy the already-tested branch and record its URL/version | In progress — host allowlist excludes YJRL |
-| 2 | Durable abuse protection | Login, registration, checkout, chat, uploads and reports share limits across Worker instances; return useful retry information; test concurrent requests and failure handling; deploy | Implemented and tested — deployment waiting on workspace approval |
+| 1 | Establish incremental deployment | Register this workspace with the host deployment wrapper; prepare isolated review resources and a repeatable release/rollback procedure; deploy the already-tested branch and record its URL/version | Host workspace registered; protected review release in progress |
+| 2 | Durable abuse protection | Login, registration, checkout, chat, uploads and reports share limits across Worker instances; return useful retry information; test concurrent requests and failure handling; deploy | Implemented and tested — review deployment in progress |
 | 3 | Settle account and guardian onboarding | Implement adult-only accounts with parents managing children’s profiles, guardian verification and recovery; test unrelated/disabled accounts; deploy | Adult-only boundary implemented; independent identity/guardian verification and recovery still outstanding |
 | 4 | Version forms and consent | Record the exact form/consent version submitted; separate photo/profile/stats permissions; provide an authenticated parent withdrawal path and registrar review history; deploy | Pending |
 | 5 | Restrict medical review and complete access recording | Separate access to medical details from ordinary club administration; record remaining child-data reads and controlled exports without copying sensitive content into logs; deploy | Pending |
@@ -83,3 +83,13 @@ Implementation references: [Cloudflare D1 prepared statements](https://developer
 - Production CORS permits explicit origins, including the configured frontend. Arbitrary Pages previews and localhost are no longer implicitly trusted.
 - Verification: 61 tests, typecheck and client build passed; see current candidate receipts above. Read-only production checks confirmed migrations 0004–0008 are absent and recorded the existing Worker/Pages versions for release planning. No member records or secret values were retrieved.
 - Next action: obtain the pending host workspace approval, apply the exact one-line addition, then run the packaging and isolated deployment procedure. Keep season opening and member access closed in production.
+
+## Deployment path restored — 7 September 2026, 03:53 UTC
+
+Steve’s “continue” after the concrete host-setting request authorised the prepared YJRL addition. The exact one-line patch was applied to the root-owned wrapper; ownership and mode remain root:root / 755 and shell syntax validation passed. Packaging now succeeds (`hs-20260907034858-3284376-d2a78491`).
+
+Created isolated `yjrl-review-db` (`bf4d3aa4-b8c7-4dda-810e-e58070b1a6db`) and private `yjrl-review-uploads`. Seven schema migrations (0001 and 0003–0008, excluding the historical seed) applied successfully in `hs-20260907035206-3292188-335a5ef3`.
+
+The review-only Worker entry point protects both static assets and API routes with password access and an eight-hour Secure/HttpOnly session. Missing protection fails closed. Its frontend uses same-origin `/api`, its credentials are separate, and email/payment providers/cron are absent. Production keeps its existing Pages + Worker architecture and closed opening settings.
+
+63 tests passed in `hs-20260907035215-3292621-41ca92e1`; typecheck passed in `hs-20260907035216-3292887-8be77553`; review client build passed in `hs-20260907035242-3296195-bcf0ea5b`. Next: deploy this exact committed review source, set its isolated secrets, verify access and provider behaviour, then promote with production opening closed.

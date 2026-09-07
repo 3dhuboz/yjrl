@@ -3,6 +3,7 @@
 ## Active 2027 sign-up work
 
 - Start with `SEASON_2027_READINESS.md` for the latest checkpoint, live observations and remaining launch work.
+- `worker/wrangler.review.toml` / `worker/src/review.ts`: protected isolated review Worker with same-origin assets/API; stage review migrations with `worker/scripts/stage-review-migrations.mjs`.
 - `SIGNUP_2027_DELIVERY_GUIDE.md`: ordered remaining work, club decisions and incremental deployment ledger.
 - `worker/migrations/0007_rate_limits.sql` and `worker/src/middleware/rateLimit.ts`: shared atomic request limits and hourly expiry cleanup; apply before Worker release.
 - `shared/adultAccount.json`, `worker/migrations/0008_adult_accounts.sql`, auth routes/middleware: adult-only accounts, versioned self-attestation and rejection of junior sessions.

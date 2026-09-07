@@ -1,0 +1,40 @@
+name = "yjrl-review"
+main = "src/review.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "../client/build"
+binding = "ASSETS"
+run_worker_first = true
+not_found_handling = "single-page-application"
+
+[vars]
+ENVIRONMENT = "review"
+# Synthetic acceptance settings only; the gateway protects every request.
+REGISTRATIONS_OPEN = "true"
+MEMBER_ACCESS_OPEN = "true"
+SEASON_DETAILS_CONFIRMED = "2027"
+CHILD_SAFETY_SIGNOFF = "approved"
+FROM_EMAIL = "review@example.test"
+FRONTEND_URL = "https://yjrl-review.steve-700.workers.dev"
+ALLOWED_ORIGINS = "https://yjrl-review.steve-700.workers.dev"
+API_PUBLIC_URL = "https://yjrl-review.steve-700.workers.dev/api"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "yjrl-review-db"
+database_id = "bf4d3aa4-b8c7-4dda-810e-e58070b1a6db"
+migrations_dir = ".wrangler/review-migrations"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "yjrl-review-uploads"
+
+[images]
+binding = "IMAGES"
+
+# No email, payment providers or cron in review. Secrets set only through HeadSnap:
+# REVIEW_ACCESS_PASSWORD, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD.
