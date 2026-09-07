@@ -41,8 +41,8 @@ These requests take priority over the remaining launch work above. Deploy throug
 | Add Player in admin and link to the public registration page | **Deployed:** `9360581`. Manual records stay pending; no junior login or payment is created |
 | Remove audit-log/technical status panels from admin | **Deployed:** backend activity history retained |
 | Search/sort chat rooms by age group, name or type | **Deployed:** numeric age ordering |
-| Uniforms and merchandise shop: online payment and pay on collection | Next implementation; products, provider and fulfilment details pending from Nathan |
-| Nathan handover and test checklist | Draft in `NATHAN_TESTING_HANDOVER.md`; finalise after deployments |
+| Uniforms and merchandise shop: online payment and pay on collection | **Deployed:** catalogue, basket, collection orders, PayPal checkout/resume/capture and admin fulfilment. Orders closed; catalogue/provider/fulfilment details and real payment acceptance pending from Nathan |
+| Nathan handover and test checklist | **Complete:** `NATHAN_TESTING_HANDOVER.md` contains the requested information list, test sequence and remaining acceptance checks |
 
 ## What is already implemented
 
@@ -57,19 +57,20 @@ These requests take priority over the remaining launch work above. Deploy throug
 
 | Check | Result / receipt |
 | --- | --- |
-| Isolated API/SQLite suite | **63 passed** — `hs-20260907035215-3292621-41ca92e1` |
-| Worker typecheck | **Passed** — `hs-20260907035216-3292887-8be77553` |
-| Production client build | **Passed** — `hs-20260907040029-3315989-3ef47c93` |
+| Isolated API/SQLite suite | **82 passed** — `hs-20260907075122-3831329-3113e2dc` |
+| Worker typecheck | **Passed** — `hs-20260907080343-3856458-dbfd5402` |
+| Production client build | **Passed** — `hs-20260907080515-3858927-46b95dad` |
 | Real protected review acceptance | **Passed** — `hs-20260907035703-3308085-c9d18063`; synthetic registration/duplicate/guardian reads and real Images/R2 review/withdrawal/cleanup |
 | Production API | **Passed** — `hs-20260907040049-3317846-2d0ef6b9`; health, season 2027, hidden fees and closed writes/checkout |
 | Production frontend | **Passed** — `hs-20260907040128-3319035-abce104e`; home/register/login/parent deep links return the expected build with preparation/adult-login copy |
 
-The frontend checks inspect deployed HTTP/build responses; full interactive browser acceptance and real production administrator login remain outstanding. Existing production admin/JWT secret bindings were retained and checked by name/type only. No existing secret value was retrieved or rotated.
+Real Chrome acceptance now passes for the requested admin and shop flows: `hs-20260907080410-3857159-68a953a9` and `hs-20260907080212-3852902-6bde1347`. Latest production checks passed in `hs-20260907080831-3865085-37125169` (seven routes, current bundle, closed empty shop, private admin endpoint and closed sign-ups). Broader parent/onboarding/provider acceptance remains outstanding. Existing production admin/JWT secret bindings were retained and checked by name/type only. No existing secret value was retrieved or rotated.
 
 ## Deployment ledger
 
 | UTC, 7 Sep 2026 | Source / action | Result |
 | --- | --- | --- |
+| 08:02–08:08 | `fa7f355`, shop and edit preservation | Migration 0010 applied; Worker `83151c72-9a94-4086-b6d9-879fe8411019`; Pages https://1171f88e.yjrl.pages.dev; 82 tests and both browser suites pass; shop closed with no products and online provider unconfigured |
 | 07:34–07:36 | `9360581`, admin tools and maps | 69 tests/typecheck/build pass; Chrome acceptance `hs-20260907073407-3795159-89abc4c4`; migration 0009 applied; Worker `48709805-395b-45dd-9166-0ffd2d3464d0`; Pages https://d8385052.yjrl.pages.dev; live bundle verified |
 | 03:02 | `13aa212`, packaging attempt | Host workspace list rejected YJRL; no deployment |
 | 03:48 | Approved one-line YJRL workspace addition | Applied to root wrapper; root:root / 755 retained, syntax valid; packaging passed in `hs-20260907034858-3284376-d2a78491` |
@@ -86,4 +87,4 @@ Use `ops/2027_RELEASE_RUNBOOK.md` for exact resources, build/migration commands 
 
 Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Do not set actual safeguarding sign-off until the club adopts the incident playbook and approves launch.
 
-**Next implementation:** finish the admin testing requests and shop setup above, then return to guardian verification, recovery and form/consent versioning. Keep deployments incremental and this table current.
+**Next action:** Nathan’s admin testing and information collection using the handover. Resume guardian verification, recovery and form/consent versioning for season opening; complete real provider acceptance and confirmed catalogue/fulfilment setup before shop opening. Keep deployments incremental and this table current.

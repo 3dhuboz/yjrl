@@ -2,6 +2,12 @@
 
 ## Active 2027 sign-up work
 
+- `NATHAN_TESTING_HANDOVER.md`: delivered admin/shop test steps and club information still needed.
+- `shared/maps.ts`, migration 0009, `VenueMap`/`MapLocationFields`: admin Google Maps destinations and public links/previews.
+- `AdminEvents`, `AdminAddPlayer`, `ArticlePhotoUpload`: calendar, manual pending player and inline reviewed photo tools.
+- `worker/src/routes/shop.ts`, migration 0010, `AdminShop`/`YJRLShop`: shop catalogue/orders, collection and PayPal, default ordering closed.
+- `worker/tests/adminContent.test.mjs`, `shop.test.mjs`, `scripts/accept-admin-browser.mjs`, `scripts/accept-shop-browser.mjs`: API and real protected-review Chrome acceptance.
+
 - Start with `SEASON_2027_READINESS.md` for the latest checkpoint, live observations and remaining launch work.
 - `worker/wrangler.review.toml` / `worker/src/review.ts`: protected isolated review Worker with same-origin assets/API; stage review migrations with `worker/scripts/stage-review-migrations.mjs`.
 - `SIGNUP_2027_DELIVERY_GUIDE.md`: ordered remaining work, club decisions and incremental deployment ledger.

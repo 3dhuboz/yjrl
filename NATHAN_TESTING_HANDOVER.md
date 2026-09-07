@@ -1,26 +1,46 @@
-# Nathan: website testing and details needed
+# Nathan: website testing and information needed
 
-Working site: https://yjrl.pages.dev. Season: **2027**. Adult accounts only; parents/guardians manage children. Public registrations remain closed while season details and launch checks are outstanding.
+Website: https://yjrl.pages.dev
 
-## Details to supply
+The site is prepared for **2027**. Adults hold the accounts and parents/guardians manage children’s records. The admin tools are ready to test. Public registration and shop ordering remain closed while the club details and launch checks are completed.
 
-- **Registration:** opening date/time, closing date if any, eligible age groups, each fee, discounts, payment plans/options, inclusions and any additional competition fees.
-- **Club contacts:** registrar name/email/phone, public enquiries contact, official PlayHQ/competition registration link, current club/domain administrator.
-- **Teams and draw:** team names/age groups, coaches, training days/times, home/away fixture details, and exact Google Maps Share links for each venue/entrance. For a visible map preview, also provide Google Maps → Share → Embed a map → Copy HTML from the same location.
-- **News/events:** approved copy, dates/times, venues and approved photos. Photos showing children need identified player records and current guardian media consent.
-- **Uniforms/merchandise:** supplier details or existing shop link; product names/descriptions; approved photos; prices in AUD; sizes/colours and size charts; stock or preorder availability; order limits; personalisation choices and costs.
-- **Shop fulfilment:** collection location/hours/contact, delivery availability and charges, lead times and preorder cut-offs, exchanges/refunds and how stock/orders are managed.
-- **Shop payments:** online payment provider/business account to use, payment-on-collection methods, person reconciling payments, order notification recipient. Provide account access through the agreed secure setup, not this document.
-- **Opening sign-off:** approved registration/consent wording and club incident/escalation arrangements, authorised adult administrators and coaches, designated testing accounts and email recipient.
+## What Nathan needs to supply
 
-## Admin test sequence (deployed 7 September, 07:36 UTC)
+| Area | Details needed |
+| --- | --- |
+| Testing access | Nathan’s email and whether he will test admin, parent features or both; other approved testers |
+| Registration | Opening/closing dates, eligible age groups, each fee, discounts, payment plans, inclusions and any separate competition fees |
+| Contacts and links | Registrar name/email/phone, public enquiries contact, official PlayHQ/competition registration link and the club’s domain administrator |
+| Teams and training | Team names/age groups, coaches, training days/times and venue names |
+| Fixtures | Confirmed draw: round, date, kick-off, home/away teams and venue |
+| Google Maps | Exact Share link for each venue/entrance. For a visible map preview, also supply Google Maps → Share → Embed a map → Copy HTML from the same location |
+| News and events | Approved copy, dates/times, venues and photos. Images of children require identified player records and current guardian media consent |
+| Uniforms and merchandise | Supplier/existing shop link, product names/descriptions, approved photos, AUD prices, sizes/colours, size charts, availability/preorders and any personalisation choices/costs |
+| Collection and delivery | Collection location/hours/contact, lead times and preorder cut-offs; confirm whether delivery is also required and its charges |
+| Shop payments | Confirm the PayPal business account for the current integration, or identify the preferred alternative. Confirm payment methods accepted on collection and who reconciles orders/payments |
+| Shop operations | Approved ordering/exchange/refund wording, who fulfils orders, stock-management needs and order notification recipient. Current fulfilment is club collection with availability controlled by admin |
+| Season opening | Final registration/consent wording, club incident/escalation arrangements, approved adult administrators/coaches and designated provider test accounts/email recipient |
 
-1. Teams → Edit: set training details and Google Maps Share link. Add an optional map preview using the copied embed code. Save and check Teams publicly; the location opens the selected Google Maps destination.
-2. Fixtures → Add Fixture: enter both teams (TBC if the opponent is unknown), round, date/time and venue. Save; edit it and check Fixtures publicly.
-3. Events → choose a calendar date or Add Event. Save a draft, edit it, tick public publication and save. Check Events, then remove any test event.
-4. News → Write Article: upload a photo, preview it, identify who is shown and approve it. Save Draft (admin only) or tick Publish immediately and Publish Article (public). Feature on homepage only applies to published articles. Existing Test article can be published using its Publish button.
-5. Players → Add Player: enter a synthetic player/guardian while testing. The record remains pending. Public registration page is `/register`; it stays closed until launch requirements are met.
-6. Chat Safety → Active Chat Rooms: search a team and try the three sort choices.
-7. Shop: testing steps will be added once its setup is deployed. Both online payment and pay on collection are requested; do not take real payments until provider and fulfilment checks are complete.
+Supply account access through the agreed secure setup, rather than putting passwords or payment credentials in this document.
 
-Use synthetic children/contact information for testing. This document does not send a message or invite to Nathan.
+## Things to test now
+
+Use synthetic player/contact details for testing. Full order and payment tests belong in the isolated review site; live ordering stays closed during preparation.
+
+1. **Teams → Edit:** change training days/times/venue. Paste the Google Maps Share link and optional embed code, then save. Check the public Teams page and click its location/map. The coach selector defaults to **Keep current coach** when editing.
+2. **Fixtures → Add Fixture:** enter both teams, round, date/time and venue. Use **TBC** for an unknown opponent. Set whether Yeppoon is the home team. Save, edit and check the public Fixtures page and its map link. Missing details should produce a clear error.
+3. **Events:** select a calendar date or use **Add Event**. Enter the title/date/time/venue and optional map. Save a draft, edit it, select public publication and save. Check the public Events page, then remove the test event.
+4. **News:** upload a photo inside the article form, preview it, identify who is shown and approve it. **Save Draft** keeps the article in admin. Select **Publish immediately** and **Publish Article**, or use **Publish** beside a draft, to put it on the public News page. **Feature on homepage** applies to published articles. The existing Test article was saved as a draft.
+5. **Players → Add Player:** enter a synthetic player and adult guardian details. The player remains pending registration review; this does not create a junior login, take a payment or grant photo consent. The **Public registration page** button opens `/register`, which currently explains that 2027 sign-ups are being prepared.
+6. **Chat Safety → Active Chat Rooms:** search for a team and sort by age group, room name or room type. U6–U9 should appear before U10. The technical audit-log panel has been removed from this page.
+7. **Shop → Add Product:** enter a draft uniform or merchandise item with price, size/colour options and an optional uploaded photo. Drafts stay off the public site. Confirmed products can be marked available and published. Shop setup stores collection details, policies and both payment preferences.
+8. **Shop order test in review:** select a size/colour, add quantity to the basket, place a pay-on-collection order and reload its receipt. In admin, record the simulated collection payment, then mark the order collected. Keep production ordering closed until the catalogue, fulfilment and provider checks are approved.
+
+## What still needs a separate acceptance check
+
+- Real PayPal sandbox approval, cancellation, return, reconciliation and the agreed refund workflow using designated test accounts. Automated provider simulations pass; no real payment was made.
+- Confirm the working public/payment-return domain before enabling live online payments. The working site is currently `yjrl.pages.dev`.
+- Confirm any automatic shop email notifications, delivery and inventory requirements. Current order receipts are shown on the site and orders are managed in admin.
+- Complete the remaining guardian/account verification, registration consent, medical-access and launch requirements listed in `SIGNUP_2027_DELIVERY_GUIDE.md` before opening sign-ups.
+
+The two payment choices are supported in the implementation. An online payment option appears for customers only after the provider is configured; all shop orders are currently closed.

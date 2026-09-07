@@ -10,18 +10,22 @@ Steve authorised ongoing deployment and the exact YJRL host workspace addition. 
 | Production | API | https://yjrl-api.steve-700.workers.dev |
 | Production | D1 `yjrl-db` | `690424d2-5985-4576-9d4c-62e643ae5ed3` |
 | Production | Private R2 | `yjrl-uploads` |
-| Production | Worker version | `d66eebc8-4e34-4fff-a0a7-61f1dc5f8fc3` |
-| Production | Pages deployment | `9cb8b591-e863-4640-919e-6e06f85b72af` |
+| Production | Worker version | `83151c72-9a94-4086-b6d9-879fe8411019` |
+| Production | Pages deployment | https://1171f88e.yjrl.pages.dev |
 | Review | Password-protected app/API | https://yjrl-review.steve-700.workers.dev |
 | Review | D1 `yjrl-review-db` | `bf4d3aa4-b8c7-4dda-810e-e58070b1a6db` |
 | Review | Private R2 | `yjrl-review-uploads` |
-| Review | Worker version after secrets | `f9ebe00a-a95f-4035-86cb-5cabb839c6f6` |
+| Review | Worker version after secrets | `90696a2e-b003-43a3-97d7-8e7bfec89e4d` |
 
-Production source is `46ea14cecf05b277d5863a9b31c2be4e6f7d7915`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
+Production source is `fa7f355591122852a3af15a05c8e17dc6549d3af`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
 
 Before 0004–0008 were applied, the production D1 recovery bookmark was `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` at 03:57 UTC on 7 September (`hs-20260907035723-3308785-7c9a8a70`). Refresh recovery evidence before every subsequent production migration.
 
 The historical production journal was empty even though the base/child-safety schema existed. The release successfully applied only 0004–0008 and recorded them in the journal. Do not invent baseline journal entries, replay 0001/0003, or run the legacy 0002 seed against live data. The old package `db:migrate` scripts execute that seed and must not be used for production.
+
+Migrations 0009 (venue maps) and 0010 (shop) are now applied too. The latest pre-shop recovery bookmark is `00000096-00000000-000050df-72a0627feb24d1ad74bcfd98d5e40ee9` (`hs-20260907075616-3841354-afcd7958`). Shop settings remain `orders_open = 0`; no catalogue products were added to production. Do not open ordering before confirmed collection/policies/products and provider acceptance. Existing orders snapshot prices/options/policies; product removal retains order history. Current online integration reuses the existing PayPal provider, with production requiring live mode and a verified working return domain as an operational launch check.
+
+The real-browser scripts use HeadSnap’s installed Playwright and project Chrome profile. Start/status Chrome with `headsnap browser start yjrl` / `headsnap browser status yjrl`, then run each script through `headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/accept-admin-browser.mjs` or `scripts/accept-shop-browser.mjs`. They target the isolated review hostname only, use synthetic content and restore the shop’s original settings. Provider payment tests in the unit suite are simulated; obtain designated sandbox accounts for real acceptance.
 
 ## Verify and release to review
 

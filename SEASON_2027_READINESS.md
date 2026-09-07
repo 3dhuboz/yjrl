@@ -1,3 +1,17 @@
+## Admin and shop delivery checkpoint — 7 September 2026, 08:09 UTC
+
+Objective: complete Steve’s screenshot requests and uniforms/merchandise shop setup, deploy incrementally, and provide Nathan’s testing/input guide. Branch `codex/2027-signup-readiness`; application HEAD `fa7f355591122852a3af15a05c8e17dc6549d3af`, pushed. Single lead owns this checkout.
+
+**Delivered and live:** all admin requests in the checkpoint below, plus shop product drafts/publishing, reviewed photos, sizes/colours/AUD prices, basket, private order receipts, pay on collection, PayPal creation/resume/capture/reconciliation and admin payment/collection recording. Team/fixture edits preserve results/records; coach assignment stays unchanged unless selected. Same-day games and ongoing events remain visible. Backend audit history remains recorded. Public shop: https://yjrl.pages.dev/shop; ordering closed, no products published, provider unconfigured. Public registrations/member access also remain closed.
+
+**Verification:** 82 API/SQLite tests (`hs-20260907075122-3831329-3113e2dc`), final typecheck (`hs-20260907080343-3856458-dbfd5402`) and production build (`hs-20260907080515-3858927-46b95dad`) pass. Chrome admin suite passed on final source (`hs-20260907080410-3857159-68a953a9`); Chrome shop/team-edit suite passed (`hs-20260907080212-3852902-6bde1347`). These cover real Images/R2 article upload and review, public news/maps/events, manual player entry, room controls, shop catalogue/order/receipt/collection and mobile layout. PayPal is tested with provider simulations; no real payments or emails were sent. Synthetic review products/content removed; inactive players and completed synthetic collection orders retain audit history. Production HTTP checks passed (`hs-20260907080831-3865085-37125169`).
+
+**Release:** migration 0010 applied to both DBs. Production Worker `83151c72-9a94-4086-b6d9-879fe8411019`; Pages https://1171f88e.yjrl.pages.dev (public alias verified), source `fa7f355591122852a3af15a05c8e17dc6549d3af`. Protected review Worker `90696a2e-b003-43a3-97d7-8e7bfec89e4d`. Before shop migration, production recovery bookmark was `00000096-00000000-000050df-72a0627feb24d1ad74bcfd98d5e40ee9`.
+
+**Changed files:** `worker/src/routes/shop.ts`, migration 0010, index/rate-limit mounting, shop tests/browser acceptance; `AdminShop`, `YJRLShop`, shared photo uploader, navigation/login return and admin editing. `NATHAN_TESTING_HANDOVER.md` is the completed information list and testing sequence; `SIGNUP_2027_DELIVERY_GUIDE.md` retains the full remaining launch work.
+
+**Remaining risk / next action:** obtain Nathan’s catalogue, prices, photos, exact venue links, collection/policy/provider and 2027 details. Run real designated PayPal sandbox/domain-return/operations acceptance before enabling online orders. Shop currently uses collection and admin-managed availability; clarify delivery, inventory, notifications and refund operations. Arrange named adult test access. Resume independent guardian verification/recovery and form/consent/medical-access launch work from the delivery guide before opening registrations. Keep production controls closed while these decisions/checks remain outstanding. League Bot remains Norths-only.
+
 ## Admin tools checkpoint — 7 September 2026, 07:36 UTC
 
 Objective: finish Steve’s screenshot requests, deploy as we go, prepare Nathan’s testing guide, then resume the 2027 launch guide. Branch `codex/2027-signup-readiness`; application HEAD `93605816e6a75390846213848015745f97b8d3f7`, pushed. Lead-only checkout.
