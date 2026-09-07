@@ -1,0 +1,9 @@
+--- /usr/local/libexec/headsnap-cloudflare-wrangler
++++ /usr/local/libexec/headsnap-cloudflare-wrangler
+@@ -6,6 +6,7 @@
+ workspace="$(realpath -e -- "${PWD}")"
+ case "${workspace}/" in
++  /srv/headsnap/workspaces/yjrl/* | \
+   /srv/headsnap/workspaces/Norths-Knights-website-forms/* | \
+   /srv/headsnap/workspaces/laze-about-shades/* | \
+   /srv/headsnap/workspaces/CrystalBrook/* | \

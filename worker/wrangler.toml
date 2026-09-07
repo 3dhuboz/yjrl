@@ -28,7 +28,7 @@ binding = "IMAGES"
 
 # Cron trigger for daily email reminders (8am AEST = 10pm UTC previous day)
 [triggers]
-crons = ["0 22 * * *"]
+crons = ["0 22 * * *", "0 0-21,23 * * *"]
 
 # Secrets (set via `wrangler secret put`):
 # JWT_SECRET

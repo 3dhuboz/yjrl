@@ -4,6 +4,7 @@ import type { Env, Variables } from './types';
 import { hashPassword } from './lib/password';
 import { sendEmail, eventReminderEmail } from './lib/email';
 import { writeAudit } from './lib/audit';
+import { rateLimit, cleanupRateLimits } from './middleware/rateLimit';
 
 import authRoutes from './routes/auth';
 import teamsRoutes from './routes/teams';
@@ -21,34 +22,6 @@ import adminRoutes from './routes/admin';
 import mediaRoutes from './routes/media';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
-
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function clientKey(c: any, scope: string) {
-  const ip = c.req.header('CF-Connecting-IP')
-    || c.req.header('x-forwarded-for')
-    || c.req.header('x-real-ip')
-    || 'unknown';
-  return `${scope}:${ip}`;
-}
-
-function rateLimit(scope: string, max: number, windowSeconds: number) {
-  return async (c: any, next: any) => {
-    const now = Date.now();
-    const key = clientKey(c, scope);
-    const existing = rateBuckets.get(key);
-    if (!existing || existing.resetAt <= now) {
-      rateBuckets.set(key, { count: 1, resetAt: now + windowSeconds * 1000 });
-      await next();
-      return;
-    }
-    existing.count += 1;
-    if (existing.count > max) {
-      return c.json({ error: 'Too many requests. Please wait and try again.' }, 429);
-    }
-    await next();
-  };
-}
 
 function allowedOrigin(origin: string | undefined, env: Env): string | undefined {
   if (!origin) return undefined;
@@ -79,6 +52,7 @@ app.use('*', cors({
   origin: (origin, c) => allowedOrigin(origin, c.env),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  exposeHeaders: ['Retry-After'],
   maxAge: 86400,
 }));
 
@@ -116,12 +90,13 @@ app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISO
 
 app.route('/api/media', mediaRoutes);
 
-// Abuse-sensitive route limits. These are isolate-local guardrails; durable blocking can be added later.
+// Shared durable limits apply before authentication/password work and sensitive mutations.
 app.use('/api/auth/login', rateLimit('auth-login', 10, 15 * 60));
 app.use('/api/auth/register', rateLimit('auth-register', 5, 60 * 60));
 app.use('/api/register-player', rateLimit('player-register', 5, 60 * 60));
-app.use('/api/register-player/*', rateLimit('registration-checkout', 30, 15 * 60));
-app.use('/api/yjrl/chat', rateLimit('chat', 120, 60));
+app.use('/api/register-player/:id/resume', rateLimit('registration-checkout', 30, 15 * 60));
+app.use('/api/register-player/:id/capture', rateLimit('registration-checkout', 30, 15 * 60));
+app.use('/api/yjrl/chat', rateLimit('chat', 120, 60, ['GET', 'POST']));
 app.use('/api/upload', rateLimit('upload', 20, 60 * 60));
 app.use('/api/yjrl/safety/reports', rateLimit('safety-report', 30, 60 * 60));
 
@@ -164,7 +139,12 @@ export default {
 
   // Cron trigger: daily event reminders
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    if (!env.RESEND_API_KEY) return;
+    try {
+      await cleanupRateLimits(env);
+    } catch {
+      console.error('Rate-limit cleanup failed');
+    }
+    if (event.cron !== '0 22 * * *' || !env.RESEND_API_KEY) return;
     try {
       // Find events in the next 48 hours
       const now = new Date();

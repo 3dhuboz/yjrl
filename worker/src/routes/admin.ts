@@ -43,6 +43,13 @@ admin.get('/readiness', authMiddleware, async (c) => {
   const checks: ReadinessCheck[] = [];
 
   try {
+    await c.env.DB.prepare('SELECT bucket_key, request_count, reset_at FROM rate_limit_buckets LIMIT 1').first();
+    checks.push(check('durable_rate_limits', 'Shared abuse protection', 'pass', 'Durable request counters are installed; hourly cleanup is configured in the Worker.'));
+  } catch {
+    checks.push(check('durable_rate_limits', 'Shared abuse protection', 'fail', 'Apply migration 0007 before release. Sensitive requests fail closed without these counters.'));
+  }
+
+  try {
     await c.env.DB.prepare('SELECT 1 AS ok').first();
     checks.push(check('d1', 'D1 database', 'pass', 'Database query succeeded.'));
   } catch {

@@ -1,3 +1,13 @@
+## Delivery checkpoint — 7 September 2026, 03:11 UTC
+
+Objective: complete the ordered `SIGNUP_2027_DELIVERY_GUIDE.md` and deploy each verified milestone. Branch: `codex/2027-signup-readiness`, prior pushed HEAD `13aa212`. This checkout has one lead owner.
+
+Steve confirmed adult-only accounts; the club has not yet supplied season dates/fees/payment options/contact. The delivery guide records all remaining steps. Step 2 now has durable request limits (migration 0007, middleware, mounted routes, expiry cron, readiness check and regression tests). 53 tests and typecheck passed; see the guide for job receipts.
+
+Deployment remains blocked by the root-owned HeadSnap Cloudflare workspace list. Exact one-line addition prepared in `ops/headsnap-yjrl-workspace.patch`; narrowly scoped approval is pending. No deployment has succeeded. No production data was changed.
+
+Next action: implement adult-only accounts and keep the guide current; on host workspace approval, apply the exact addition and complete isolated review deployment. Season opening stays dependent on genuine club details and safeguarding sign-off.
+
 # 2027 sign-up readiness
 
 ## Checkpoint — 7 September 2026
@@ -40,7 +50,7 @@
 
 Steve authorised using Norths Knights as context on 6 September. Read-only comparison used committed HEAD `8ae69848910a` in `/srv/headsnap/workspaces/Norths-Knights-website-forms`, specifically `docs/superpowers/specs/2026-08-19-norths-club-forms-design.md`, `packages/club-contracts/src/forms.ts` and `docs/checkpoints/2026-08-28-family-pwa-communications-ready.md`. The working tree has another task's active edits; none were copied or modified.
 
-Reusable decisions: typed field/consent validation, guardian-led completion, club review separate from payment, truthful submission/delivery receipts, atomic duplicate handling and minimal registration notifications. Norths has a materially stronger adult-only identity model, immutable versioned forms and restricted medical review. Those remain alignment work, not features claimed complete in YJRL. A question about adopting adult-only YJRL accounts is pending; existing player accounts were not removed without that scope decision. League Bot remains specific to Norths.
+Reusable decisions: typed field/consent validation, guardian-led completion, club review separate from payment, truthful submission/delivery receipts, atomic duplicate handling and minimal registration notifications. Norths has a materially stronger adult-only identity model, immutable versioned forms and restricted medical review. Those remain alignment work, not features claimed complete in YJRL. Steve confirmed adult-only YJRL accounts on 7 September. Implementation is the next delivery step; historical player profiles must be preserved. League Bot remains specific to Norths.
 
 ## Current live evidence
 
