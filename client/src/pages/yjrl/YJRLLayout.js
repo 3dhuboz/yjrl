@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Home, Calendar, Trophy, Newspaper, Users, LogIn, LogOut,
-  Menu, X, ChevronDown, User, Shield, Heart, Zap, Mail
+  Menu, X, ChevronDown, User, Shield, Heart, Mail
 } from 'lucide-react';
 import './yjrl.css';
 

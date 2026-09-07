@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { registrationOpen, memberAccessOpen } from '../lib/launch';
+import season from '../../../shared/season.json';
 
 const admin = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -41,6 +43,11 @@ admin.get('/readiness', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
 
   const checks: ReadinessCheck[] = [];
+  checks.push(check('opening_controls', 'Opening controls', 'pass',
+    `Registration ${registrationOpen(c.env) ? 'open' : 'closed'}; member access ${memberAccessOpen(c.env) ? 'open' : 'closed'}.`, false));
+  checks.push(c.env.SEASON_DETAILS_CONFIRMED === season.season
+    ? check('season_details', 'Confirmed season details', 'pass', `Club details are marked confirmed for ${season.season}.`)
+    : check('season_details', 'Confirmed season details', 'fail', `Keep registration closed until the club confirms the ${season.season} opening date, fees and operating details.`));
 
   try {
     await c.env.DB.prepare('SELECT adult_attested_at, adult_attestation_version FROM users LIMIT 1').first();

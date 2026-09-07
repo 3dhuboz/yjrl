@@ -37,7 +37,8 @@ function database(t) {
 }
 
 function environment(t) {
-  return { DB: database(t), JWT_SECRET: 'local-test-secret-only', ENVIRONMENT: 'production' };
+  return { DB: database(t), JWT_SECRET: 'local-test-secret-only', ENVIRONMENT: 'production',
+    REGISTRATIONS_OPEN: 'true', MEMBER_ACCESS_OPEN: 'true', SEASON_DETAILS_CONFIRMED: '2027', CHILD_SAFETY_SIGNOFF: 'approved' };
 }
 
 async function actor(env, id, role) {

@@ -1,3 +1,15 @@
+## Release preparation checkpoint — 7 September 2026, 03:23 UTC
+
+Objective: execute `SIGNUP_2027_DELIVERY_GUIDE.md` one step at a time and deploy verified milestones. Branch `codex/2027-signup-readiness`; previous pushed HEAD `b63b363`. The lead exclusively owns this checkout.
+
+Changed files: opening policy (`worker/src/lib/launch.ts`, auth/registration/admin middleware and routes, Worker variables/cron/CORS), registration closed-state client and fee contract, tests, delivery guide and `ops/2027_RELEASE_RUNBOOK.md`. Also corrects the exact proposed workspace patch context. 61 tests, Worker typecheck and client build passed; receipts are in the guide. Existing adult-account and durable-limit work is pushed.
+
+Deployment is still blocked by HeadSnap’s explicit approved-workspace list. The user-facing approval for the exact YJRL addition remains unanswered; the patch has not been applied and no deployment has succeeded. Read-only production schema/previous-release checks succeeded with zero database writes. Production requires migrations 0004–0008 before this Worker.
+
+Remaining risk: independent guardian/identity verification, recovery, versioned forms/withdrawal, medical access roles and wider audit coverage, real media/provider acceptance, actual season details, branded domains and club safeguarding sign-off. Adult self-attestation is not independent verification. Opening controls remain closed until these are satisfied.
+
+Exact next action: on approval, add only the proposed YJRL workspace entry, run the release runbook’s dry-run and isolated review deployment, record its URL/version, then resume the next guide item. Do not bypass the host wrapper or imply that a build/push is a deployment.
+
 ## Account boundary checkpoint — 7 September 2026, 03:17 UTC
 
 Objective: work through the delivery guide and deploy verified milestones. Branch `codex/2027-signup-readiness`; prior pushed HEAD `92c4d65`. Adult-only changes span shared declaration/registration validation, Worker auth and checkout, migration 0008, login/navigation/registration copy and tests.

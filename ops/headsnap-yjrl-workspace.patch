@@ -1,6 +1,6 @@
 --- /usr/local/libexec/headsnap-cloudflare-wrangler
 +++ /usr/local/libexec/headsnap-cloudflare-wrangler
-@@ -6,6 +6,7 @@
+@@ -6,5 +6,6 @@
  workspace="$(realpath -e -- "${PWD}")"
  case "${workspace}/" in
 +  /srv/headsnap/workspaces/yjrl/* | \

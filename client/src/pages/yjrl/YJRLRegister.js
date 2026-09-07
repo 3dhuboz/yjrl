@@ -228,6 +228,20 @@ const YJRLRegister = () => {
     </YJRLLayout>
   );
 
+  if (registrationDetails?.registrationOpen === false) return (
+    <YJRLLayout>
+      <section className="yjrl-section">
+        <div className="yjrl-section-inner" style={{ maxWidth: 720 }}>
+          <h1>{seasonConfig.season} sign-ups are being prepared</h1>
+          <p role="status">{registrationDetails.message}</p>
+          <p>Parents and guardians will register children using their own adult accounts.</p>
+          <button type="button" className="yjrl-btn yjrl-btn-secondary" onClick={loadFees}>Check for updates</button>
+          <Link to="/" className="yjrl-btn yjrl-btn-primary" style={{ marginLeft: '1rem' }}>Back to home</Link>
+        </div>
+      </section>
+    </YJRLLayout>
+  );
+
   return (
     <YJRLLayout>
       {/* Header */}

@@ -15,6 +15,9 @@ export interface Env {
   FRONTEND_URL?: string;
   API_PUBLIC_URL?: string;
   CHILD_SAFETY_SIGNOFF?: string;
+  REGISTRATIONS_OPEN?: string;
+  MEMBER_ACCESS_OPEN?: string;
+  SEASON_DETAILS_CONFIRMED?: string;
   CLICKSEND_USERNAME?: string;
   CLICKSEND_API_KEY?: string;
   CLICKSEND_REQUIRED?: string;

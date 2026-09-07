@@ -5,6 +5,7 @@ import { hashPassword } from './lib/password';
 import { sendEmail, eventReminderEmail } from './lib/email';
 import { writeAudit } from './lib/audit';
 import { rateLimit, cleanupRateLimits } from './middleware/rateLimit';
+import { memberAccessOpen } from './lib/launch';
 
 import authRoutes from './routes/auth';
 import teamsRoutes from './routes/teams';
@@ -37,13 +38,13 @@ function allowedOrigin(origin: string | undefined, env: Env): string | undefined
     .filter(Boolean);
   const exactOrigins = new Set([
     ...configured,
+    env.FRONTEND_URL,
     'https://yjrl.pages.dev',
     'https://yeppoonjrl.com.au',
     'https://www.yeppoonjrl.com.au',
   ]);
 
-  if (host === 'localhost' || host === '127.0.0.1') return origin;
-  if (host === 'yjrl.pages.dev' || host.endsWith('.yjrl.pages.dev')) return origin;
+  if (env.ENVIRONMENT === 'development' && (host === 'localhost' || host === '127.0.0.1')) return origin;
   return exactOrigins.has(origin) ? origin : undefined;
 }
 
@@ -144,7 +145,7 @@ export default {
     } catch {
       console.error('Rate-limit cleanup failed');
     }
-    if (event.cron !== '0 22 * * *' || !env.RESEND_API_KEY) return;
+    if (event.cron !== '0 22 * * *' || !memberAccessOpen(env) || !env.RESEND_API_KEY) return;
     try {
       // Find events in the next 48 hours
       const now = new Date();

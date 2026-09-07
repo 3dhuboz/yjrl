@@ -6,6 +6,7 @@ import { authMiddleware } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
 import { canBeGuardian } from '../lib/safeguarding';
 import adultAccount from '../../../shared/adultAccount.json';
+import { registrationOpen, registrationClosedMessage, memberAccessOpen, memberClosedMessage } from '../lib/launch';
 
 const auth = new Hono<{ Bindings: Env; Variables: Variables }>();
 auth.use('*', async (c, next) => { c.header('Cache-Control', 'no-store'); await next(); });
@@ -21,6 +22,7 @@ async function makeToken(userId: string, secret: string): Promise<string> {
 
 // POST /auth/register
 auth.post('/register', async (c) => {
+  if (!registrationOpen(c.env)) return c.json({ error: registrationClosedMessage, code: 'registration_closed' }, 503);
   let body: Record<string, any>;
   try {
     body = await c.req.json();
@@ -88,6 +90,7 @@ auth.post('/login', async (c) => {
   const valid = await verifyPassword(password, user.password_hash as string);
   if (!valid) return c.json({ error: 'Invalid email or password' }, 401);
   if (!canBeGuardian(user.role as string)) return c.json({ error: 'Accounts are for adults only. Please ask a parent or guardian to use their own account.', code: 'adult_account_required' }, 403);
+  if (!memberAccessOpen(c.env) && user.role !== 'admin' && user.role !== 'dev') return c.json({ error: memberClosedMessage, code: 'member_access_closed' }, 503);
   if (body.adultConfirmed !== true) return c.json({ error: 'Please confirm the adult account declaration.', code: 'adult_confirmation_required' }, 400);
   await c.env.DB.prepare("UPDATE users SET adult_attested_at = datetime('now'), adult_attestation_version = ? WHERE id = ?")
     .bind(adultAccount.version, user.id).run();

@@ -30,11 +30,12 @@ The lead works on one implementation step at a time. When a step needs a club de
 
 ## Current release candidate
 
-- Pushed application commit: `13aa212db4c729e1d9ac74395451c9755b81cb78`.
-- Completed: shared 2027 season, validated fee/form handling, duplicate protection, checkout recovery, minimal notices, player/guardian boundaries, current coach approval, player read auditing and processed/reviewed photos with group consent.
-- Verification: 47 isolated tests and Worker typecheck passed in `hs-20260907025753-3133624-21c8696f`; client build passed in `hs-20260907025622-3123069-7950700f`.
-- Required database migrations before this Worker: 0004, 0005 and 0006 after the existing baseline. Missing access-log columns deliberately block private reads.
-- Photo release instructions: `MEDIA_REVIEW_ACCEPTANCE.md`. The Images binding still needs a real staged check; previous tests mock its codec.
+- Branch: `codex/2027-signup-readiness`; the latest pushed commit containing this guide is the candidate. Previous milestones: `13aa212` (media), `92c4d65` (guide/shared limits), `b63b363` (adult-only accounts).
+- Completed implementation: shared 2027 season, validated fee/form handling, duplicate protection, checkout recovery, minimal notices, player/guardian boundaries, current coach approval, player read auditing, processed/reviewed photos, durable request limits, adult-only authentication and closed-by-default opening controls.
+- Latest verification: 61 tests passed in `hs-20260907032009-3207831-8767ac93`; Worker typecheck passed in `hs-20260907032010-3208017-a7fd1c49`; client build passed in `hs-20260907032011-3208167-93426958`.
+- Required migrations before the current Worker: **0004 through 0008**, after the existing baseline. Missing tables/columns deliberately block sensitive routes.
+- Release procedure and known previous deployments: `ops/2027_RELEASE_RUNBOOK.md`.
+- Photo release instructions: `MEDIA_REVIEW_ACCEPTANCE.md`. Real Images binding acceptance is still outstanding.
 
 ## Deployment ledger
 
@@ -73,3 +74,12 @@ Implementation references: [Cloudflare D1 prepared statements](https://developer
 - Remaining in step 3: verified adult identity/email, registrar-approved guardian links, restricted onboarding access and account recovery. The existing registration-created guardian link is still marked verified without independent review; this must be corrected before broad member opening.
 - Verification: 57 tests passed in `hs-20260907031638-3195920-c6c01bda`; typecheck passed in `hs-20260907031639-3196096-37b5a8df`. Client build passed in `hs-20260907031640-3196282-32033abd`. Deployment still awaits the host workspace approval.
 - Next: add explicit closed-by-default launch controls so incremental releases can be published while club details, identity onboarding and safeguarding sign-off remain outstanding.
+
+## Step 1 opening controls checkpoint — 7 September 2026
+
+- `REGISTRATIONS_OPEN=false` and `MEMBER_ACCESS_OPEN=false` are committed production defaults. Member access requires actual safeguarding sign-off; registration additionally requires the exact confirmed season in `SEASON_DETAILS_CONFIRMED`. Missing settings keep the service closed.
+- While closed, the fee API hides carried-over prices/payment methods and the client shows a 2027 preparation page. Both public account creation and player registration refuse writes. Non-admin member sessions and checkout are closed; administrators can still sign in to prepare the service. Event reminders stay off while member access is closed.
+- New-registration closure is separate from member access, so after launch the club can stop accepting applications without preventing established members from finishing existing checkout.
+- Production CORS permits explicit origins, including the configured frontend. Arbitrary Pages previews and localhost are no longer implicitly trusted.
+- Verification: 61 tests, typecheck and client build passed; see current candidate receipts above. Read-only production checks confirmed migrations 0004–0008 are absent and recorded the existing Worker/Pages versions for release planning. No member records or secret values were retrieved.
+- Next action: obtain the pending host workspace approval, apply the exact one-line addition, then run the packaging and isolated deployment procedure. Keep season opening and member access closed in production.

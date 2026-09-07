@@ -5,6 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
+REGISTRATIONS_OPEN = "false"
+MEMBER_ACCESS_OPEN = "false"
+SEASON_DETAILS_CONFIRMED = ""
 FROM_EMAIL = "noreply@yeppoonjrl.com.au"
 ALLOWED_ORIGINS = "https://yeppoonjrl.com.au,https://www.yeppoonjrl.com.au"
 UPLOADS_PUBLIC_URL = "https://uploads.yeppoonjrl.com.au"

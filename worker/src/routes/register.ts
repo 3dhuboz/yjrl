@@ -9,6 +9,7 @@ import seasonConfig from '../../../shared/season.json';
 import { validateRegistration } from '../../../shared/registration';
 import adultAccount from '../../../shared/adultAccount.json';
 import { canBeGuardian } from '../lib/safeguarding';
+import { registrationOpen, registrationClosedMessage, memberAccessOpen, memberClosedMessage } from '../lib/launch';
 
 const register = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -207,8 +208,14 @@ async function sendRegistrationEmails(
 
 register.get('/registration-fees', async (c) => {
   c.header('Cache-Control', 'no-store');
+  if (!registrationOpen(c.env)) return c.json({
+    season: SEASON, registrationOpen: false, message: registrationClosedMessage,
+    fees: {}, earlyBirdDiscount: 0, earlyBirdCutoff: null, earlyBirdActive: false,
+    paymentOptions: { paypal: false, offline: false },
+  });
   return c.json({
     season: SEASON,
+    registrationOpen: true,
     fees: FEES,
     earlyBirdDiscount: EARLY_BIRD_DISCOUNT,
     earlyBirdCutoff: EARLY_BIRD_CUTOFF,
@@ -221,6 +228,8 @@ register.get('/registration-fees', async (c) => {
 });
 
 register.post('/register-player', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  if (!registrationOpen(c.env)) return c.json({ error: registrationClosedMessage, code: 'registration_closed' }, 503);
   let raw: unknown;
   try {
     raw = await c.req.json();
@@ -443,6 +452,8 @@ register.post('/register-player', async (c) => {
 });
 
 register.post('/register-player/:id/resume', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  if (!memberAccessOpen(c.env)) return c.json({ error: memberClosedMessage, code: 'member_access_closed' }, 503);
   let body: { state?: unknown } | null = null;
   try { body = await c.req.json(); } catch {}
   const reg = await c.env.DB.prepare('SELECT * FROM registrations WHERE id = ?').bind(c.req.param('id')).first();
@@ -463,6 +474,8 @@ register.post('/register-player/:id/resume', async (c) => {
 });
 
 register.post('/register-player/:id/capture', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  if (!memberAccessOpen(c.env)) return c.json({ error: memberClosedMessage, code: 'member_access_closed' }, 503);
   const regId = c.req.param('id');
   let body: { state?: unknown } | null = null;
   try { body = await c.req.json(); } catch {}

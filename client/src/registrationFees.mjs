@@ -3,6 +3,12 @@ export function validateRegistrationFees(data, expectedSeason) {
   if (!data || data.season !== expectedSeason) {
     throw new Error('Registration details are being updated. Please try again shortly.');
   }
+  if (data.registrationOpen === false) return {
+    season: data.season, registrationOpen: false,
+    message: typeof data.message === 'string' ? data.message : 'Sign-ups are not open yet.',
+    fees: {}, earlyBirdDiscount: 0, earlyBirdCutoff: null, earlyBirdActive: false,
+    paymentOptions: { paypal: false, offline: false },
+  };
   const fees = data.fees;
   if (!fees || typeof fees !== 'object' || Array.isArray(fees) || !Object.keys(fees).length
     || Object.values(fees).some(fee => !Number.isFinite(fee) || fee < 0)) {

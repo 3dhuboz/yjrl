@@ -3,6 +3,7 @@ import * as jose from 'jose';
 import type { Env, Variables } from '../types';
 import { hasCurrentAdultApproval, isApprovedCoach, canBeGuardian } from '../lib/safeguarding';
 import adultAccount from '../../../shared/adultAccount.json';
+import { memberAccessOpen, memberClosedMessage } from '../lib/launch';
 
 export async function authMiddleware(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
   c.header('Cache-Control', 'no-store');
@@ -27,6 +28,9 @@ export async function authMiddleware(c: Context<{ Bindings: Env; Variables: Vari
   if (!user || !user.is_active) return c.json({ error: 'Invalid token' }, 401);
   if (!canBeGuardian(user.role as string)) {
     return c.json({ error: 'Accounts are for adults only. A parent or guardian must manage the player’s information.', code: 'adult_account_required' }, 403);
+  }
+  if (!memberAccessOpen(c.env) && user.role !== 'admin' && user.role !== 'dev') {
+    return c.json({ error: memberClosedMessage, code: 'member_access_closed' }, 503);
   }
   if (user.adult_attestation_version !== adultAccount.version) {
     return c.json({ error: 'Please sign in again and confirm the adult account declaration.', code: 'adult_confirmation_required' }, 401);

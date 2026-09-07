@@ -349,7 +349,7 @@ const YJRLHome = () => {
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">
-              Register Now <ArrowRight size={18} />
+              {seasonConfig.season} Sign-up Details <ArrowRight size={18} />
             </Link>
             <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
               Contact Us
