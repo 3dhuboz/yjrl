@@ -63,6 +63,17 @@ admin.get('/readiness', authMiddleware, async (c) => {
     checks.push(check('registration_duplicates', 'Duplicate registration protection', 'fail', 'Apply the registration claims migration before opening sign-ups.'));
   }
 
+  try {
+    await c.env.DB.prepare('SELECT actor_user_id, actor_role, action, player_ids, data_scope, created_at FROM child_access_log LIMIT 1').first();
+    const guards = await c.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'child_access_log' AND name IN ('child_access_log_no_update', 'child_access_log_no_delete', 'child_access_log_no_replace')"
+    ).first<{ count: number }>();
+    if (guards?.count !== 3) throw new Error('Missing access log guards');
+    checks.push(check('child_access_log', 'Player access recording', 'pass', 'Player access log and append-only guards are installed.'));
+  } catch {
+    checks.push(check('child_access_log', 'Player access recording', 'fail', 'Apply the child access log migration before releasing player portal access.'));
+  }
+
   checks.push(paypalReady(c.env)
     ? check('paypal', 'PayPal live payments', 'pass', 'Live PayPal credentials are configured.')
     : check('paypal', 'PayPal live payments', 'fail', 'PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, and PAYPAL_MODE=live are required before online payments.'));

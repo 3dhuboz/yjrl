@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
-import { hasVerifiedParentForTeam } from '../lib/safeguarding';
+import { hasVerifiedParentForTeam, isApprovedCoach } from '../lib/safeguarding';
 
 const chat = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -48,14 +48,18 @@ function formatMessage(message: Record<string, unknown>, currentUserId?: string)
 async function canAccessRoom(c: any, roomId: string): Promise<boolean> {
   const user = c.get('user');
   if (user.role === 'admin' || user.role === 'dev') return true;
-  if (roomId === 'coach-all') return user.role === 'coach';
+  if (roomId === 'coach-all') return isApprovedCoach(user);
 
   const [type, teamId] = roomId.split(':');
   if (!teamId || !['player', 'parent'].includes(type)) return false;
 
   if (user.role === 'coach') {
-    const team = await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND coach_id = ? AND is_active = 1').bind(teamId, user.id).first();
-    return type === 'parent' && !!team;
+    if (type !== 'parent') return false;
+    if (isApprovedCoach(user)) {
+      const team = await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND coach_id = ? AND is_active = 1').bind(teamId, user.id).first();
+      if (team) return true;
+    }
+    return hasVerifiedParentForTeam(c.env.DB, user, teamId);
   }
 
   if (type === 'player') {
@@ -74,7 +78,7 @@ async function canAccessRoom(c: any, roomId: string): Promise<boolean> {
 async function canPostRoom(c: any, roomId: string): Promise<boolean> {
   if (!(await canAccessRoom(c, roomId))) return false;
   const user = c.get('user');
-  if (roomId === 'coach-all') return user.role === 'coach' || user.role === 'admin' || user.role === 'dev';
+  if (roomId === 'coach-all') return isApprovedCoach(user) || user.role === 'admin' || user.role === 'dev';
 
   const [type] = roomId.split(':');
   if (type === 'player') return user.role === 'player';

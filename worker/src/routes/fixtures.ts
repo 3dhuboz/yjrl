@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
+import { isApprovedCoach } from '../lib/safeguarding';
 
 const fixtures = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -14,7 +15,7 @@ function isAdmin(c: any) {
 async function canManageFixture(c: any, fixture: Record<string, unknown>) {
   if (isAdmin(c)) return true;
   const user = c.get('user');
-  if (user.role !== 'coach' || !fixture.team_id) return false;
+  if (!isApprovedCoach(user) || !fixture.team_id) return false;
   const team = await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND coach_id = ? AND is_active = 1').bind(fixture.team_id, user.id).first();
   return !!team;
 }

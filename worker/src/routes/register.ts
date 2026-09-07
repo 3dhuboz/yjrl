@@ -169,9 +169,7 @@ async function sendRegistrationEmails(
   registrationId: string,
   guardianEmail: string,
   adminEmail: string | undefined,
-  playerName: string,
-  ageGroup: string,
-  guardianName: string,
+  season: string,
   amount: number,
   paymentStatus: 'paid' | 'offline',
 ) : Promise<'sent' | 'unavailable' | 'failed'> {
@@ -181,23 +179,22 @@ async function sendRegistrationEmails(
   }
 
   const parentEmail = paymentStatus === 'paid'
-    ? registrationPaidEmail(playerName, ageGroup, amount)
-    : registrationOfflineEmail(playerName, ageGroup, amount);
+    ? registrationPaidEmail({ registrationId, season, amount })
+    : registrationOfflineEmail({ registrationId, season, amount });
   const sentParent = await sendEmail(env.RESEND_API_KEY, env.FROM_EMAIL, { to: guardianEmail, ...parentEmail }, `registration/${registrationId}/${paymentStatus}/parent`);
   if (!sentParent) {
-    await writeAudit(env, null, 'email_failed', 'registration', registrationId, { to: guardianEmail, paymentStatus });
+    await writeAudit(env, null, 'email_failed', 'registration', registrationId, { recipient: 'guardian', paymentStatus });
   }
 
   if (adminEmail) {
     const adminNotice = adminRegistrationNotification(
-      playerName,
-      ageGroup,
-      guardianName || 'N/A',
+      registrationId,
+      season,
       paymentStatus === 'paid' ? 'Paid online' : 'Awaiting offline payment',
     );
     const sentAdmin = await sendEmail(env.RESEND_API_KEY, env.FROM_EMAIL, { to: adminEmail, ...adminNotice }, `registration/${registrationId}/${paymentStatus}/admin`);
     if (!sentAdmin) {
-      await writeAudit(env, null, 'email_failed', 'registration', registrationId, { to: adminEmail, paymentStatus, recipient: 'admin' });
+      await writeAudit(env, null, 'email_failed', 'registration', registrationId, { paymentStatus, recipient: 'admin' });
     }
   }
   return sentParent ? 'sent' : 'failed';
@@ -322,16 +319,14 @@ register.post('/register-player', async (c) => {
         paypalEnv,
         totalFee,
         'AUD',
-        `YJRL ${ageGroup} Registration - ${playerName}`,
+        `YJRL ${season} registration ${regId}`,
         `${frontendUrl}/register?success=true&reg=${regId}&state=${encodeURIComponent(checkoutState)}`,
         `${frontendUrl}/register?cancelled=true&reg=${regId}&state=${encodeURIComponent(checkoutState)}`,
         regId,
       );
     } catch (error) {
       await writeAudit(c.env, authUserFrom(user), 'paypal_order_failed', 'registration', regId, {
-        playerName,
-        ageGroup,
-        message: error instanceof Error ? error.message : String(error),
+        provider: 'paypal', stage: 'order_creation',
       });
       return c.json({ error: 'Online payment could not be started. No registration was created; please try again or choose offline payment.' }, 502);
     }
@@ -412,7 +407,7 @@ register.post('/register-player', async (c) => {
 
   if (requestedPaymentMethod === 'offline') {
     const token = await issueToken(c.env, user.id);
-    const emailStatus = await sendRegistrationEmails(c.env, regId, guardianEmailNorm, c.env.ADMIN_EMAIL, playerName, ageGroup, guardianName || 'N/A', totalFee, 'offline');
+    const emailStatus = await sendRegistrationEmails(c.env, regId, guardianEmailNorm, c.env.ADMIN_EMAIL, season, totalFee, 'offline');
     return c.json({
       registrationId: regId,
       season,
@@ -519,9 +514,7 @@ register.post('/register-player/:id/capture', async (c) => {
       regId,
       guardianEmail,
       c.env.ADMIN_EMAIL,
-      capturedPlayerName,
-      player.age_group as string,
-      player.guardian_name as string,
+      String(reg.season),
       Number(reg.fee_amount || 0),
       'paid',
     );

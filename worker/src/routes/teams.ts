@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
+import { hasCurrentAdultApproval } from '../lib/safeguarding';
 
 const teams = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -42,26 +43,6 @@ function publicTeamDto(team: Record<string, unknown>, options: { includePrivateI
       updatedAt: team.updated_at,
     } : {}),
   };
-}
-
-async function hasCurrentAdultApproval(env: Env, userId: string, role: 'coach' | 'admin' | 'dev') {
-  const today = new Date().toISOString().split('T')[0];
-  const row = await env.DB.prepare(
-    `SELECT ara.user_id
-     FROM adult_role_approvals ara
-     JOIN users u ON ara.user_id = u.id
-     WHERE ara.user_id = ?
-       AND ara.requested_role = ?
-       AND ara.status = 'approved'
-       AND ara.blue_card_status = 'verified'
-       AND ara.blue_card_expiry IS NOT NULL
-       AND ara.blue_card_expiry >= ?
-       AND ara.identity_checked = 1
-       AND ara.safeguarding_training_completed = 1
-       AND u.is_active = 1
-       AND u.role = ?`
-  ).bind(userId, role, today, role).first();
-  return !!row;
 }
 
 // GET /yjrl/teams

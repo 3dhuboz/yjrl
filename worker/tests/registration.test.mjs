@@ -2,8 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
+import { SignJWT } from 'jose';
 import register from '../src/routes/register.ts';
 import players from '../src/routes/players.ts';
+import chat from '../src/routes/chat.ts';
+import admin from '../src/routes/admin.ts';
+import fixtures from '../src/routes/fixtures.ts';
+import upload from '../src/routes/upload.ts';
 import { validateRegistrationFees, registrationFee } from '../../client/src/registrationFees.mjs';
 import { handleUnauthorized } from '../../client/src/apiErrors.mjs';
 import { checkoutFromSearch, confirmationEmailMessage } from '../../client/src/registrationCheckout.mjs';
@@ -11,7 +16,7 @@ import { checkoutFromSearch, confirmationEmailMessage } from '../../client/src/r
 function database(t) {
   const sqlite = new DatabaseSync(':memory:');
   t.after(() => sqlite.close());
-  for (const file of ['0001_schema.sql', '0003_child_safety.sql', '0004_registration_claims.sql']) {
+  for (const file of ['0001_schema.sql', '0003_child_safety.sql', '0004_registration_claims.sql', '0005_child_access_log.sql']) {
     sqlite.exec(readFileSync(`migrations/${file}`, 'utf8'));
   }
   function prepare(sql, args = []) {
@@ -246,6 +251,9 @@ test('email failures preserve registration and report a truthful receipt', async
   assert.notEqual(keys[0], keys[1]);
   assert.match(confirmationEmailMessage(body.emailStatus, form.email), /could not send/);
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM registrations').get().n, 1);
+  const failures = JSON.stringify(env.DB.sqlite.prepare("SELECT details FROM audit_log WHERE action = 'email_failed'").all());
+  assert.ok(!failures.includes(form.email));
+  assert.ok(!failures.includes(env.ADMIN_EMAIL));
 });
 
 test('unconfigured email and replayed receipts do not claim that email was sent', async (t) => {
@@ -376,4 +384,211 @@ test('capture does not overwrite a concurrent refund or administrative status ch
   updateStatus = () => env.DB.sqlite.exec("UPDATE registrations SET payment_status = 'refunded'");
   assert.equal((await post('capture')).status, 409);
   assert.equal(env.DB.sqlite.prepare('SELECT payment_status FROM registrations').get().payment_status, 'refunded');
+});
+
+test('offline registration notices use references without child or guardian details', async (t) => {
+  const env = { ...environment(t), RESEND_API_KEY: 'test-only', FROM_EMAIL: 'club@example.test', ADMIN_EMAIL: 'admin@example.test' };
+  const notices = [];
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    assert.equal(url, 'https://api.resend.com/emails');
+    notices.push(JSON.parse(init.body));
+    return Response.json({ id: 'fake-email' });
+  });
+  const body = await (await submit(env, { firstName: 'PrivateJunior', lastName: 'ConfidentialFamily', medicalNotes: 'Private medical note' })).json();
+  assert.equal(body.emailStatus, 'sent');
+  assert.equal(notices.length, 2);
+  for (const notice of notices) {
+    const content = notice.subject + notice.html;
+    assert.ok(content.includes(body.registrationId));
+    assert.match(content, /2027/);
+    for (const privateValue of ['PrivateJunior', 'ConfidentialFamily', form.ageGroup, form.dateOfBirth, form.guardianName, form.guardianPhone, form.emergencyContact.name, 'Private medical note']) {
+      assert.ok(!content.includes(privateValue), privateValue);
+    }
+  }
+});
+
+test('PayPal orders and paid email content contain a reference, not child details', async (t) => {
+  const { env, mock, body, post } = await paypalRegistration(t);
+  const checkout = JSON.stringify(mock.checkout());
+  assert.ok(checkout.includes(body.registrationId));
+  for (const privateValue of [form.firstName, form.lastName, form.ageGroup, form.dateOfBirth, form.guardianName, form.guardianPhone]) {
+    assert.ok(!checkout.includes(privateValue), privateValue);
+  }
+  env.RESEND_API_KEY = 'test-only'; env.FROM_EMAIL = 'club@example.test'; env.ADMIN_EMAIL = 'admin@example.test';
+  assert.equal((await post('capture')).status, 200);
+  const notices = mock.calls.filter(call => call.url === 'https://api.resend.com/emails');
+  assert.equal(notices.length, 2);
+  for (const { init } of notices) {
+    const notice = JSON.parse(init.body);
+    const content = notice.subject + notice.html;
+    assert.ok(content.includes(body.registrationId));
+    for (const privateValue of [`${form.firstName} ${form.lastName}`, form.ageGroup, form.dateOfBirth, form.guardianName, form.guardianPhone]) {
+      assert.ok(!content.includes(privateValue), privateValue);
+    }
+  }
+});
+
+async function actor(env, id, role) {
+  env.DB.sqlite.prepare('INSERT INTO users (id, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, 'PrivateAdult', 'PrivateSurname', `${id}@example.test`, 'unused-test-hash', role);
+  if (role === 'coach') {
+    env.DB.sqlite.prepare("INSERT INTO adult_role_approvals (id, user_id, requested_role, status, blue_card_status, blue_card_expiry, identity_checked, safeguarding_training_completed) VALUES (?, ?, 'coach', 'approved', 'verified', ?, 1, 1)")
+      .run(`approval-${id}`, id, new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  }
+  const token = await new SignJWT({ sub: id }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(env.JWT_SECRET));
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function privatePlayer(t) {
+  const env = environment(t);
+  const saved = await (await submit(env, { medicalNotes: 'Private medical note' })).json();
+  const player = env.DB.sqlite.prepare('SELECT * FROM players').get();
+  return { env, player, parent: { Authorization: `Bearer ${saved.token}` } };
+}
+
+test('player accounts cannot use direct ownership or a stored link to read parent details or parent chat', async (t) => {
+  const { env, player, parent } = await privatePlayer(t);
+  const junior = await actor(env, 'junior', 'player');
+  env.DB.sqlite.exec("INSERT INTO teams (id, name, age_group) VALUES ('team-test', 'Team', 'U9')");
+  env.DB.sqlite.prepare("UPDATE players SET user_id = 'junior', team_id = 'team-test' WHERE id = ?").run(player.id);
+  env.DB.sqlite.prepare("INSERT INTO parent_child_links (id, parent_user_id, player_id, status) VALUES ('invalid-link', 'junior', ?, 'verified')").run(player.id);
+  const denied = await players.request('/my-children', { headers: junior }, env);
+  assert.equal(denied.status, 403);
+  assert.ok(!(await denied.text()).includes('Private medical note'));
+  assert.equal((await chat.request('/?room_id=parent:team-test', { headers: junior }, env)).status, 403);
+  assert.equal((await chat.request('/?room_id=parent:team-test', { headers: parent }, env)).status, 200);
+  for (const path of ['/my-player', `/${player.id}`]) {
+    const response = await players.request(path, { headers: junior }, env);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    const profile = await response.json();
+    assert.equal(profile.firstName, form.firstName);
+    for (const field of ['medicalNotes', 'dateOfBirth', 'guardianEmail', 'emergencyContact']) assert.equal(profile[field], undefined);
+  }
+});
+
+test('verified guardians can read their children, and unrelated or revoked links cannot', async (t) => {
+  const { env, player, parent } = await privatePlayer(t);
+  const stranger = await actor(env, 'unrelated-parent', 'parent');
+  for (const path of ['/my-children', `/${player.id}`]) {
+    const response = await players.request(path, { headers: parent }, env);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal((Array.isArray(body) ? body[0] : body).medicalNotes, 'Private medical note');
+  }
+  assert.equal((await players.request(`/${player.id}`, { headers: stranger }, env)).status, 403);
+  assert.deepEqual(await (await players.request('/my-children', { headers: stranger }, env)).json(), []);
+  env.DB.sqlite.prepare("INSERT INTO parent_child_links (id, parent_user_id, player_id, status) VALUES ('revoked-link', 'unrelated-parent', ?, 'revoked')").run(player.id);
+  assert.equal((await players.request(`/${player.id}`, { headers: stranger }, env)).status, 403);
+  assert.equal((await players.request(`/${player.id}`, {}, env)).status, 401);
+});
+
+test('coach reads stay within the assigned team and medical notes stay out of bulk admin rosters', async (t) => {
+  const { env, player } = await privatePlayer(t);
+  const coach = await actor(env, 'coach-one', 'coach');
+  const anotherCoach = await actor(env, 'coach-two', 'coach');
+  const administrator = await actor(env, 'admin', 'admin');
+  env.DB.sqlite.exec("INSERT INTO teams (id, name, age_group, coach_id) VALUES ('team-test', 'Team', 'U9', 'coach-one')");
+  env.DB.sqlite.prepare("UPDATE players SET team_id = 'team-test', coach_notes = 'Coach test note' WHERE id = ?").run(player.id);
+  for (const path of ['/', '/my-team', `/${player.id}`]) {
+    const response = await players.request(path, { headers: coach }, env);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    const profile = Array.isArray(body) ? body[0] : body.players ? body.players[0] : body;
+    assert.equal(profile.id, player.id);
+    assert.equal(profile.medicalNotes, undefined);
+    assert.equal(profile.guardianPhone, undefined);
+  }
+  assert.equal((await players.request(`/${player.id}`, { headers: anotherCoach }, env)).status, 403);
+  assert.deepEqual(await (await players.request('/', { headers: anotherCoach }, env)).json(), []);
+  const roster = await (await players.request('/', { headers: administrator }, env)).json();
+  assert.equal(roster[0].medicalNotes, undefined);
+  const detail = await (await players.request(`/${player.id}`, { headers: administrator }, env)).json();
+  assert.equal(detail.medicalNotes, 'Private medical note');
+  const events = env.DB.sqlite.prepare('SELECT * FROM child_access_log').all();
+  assert.deepEqual(events.map(event => event.action), ['player_list', 'coach_team', 'player_detail', 'player_list', 'player_list', 'player_detail']);
+  assert.deepEqual(events.map(event => event.data_scope), ['coach', 'coach', 'coach', 'coach', 'admin_roster', 'admin']);
+  assert.deepEqual(JSON.parse(events[0].player_ids), [player.id]);
+  const logged = JSON.stringify(events);
+  for (const privateValue of ['Private medical note', 'PrivateAdult', 'PrivateSurname', form.guardianEmail, form.guardianPhone, form.dateOfBirth, 'Coach test note']) assert.ok(!logged.includes(privateValue), privateValue);
+});
+
+test('every player read withholds details when its access record cannot be saved', async (t) => {
+  const { env, player, parent } = await privatePlayer(t);
+  const coach = await actor(env, 'coach', 'coach');
+  const administrator = await actor(env, 'admin', 'admin');
+  env.DB.sqlite.exec("INSERT INTO teams (id, name, age_group, coach_id) VALUES ('team-test', 'Team', 'U9', 'coach')");
+  env.DB.sqlite.prepare("UPDATE players SET team_id = 'team-test' WHERE id = ?").run(player.id);
+  env.DB.sqlite.exec("CREATE TRIGGER reject_access_insert BEFORE INSERT ON child_access_log BEGIN SELECT RAISE(ABORT, 'Simulated write failure'); END");
+  for (const [path, headers] of [['/', administrator], ['/my-player', parent], ['/my-children', parent], ['/my-team', coach], [`/${player.id}`, parent]]) {
+    const response = await players.request(path, { headers }, env);
+    assert.equal(response.status, 503, path);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    const content = await response.text();
+    assert.ok(!content.includes(player.id));
+    assert.ok(!content.includes('Private medical note'));
+  }
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM child_access_log').get().n, 0);
+  env.DB.sqlite.exec('DROP TRIGGER reject_access_insert');
+  assert.equal((await players.request('/my-children', { headers: parent }, env)).status, 200);
+});
+
+test('access events survive attempted update, deletion and replacement', async (t) => {
+  const { env, parent } = await privatePlayer(t);
+  assert.equal((await players.request('/my-children', { headers: parent }, env)).status, 200);
+  const original = env.DB.sqlite.prepare('SELECT * FROM child_access_log').get();
+  for (const sql of [
+    "UPDATE child_access_log SET actor_user_id = 'changed'",
+    'DELETE FROM child_access_log',
+    "INSERT OR REPLACE INTO child_access_log (id, actor_user_id, actor_role, action, player_ids, data_scope) VALUES (1, 'changed', 'admin', 'player_list', '[]', 'admin')",
+  ]) assert.throws(() => env.DB.sqlite.exec(sql), /append-only/);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM child_access_log').get(), original);
+});
+
+test('readiness requires the access log and each append-only guard', async (t) => {
+  const env = { ...environment(t), UPLOADS: { list: async () => ({ objects: [] }) } };
+  const headers = await actor(env, 'admin', 'admin');
+  const accessCheck = async () => {
+    const response = await admin.request('/readiness', { headers }, env);
+    assert.equal(response.status, 200);
+    return (await response.json()).checks.find(check => check.id === 'child_access_log');
+  };
+  assert.equal((await accessCheck()).status, 'pass');
+  env.DB.sqlite.exec('DROP TRIGGER child_access_log_no_replace');
+  assert.equal((await accessCheck()).status, 'fail');
+  env.DB.sqlite.exec('DROP TABLE child_access_log');
+  assert.equal((await accessCheck()).status, 'fail');
+});
+
+test('existing coach sessions lose team privileges when approval expires or becomes incomplete', async (t) => {
+  const { env, player } = await privatePlayer(t);
+  const headers = await actor(env, 'coach', 'coach');
+  env.DB.sqlite.exec("INSERT INTO teams (id, name, age_group, coach_id) VALUES ('team-test', 'Team', 'U9', 'coach')");
+  env.DB.sqlite.prepare("UPDATE players SET team_id = 'team-test' WHERE id = ?").run(player.id);
+  env.DB.sqlite.exec("INSERT INTO fixtures (id, team_id, age_group, season, round, home_team_name, away_team_name, date) VALUES ('fixture-test', 'team-test', 'U9', '2027', 1, 'Test club', 'Test opposition', '2027-05-01')");
+  assert.equal((await players.request('/my-team', { headers }, env)).status, 200);
+  assert.equal((await chat.request('/?room_id=coach-all', { headers }, env)).status, 200);
+  for (const invalid of [
+    "status = 'suspended'", "status = 'pending'", "status = 'expired'",
+    "blue_card_status = 'not-provided'", "blue_card_expiry = '2000-01-01'", 'blue_card_expiry = NULL',
+    'identity_checked = 0', 'safeguarding_training_completed = 0',
+  ]) {
+    env.DB.sqlite.exec("UPDATE adult_role_approvals SET status = 'approved', blue_card_status = 'verified', blue_card_expiry = '2099-01-01', identity_checked = 1, safeguarding_training_completed = 1");
+    env.DB.sqlite.exec(`UPDATE adult_role_approvals SET ${invalid}`);
+    for (const path of ['/', '/my-team', `/${player.id}`]) assert.equal((await players.request(path, { headers }, env)).status, 403, `${invalid}: ${path}`);
+    for (const room of ['coach-all', 'parent:team-test']) assert.equal((await chat.request(`/?room_id=${room}`, { headers }, env)).status, 403, `${invalid}: ${room}`);
+    assert.equal((await players.request(`/${player.id}`, { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ coachNotes: 'Unauthorised change' }) }, env)).status, 403);
+    assert.equal((await fixtures.request('/fixture-test', { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Unauthorised change' }) }, env)).status, 403);
+    assert.equal((await upload.request('/', { method: 'POST', headers }, env)).status, 403);
+  }
+  env.DB.sqlite.exec('DELETE FROM adult_role_approvals');
+  assert.equal((await players.request('/my-team', { headers }, env)).status, 403);
+  assert.notEqual(env.DB.sqlite.prepare('SELECT coach_notes FROM players').get().coach_notes, 'Unauthorised change');
+  // An independently verified guardian link still permits access to their own child.
+  env.DB.sqlite.prepare("INSERT INTO parent_child_links (id, parent_user_id, player_id, status) VALUES ('coach-parent', 'coach', ?, 'verified')").run(player.id);
+  const children = await players.request('/my-children', { headers }, env);
+  assert.equal(children.status, 200);
+  assert.equal((await children.json())[0].medicalNotes, 'Private medical note');
+  assert.equal((await chat.request('/?room_id=parent:team-test', { headers }, env)).status, 200);
+  assert.equal((await chat.request('/?room_id=coach-all', { headers }, env)).status, 403);
 });

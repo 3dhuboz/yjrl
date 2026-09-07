@@ -30,6 +30,8 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  // Computed from the database for this request, never trusted from JWT claims.
+  coachApproved?: boolean;
 }
 
 export type Variables = {

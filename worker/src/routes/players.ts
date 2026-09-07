@@ -1,11 +1,28 @@
 import seasonConfig from '../../../shared/season.json';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin, requireCoachOrAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
-import { hasVerifiedParentLink } from '../lib/safeguarding';
+import { canBeGuardian, hasVerifiedParentLink, isApprovedCoach } from '../lib/safeguarding';
+import { recordChildAccess, type ChildDataScope, type ChildReadAction } from '../lib/childAccess';
 
 const players = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+async function auditedPlayerResponse(
+  c: Context<{ Bindings: Env; Variables: Variables }>,
+  payload: object,
+  playerIds: unknown[],
+  action: ChildReadAction,
+  scope: ChildDataScope,
+) {
+  try {
+    await recordChildAccess(c.env, c.get('user'), action, playerIds.map(String), scope);
+  } catch {
+    console.error('Player read withheld because access logging is unavailable');
+    return c.json({ error: 'Player details are temporarily unavailable. Please try again shortly.' }, 503);
+  }
+  return c.json(payload);
+}
 
 function formatStats(stats?: Record<string, unknown>[]) {
   return (stats || []).map(s => ({
@@ -108,7 +125,6 @@ function rosterPlayerDto(p: Record<string, unknown>, options: { includePrivate?:
     dto.guardianPhone = p.guardian_phone;
     dto.guardianEmail = p.guardian_email;
     dto.emergencyContact = { name: p.emergency_name, phone: p.emergency_phone, relationship: p.emergency_relationship };
-    dto.medicalNotes = p.medical_notes;
     dto.playHQId = p.playhq_id;
   }
   return dto;
@@ -122,7 +138,7 @@ function isAdmin(c: any) {
 async function coachOwnsTeam(c: any, teamId: unknown) {
   const user = c.get('user');
   if (isAdmin(c)) return true;
-  if (user.role !== 'coach' || !teamId) return false;
+  if (!isApprovedCoach(user) || !teamId) return false;
   const team = await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND coach_id = ? AND is_active = 1').bind(teamId, user.id).first();
   return !!team;
 }
@@ -154,7 +170,7 @@ async function isApprovedPlayerMedia(env: Env, playerId: string, value: string) 
 // GET /yjrl/players
 players.get('/', authMiddleware, async (c) => {
   const user = c.get('user');
-  if (!isAdmin(c) && user.role !== 'coach') return c.json({ error: 'Coach or admin only' }, 403);
+  if (!isAdmin(c) && !isApprovedCoach(user)) return c.json({ error: 'Current coach approval or admin access required' }, 403);
   let sql = 'SELECT p.*, t.name AS team_name, t.age_group AS team_age_group FROM players p LEFT JOIN teams t ON p.team_id = t.id WHERE p.is_active = 1';
   const params: unknown[] = [];
   const teamId = c.req.query('teamId');
@@ -163,10 +179,11 @@ players.get('/', authMiddleware, async (c) => {
   if (teamId) { sql += ' AND p.team_id = ?'; params.push(teamId); }
   if (ageGroup) { sql += ' AND p.age_group = ?'; params.push(ageGroup); }
   if (status) { sql += ' AND p.registration_status = ?'; params.push(status); }
-  if (user.role === 'coach' && !isAdmin(c)) { sql += ' AND t.coach_id = ?'; params.push(user.id); }
+  if (user.role === 'coach' && !isAdmin(c)) { sql += ' AND t.coach_id = ? AND t.is_active = 1'; params.push(user.id); }
   sql += ' ORDER BY p.last_name ASC, p.first_name ASC';
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(p => rosterPlayerDto(p, { includePrivate: isAdmin(c) })));
+  const rows = result.results || [];
+  return auditedPlayerResponse(c, rows.map(p => rosterPlayerDto(p, { includePrivate: isAdmin(c) })), rows.map(p => p.id), 'player_list', isAdmin(c) ? 'admin_roster' : 'coach');
 });
 
 // GET /yjrl/my-player
@@ -185,12 +202,13 @@ players.get('/my-player', authMiddleware, async (c) => {
   if (teamR) {
     formatted.teamId = { _id: teamR.id, name: teamR.name, ageGroup: teamR.age_group, trainingDay: teamR.training_day, trainingTime: teamR.training_time, trainingVenue: teamR.training_venue, coachName: teamR.coach_name } as unknown as string;
   }
-  return c.json(formatted);
+  return auditedPlayerResponse(c, formatted, [p.id], 'player_self', 'player');
 });
 
 // GET /yjrl/my-children (parent portal)
 players.get('/my-children', authMiddleware, async (c) => {
   const user = c.get('user');
+  if (!canBeGuardian(user.role)) return c.json({ error: 'Guardian account required' }, 403);
   const result = await c.env.DB.prepare(
     `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group,
             t.training_day AS team_training_day, t.training_time AS team_training_time,
@@ -233,13 +251,13 @@ players.get('/my-children', authMiddleware, async (c) => {
     }
     children.push(formatted);
   }
-  return c.json(children);
+  return auditedPlayerResponse(c, children, children.map(p => p.id), 'guardian_children', 'parent');
 });
 
 // GET /yjrl/my-team (coach portal)
 players.get('/my-team', authMiddleware, async (c) => {
   const user = c.get('user');
-  if (user.role !== 'coach' && !isAdmin(c)) return c.json({ error: 'Coach only' }, 403);
+  if (!isApprovedCoach(user) && !isAdmin(c)) return c.json({ error: 'Current coach approval required' }, 403);
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE coach_id = ? AND is_active = 1').bind(user.id).first();
   if (!team) return c.json({ error: 'No team assigned' }, 404);
   const playersR = await c.env.DB.prepare(
@@ -261,7 +279,7 @@ players.get('/my-team', authMiddleware, async (c) => {
     ]);
     playersFormatted.push(formatPlayer(p, statsR.results || [], [], attR.results || [], { scope: 'coach', includeCoachNotes: true }));
   }
-  return c.json({ team: teamFormatted, players: playersFormatted });
+  return auditedPlayerResponse(c, { team: teamFormatted, players: playersFormatted }, playersFormatted.map(p => p.id), 'coach_team', 'coach');
 });
 
 // GET /yjrl/players/:id
@@ -275,14 +293,14 @@ players.get('/:id', authMiddleware, async (c) => {
     c.env.DB.prepare('SELECT * FROM attendance_records WHERE player_id = ? ORDER BY date DESC').bind(p.id).all(),
   ]);
   const user = c.get('user');
-  const scope = isAdmin(c) ? 'admin' : p.user_id === user.id ? 'player' : await hasVerifiedParentLink(c.env.DB, user, p) ? 'parent' : 'coach';
-  return c.json(formatPlayer(
+  const scope = isAdmin(c) ? 'admin' : await hasVerifiedParentLink(c.env.DB, user, p) ? 'parent' : p.user_id === user.id ? 'player' : 'coach';
+  return auditedPlayerResponse(c, formatPlayer(
     p,
     statsR.results || [],
     achR.results || [],
     attR.results || [],
     { scope, includeCoachNotes: isAdmin(c) || await coachOwnsTeam(c, p.team_id) },
-  ));
+  ), [p.id], 'player_detail', scope);
 });
 
 // POST /yjrl/players

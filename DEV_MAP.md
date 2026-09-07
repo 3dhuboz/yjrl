@@ -10,6 +10,8 @@
 - `worker/src/routes/players.ts`: parent child/payment lookup and season statistics.
 - `worker/tests/registration.test.mjs`: isolated API/database and fee-contract regression coverage.
 - `worker/migrations/0004_registration_claims.sql`: apply before releasing the new registration Worker; protects concurrent submissions.
+- `worker/migrations/0005_child_access_log.sql` and `worker/src/lib/childAccess.ts`: required access recording for the five player GET routes; apply migration before Worker release.
+- `worker/src/lib/safeguarding.ts` and `worker/src/middleware/auth.ts`: guardian role boundaries and coach approval checked from the database on each request.
 - Run `npm test`, `npm run typecheck` and `npm run build` through `headsnap run yjrl -- ...`; all execution stays under `/srv/headsnap/workspaces`.
 - Preserve the existing Cloudflare Pages/Worker architecture and historical migrations. The legacy Express server is not the production API.
 
