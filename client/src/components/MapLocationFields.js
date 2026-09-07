@@ -51,7 +51,7 @@ export default function MapLocationFields({ form, setForm, training = false }) {
     </div>}
     {form[linkKey]?.includes('query_place_id=') && <p role="status">Location selected. Save this form to update the public map.</p>}
     <label className="yjrl-label" htmlFor={`${id}-link`}>Google Maps Share link</label>
-    <input id={`${id}-link`} className="yjrl-input" placeholder="https://maps.app.goo.gl/…" value={form[linkKey] || ''} onChange={e => setForm(prev => ({ ...prev, [linkKey]: e.target.value }))} />
+    <input id={`${id}-link`} className="yjrl-input" placeholder="https://maps.app.goo.gl/…" value={form[linkKey] || ''} onChange={e => setForm(prev => ({ ...prev, [linkKey]: e.target.value, [embedKey]: '' }))} />
     <p>Filled when you choose a search result. You can also paste a Share link for an exact entrance.</p>
     <label className="yjrl-label" htmlFor={`${id}-embed`}>Map preview (optional)</label>
     <textarea id={`${id}-embed`} className="yjrl-input" rows={2} placeholder="Paste the Google Maps embed code" value={form[embedKey] || ''} onChange={e => setForm(prev => ({ ...prev, [embedKey]: e.target.value }))} />

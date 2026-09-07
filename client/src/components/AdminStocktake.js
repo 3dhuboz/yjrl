@@ -14,6 +14,7 @@ export default function AdminStocktake({ productId = '', onShop }) {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => { setProduct(productId); }, [productId]);
   const low = row => row.onHand !== null && row.onHand - row.awaiting <= row.lowStockAt;
   const visible = rows.filter(row => (!product || row.productId === product) && `${row.name} ${row.option}`.toLowerCase().includes(search.toLowerCase()) && (filter === 'all' || (filter === 'low' ? low(row) : row.onHand === null))).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }) || a.option.localeCompare(b.option, 'en', { numeric: true }));
   const save = async event => {
