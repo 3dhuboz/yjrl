@@ -43,6 +43,13 @@ admin.get('/readiness', authMiddleware, async (c) => {
   const checks: ReadinessCheck[] = [];
 
   try {
+    await c.env.DB.prepare('SELECT adult_attested_at, adult_attestation_version FROM users LIMIT 1').first();
+    checks.push(check('adult_accounts', 'Adult account declaration', 'pass', 'Adult declaration records are installed. Independent identity and guardian verification still require club onboarding.'));
+  } catch {
+    checks.push(check('adult_accounts', 'Adult account declaration', 'fail', 'Apply migration 0008 before releasing adult-only login.'));
+  }
+
+  try {
     await c.env.DB.prepare('SELECT bucket_key, request_count, reset_at FROM rate_limit_buckets LIMIT 1').first();
     checks.push(check('durable_rate_limits', 'Shared abuse protection', 'pass', 'Durable request counters are installed; hourly cleanup is configured in the Worker.'));
   } catch {

@@ -16,7 +16,6 @@ const NAV_ITEMS = [
 ];
 
 const PORTAL_ITEMS = [
-  { to: '/portal/player', label: 'Player Portal', icon: Zap, roles: ['all'] },
   { to: '/portal/parent', label: 'Parent Portal', icon: Heart, roles: ['all'] },
   { to: '/portal/coach', label: 'Coach Portal', icon: Shield, roles: ['all'] },
   { to: '/portal/admin', label: 'Club Admin', icon: Trophy, roles: ['admin', 'dev'] },
@@ -34,7 +33,7 @@ const YJRLLayout = ({ children }) => {
     if (role === 'admin' || role === 'dev') return '/portal/admin';
     if (role === 'coach') return '/portal/coach';
     if (role === 'parent') return '/portal/parent';
-    return '/portal/player';
+    return '/login';
   };
 
   const handleLogout = async () => {

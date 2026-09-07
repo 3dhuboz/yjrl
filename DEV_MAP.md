@@ -5,6 +5,7 @@
 - Start with `SEASON_2027_READINESS.md` for the latest checkpoint, live observations and remaining launch work.
 - `SIGNUP_2027_DELIVERY_GUIDE.md`: ordered remaining work, club decisions and incremental deployment ledger.
 - `worker/migrations/0007_rate_limits.sql` and `worker/src/middleware/rateLimit.ts`: shared atomic request limits and hourly expiry cleanup; apply before Worker release.
+- `shared/adultAccount.json`, `worker/migrations/0008_adult_accounts.sql`, auth routes/middleware: adult-only accounts, versioned self-attestation and rejection of junior sessions.
 - `shared/season.json`: season and early-bird settings shared by client and Worker.
 - `shared/registration.ts`: shared form/server field validation and explicit consent checks.
 - `worker/src/routes/register.ts`: registration, fee quote, duplicate detection and payment capture.

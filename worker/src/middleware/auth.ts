@@ -1,7 +1,8 @@
 import { Context, Next } from 'hono';
 import * as jose from 'jose';
 import type { Env, Variables } from '../types';
-import { hasCurrentAdultApproval, isApprovedCoach } from '../lib/safeguarding';
+import { hasCurrentAdultApproval, isApprovedCoach, canBeGuardian } from '../lib/safeguarding';
+import adultAccount from '../../../shared/adultAccount.json';
 
 export async function authMiddleware(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
   c.header('Cache-Control', 'no-store');
@@ -20,10 +21,16 @@ export async function authMiddleware(c: Context<{ Bindings: Env; Variables: Vari
   }
   // Database and route failures are not invalid sessions.
   const user = await c.env.DB.prepare(
-    'SELECT id, first_name, last_name, email, role, is_active FROM users WHERE id = ?'
+    'SELECT id, first_name, last_name, email, role, is_active, adult_attestation_version FROM users WHERE id = ?'
   ).bind(userId).first();
 
   if (!user || !user.is_active) return c.json({ error: 'Invalid token' }, 401);
+  if (!canBeGuardian(user.role as string)) {
+    return c.json({ error: 'Accounts are for adults only. A parent or guardian must manage the player’s information.', code: 'adult_account_required' }, 403);
+  }
+  if (user.adult_attestation_version !== adultAccount.version) {
+    return c.json({ error: 'Please sign in again and confirm the adult account declaration.', code: 'adult_confirmation_required' }, 401);
+  }
 
   c.set('user', {
     id: user.id as string,

@@ -1,6 +1,6 @@
 export type RegistrationData = {
   season: string; firstName: string; lastName: string; dateOfBirth: string; ageGroup: string;
-  position: string; email: string; password: string; guardianName: string; guardianPhone: string;
+  position: string; email: string; password: string; adultConfirmed: boolean; guardianName: string; guardianPhone: string;
   guardianEmail: string; emergencyContact: { name: string; phone: string; relationship: string };
   medicalNotes: string; agreeToTerms: boolean; agreeToPhotoPolicy: boolean; paymentMethod: 'offline' | 'paypal'; quotedAmount: number;
 };
@@ -25,6 +25,7 @@ export function validateRegistration(input: unknown, season: string, ageGroups: 
   if (typeof body.ageGroup !== 'string' || !ageGroups.includes(body.ageGroup)) return fail('Please select an available age group.', 1);
   if (!validText(body.position, 100, false)) return fail('Please enter a position of up to 100 characters.', 1);
   if (throughStep >= 2) {
+    if (body.adultConfirmed !== true) return fail('An adult parent or guardian must confirm that this is their own account.', 2);
     if (!validText(body.guardianName, 150)) return fail('Please enter the parent or guardian’s full name.', 2);
     if (!validPhone(body.guardianPhone)) return fail('Please enter a valid guardian phone number, including the area or country code.', 2);
     if (!validEmail(body.email) || !validEmail(body.guardianEmail)) return fail('Please enter a valid guardian email address.', 2);
@@ -49,7 +50,7 @@ export function validateRegistration(input: unknown, season: string, ageGroups: 
   return { data: {
     season, firstName: text(body.firstName), lastName: text(body.lastName), dateOfBirth: dob,
     ageGroup: text(body.ageGroup), position: text(body.position), email: text(body.email).toLowerCase(),
-    password: typeof body.password === 'string' ? body.password : '', guardianName: text(body.guardianName),
+    password: typeof body.password === 'string' ? body.password : '', adultConfirmed: body.adultConfirmed === true, guardianName: text(body.guardianName),
     guardianPhone: text(body.guardianPhone), guardianEmail: text(body.guardianEmail).toLowerCase(),
     emergencyContact: { name: text(emergency.name), phone: text(emergency.phone), relationship: text(emergency.relationship) },
     medicalNotes: text(body.medicalNotes), agreeToTerms: body.agreeToTerms === true,

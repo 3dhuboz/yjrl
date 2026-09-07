@@ -10,7 +10,7 @@ import YJRLNews from './pages/yjrl/YJRLNews';
 import YJRLEvents from './pages/yjrl/YJRLEvents';
 import YJRLLegal from './pages/yjrl/YJRLLegal';
 import YJRLRegister from './pages/yjrl/YJRLRegister';
-import YJRLPlayerPortal from './pages/yjrl/YJRLPlayerPortal';
+import adultAccount from '../../shared/adultAccount.json';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
 import YJRLParentPortal from './pages/yjrl/YJRLParentPortal';
 import YJRLAdminPortal from './pages/yjrl/YJRLAdminPortal';
@@ -22,6 +22,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,12 +31,12 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      const session = await login(email, password);
+      const session = await login(email, password, adultConfirmed);
       const role = session.user?.role;
       if (role === 'admin' || role === 'dev') navigate('/portal/admin');
       else if (role === 'coach') navigate('/portal/coach');
       else if (role === 'parent') navigate('/portal/parent');
-      else navigate('/portal/player');
+      else navigate('/login');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
@@ -77,8 +78,9 @@ const Login = () => {
         </div>
 
         <h2 style={{ fontSize: '1.25rem', fontWeight: 800, textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
-          Sign In
+          Adult Account Sign In
         </h2>
+        <p style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>Parents and guardians manage children’s profiles. Junior player logins are no longer available; contact the club for help linking an existing player to your adult account.</p>
 
         {error && (
           <div style={{ background: 'rgba(196,30,58,0.1)', border: '1px solid rgba(196,30,58,0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: '#f87171' }}>
@@ -88,11 +90,13 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#8fa3be', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <label htmlFor="login-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#8fa3be', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Email
             </label>
             <input
               type="email"
+              id="login-email"
+              autoComplete="username"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -101,11 +105,13 @@ const Login = () => {
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#8fa3be', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <label htmlFor="login-password" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#8fa3be', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Password
             </label>
             <input
               type="password"
+              id="login-password"
+              autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -113,6 +119,10 @@ const Login = () => {
               placeholder="Your password"
             />
           </div>
+          <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.85rem' }}>
+            <input type="checkbox" required checked={adultConfirmed} onChange={e => setAdultConfirmed(e.target.checked)} />
+            <span>{adultAccount.statement}</span>
+          </label>
           <button
             type="submit"
             disabled={loading}
@@ -136,7 +146,7 @@ const portalForRole = (role) => {
   if (role === 'admin' || role === 'dev') return '/portal/admin';
   if (role === 'coach') return '/portal/coach';
   if (role === 'parent') return '/portal/parent';
-  return '/portal/player';
+  return '/login';
 };
 
 // ── Protected Route ──
@@ -144,7 +154,8 @@ const ProtectedRoute = ({ children, adminOnly = false, roles = [] }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading-screen">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
-  if (adminOnly && user.role !== 'admin' && user.role !== 'dev') return <Navigate to="/portal/player" />;
+  if (!['parent', 'coach', 'admin', 'dev'].includes(user.role)) return <Navigate to="/login" />;
+  if (adminOnly && user.role !== 'admin' && user.role !== 'dev') return <Navigate to={portalForRole(user.role)} />;
   if (roles.length && !roles.includes(user.role) && user.role !== 'admin' && user.role !== 'dev') {
     return <Navigate to={portalForRole(user.role)} />;
   }
@@ -166,9 +177,9 @@ const AppRoutes = () => (
     <Route path="/login" element={<Login />} />
 
     {/* Portals */}
-    <Route path="/portal/player" element={<ProtectedRoute roles={['player']}><YJRLPlayerPortal /></ProtectedRoute>} />
+    <Route path="/portal/player" element={<Navigate to="/portal/parent" replace />} />
     <Route path="/portal/coach" element={<ProtectedRoute roles={['coach']}><YJRLCoachPortal /></ProtectedRoute>} />
-    <Route path="/portal/parent" element={<ProtectedRoute roles={['parent', 'player']}><YJRLParentPortal /></ProtectedRoute>} />
+    <Route path="/portal/parent" element={<ProtectedRoute roles={['parent', 'coach']}><YJRLParentPortal /></ProtectedRoute>} />
     <Route path="/portal/admin" element={<ProtectedRoute adminOnly><YJRLAdminPortal /></ProtectedRoute>} />
 
     {/* Legacy routes — redirect /yjrl/* to root */}

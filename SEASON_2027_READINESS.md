@@ -1,3 +1,11 @@
+## Account boundary checkpoint — 7 September 2026, 03:17 UTC
+
+Objective: work through the delivery guide and deploy verified milestones. Branch `codex/2027-signup-readiness`; prior pushed HEAD `92c4d65`. Adult-only changes span shared declaration/registration validation, Worker auth and checkout, migration 0008, login/navigation/registration copy and tests.
+
+57 tests and typecheck pass (receipts in `SIGNUP_2027_DELIVERY_GUIDE.md`); client build passed in `hs-20260907031640-3196282-32033abd`. Adult self-attestation is explicit and versioned. Junior login/tokens and checkout access are blocked; historical player records are retained. Independent identity, guardian review and recovery remain outstanding.
+
+Deployment remains blocked by the explicit host workspace list; the one-line addition is awaiting Steve’s answer. Next action: finish build/commit, then implement closed-by-default release controls while waiting.
+
 ## Delivery checkpoint — 7 September 2026, 03:11 UTC
 
 Objective: complete the ordered `SIGNUP_2027_DELIVERY_GUIDE.md` and deploy each verified milestone. Branch: `codex/2027-signup-readiness`, prior pushed HEAD `13aa212`. This checkout has one lead owner.

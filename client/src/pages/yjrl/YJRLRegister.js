@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './yjrl.css';
 import seasonConfig from '../../../../shared/season.json';
+import adultAccount from '../../../../shared/adultAccount.json';
 import { validateRegistrationFees, registrationFee } from '../../registrationFees.mjs';
 import { validateRegistration } from '../../../../shared/registration';
 import { checkoutFromSearch, confirmationEmailMessage } from '../../registrationCheckout.mjs';
@@ -25,7 +26,7 @@ const YJRLRegister = () => {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     firstName: '', lastName: '', dateOfBirth: '', ageGroup: '', position: 'Not Sure Yet',
-    guardianName: '', guardianPhone: '', guardianEmail: '',
+    guardianName: '', guardianPhone: '', guardianEmail: '', adultConfirmed: false,
     password: '', confirmPassword: '',
     emergencyName: '', emergencyPhone: '', emergencyRelationship: '',
     medicalNotes: '', agreeToTerms: false, agreeToPhotoPolicy: false
@@ -335,6 +336,10 @@ const YJRLRegister = () => {
             {/* ── Step 2: Guardian ── */}
             {step === 2 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <label style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked={form.adultConfirmed} onChange={e => update('adultConfirmed', e.target.checked)} />
+                  <span>{adultAccount.statement}</span>
+                </label>
                 <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
                   <label className="yjrl-label">Guardian / Parent Name <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
                   <input type="text" className="yjrl-input" value={form.guardianName} onChange={e => update('guardianName', e.target.value)} placeholder="Full name" />

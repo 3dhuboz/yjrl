@@ -7,6 +7,8 @@ import { writeAudit } from '../lib/audit';
 import * as jose from 'jose';
 import seasonConfig from '../../../shared/season.json';
 import { validateRegistration } from '../../../shared/registration';
+import adultAccount from '../../../shared/adultAccount.json';
+import { canBeGuardian } from '../lib/safeguarding';
 
 const register = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -31,6 +33,7 @@ type ExistingUser = {
   password_hash: string;
   role: string;
   is_active: number | boolean;
+  adult_attestation_version?: string;
 };
 
 function paypalAvailable(env: Env): env is Env & { PAYPAL_CLIENT_ID: string; PAYPAL_CLIENT_SECRET: string; PAYPAL_MODE?: string } {
@@ -110,6 +113,8 @@ function registrationSnapshot(body: Record<string, unknown>, paymentMethod: stri
     emergencyContact,
     medicalNotes: body.medicalNotes,
     agreeToTerms: body.agreeToTerms,
+    adultConfirmed: body.adultConfirmed,
+    adultAttestationVersion: adultAccount.version,
     agreeToPhotoPolicy: body.agreeToPhotoPolicy,
     paymentMethod,
   };
@@ -256,10 +261,12 @@ register.post('/register-player', async (c) => {
     if (!existing.is_active) return c.json({ error: 'This account is not active. Please contact the club.' }, 403);
     const validPassword = await verifyPassword(String(password), existing.password_hash);
     if (!validPassword) return c.json({ error: 'Email already registered. Sign in with the existing account password to add another child.' }, 401);
-    if (existing.role === 'player') {
+    if (!canBeGuardian(existing.role)) {
       return c.json({ error: 'This email belongs to a player account. Please use a parent or guardian account.' }, 400);
     }
     user = existing;
+    await c.env.DB.prepare("UPDATE users SET adult_attested_at = datetime('now'), adult_attestation_version = ? WHERE id = ?")
+      .bind(adultAccount.version, user.id).run();
 
     const duplicate = await findExistingSeasonRegistration(c.env, user.id, firstName, lastName, dateOfBirth || '', season);
     if (duplicate) {
@@ -288,7 +295,7 @@ register.post('/register-player', async (c) => {
     user = {
       id: userId,
       first_name: guardianName || firstName,
-      last_name: lastName,
+      last_name: '',
       email: emailNorm,
       password_hash: newUserPasswordHash,
       role: 'parent',
@@ -335,8 +342,8 @@ register.post('/register-player', async (c) => {
   const writes: D1PreparedStatement[] = [];
   if (isNewUser) {
     writes.push(c.env.DB.prepare(
-      'INSERT INTO users (id, first_name, last_name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).bind(user.id, user.first_name, user.last_name, user.email, newUserPasswordHash, 'parent', guardianPhone || ''));
+      "INSERT INTO users (id, first_name, last_name, email, password_hash, role, phone, adult_attested_at, adult_attestation_version) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)"
+    ).bind(user.id, user.first_name, user.last_name, user.email, newUserPasswordHash, 'parent', guardianPhone || '', adultAccount.version));
   }
   writes.push(
     c.env.DB.prepare(
@@ -442,8 +449,9 @@ register.post('/register-player/:id/resume', async (c) => {
   if (!reg || !(await verifyCheckoutState(c.env.JWT_SECRET, body?.state, reg))) {
     return c.json({ error: 'This checkout link is invalid or has expired. Sign in or contact the club with your registration reference.' }, 403);
   }
-  const user = await c.env.DB.prepare('SELECT is_active FROM users WHERE id = ?').bind(reg.user_id).first();
+  const user = await c.env.DB.prepare('SELECT is_active, role, adult_attestation_version FROM users WHERE id = ?').bind(reg.user_id).first();
   if (!user?.is_active) return c.json({ error: 'This account is not active. Please contact the club.' }, 403);
+  if (!canBeGuardian(user.role as string) || user.adult_attestation_version !== adultAccount.version) return c.json({ error: 'An adult account is required. Please sign in again or contact the club.' }, 403);
   if (reg.payment_status === 'paid') return c.json({ captureRequired: true });
   if (reg.payment_status !== 'pending' || !reg.paypal_order_id) return c.json({ error: 'This registration cannot be paid through this link. Please contact the club.' }, 409);
   if (!paypalReadyForCustomers(c.env)) return c.json({ error: 'Online payment is not currently available. Please contact the club.' }, 503);
@@ -469,6 +477,7 @@ register.post('/register-player/:id/capture', async (c) => {
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(reg.user_id).first<ExistingUser>();
   if (!user) return c.json({ error: 'Registration account not found' }, 404);
   if (!user.is_active) return c.json({ error: 'This account is not active. Please contact the club.' }, 403);
+  if (!canBeGuardian(user.role) || user.adult_attestation_version !== adultAccount.version) return c.json({ error: 'An adult account is required. Please sign in again or contact the club.' }, 403);
   if (reg.payment_status !== 'pending' && reg.payment_status !== 'paid') return c.json({ error: 'This registration is not awaiting online payment. Please contact the club.' }, 409);
 
   let newlyPaid = false;

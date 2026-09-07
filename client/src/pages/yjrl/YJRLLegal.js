@@ -21,7 +21,7 @@ const PAGES = {
     title: 'Terms of Use',
     intro: 'The expectations for using the Yeppoon Junior Rugby League website and member portals.',
     sections: [
-      ['Accounts', 'Portal access is for registered players, parents, coaches, and authorised club administrators. Keep login details secure and notify the club if access should be removed.'],
+      ['Accounts', 'Accounts are for adults aged 18 or older. Parents and authorised guardians manage children’s player information through their own accounts. Coaches and administrators require club-authorised access. Keep login details secure and notify the club if access should be removed.'],
       ['Registration', 'Registration details must be accurate and kept current. Player participation remains subject to club review, competition requirements, and payment completion.'],
       ['Payments', 'Online payments are processed by third-party payment providers. Offline payment instructions are issued by the club after registration review.'],
       ['Acceptable use', 'Members must not misuse club systems, attempt unauthorised access, upload harmful content, or use communication tools for bullying, abuse, or harassment.']

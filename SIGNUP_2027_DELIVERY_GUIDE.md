@@ -8,7 +8,7 @@ Steve authorised working through the remaining work sequentially and deploying c
 | --- | --- | --- | --- |
 | 1 | Establish incremental deployment | Register this workspace with the host deployment wrapper; prepare isolated review resources and a repeatable release/rollback procedure; deploy the already-tested branch and record its URL/version | In progress — host allowlist excludes YJRL |
 | 2 | Durable abuse protection | Login, registration, checkout, chat, uploads and reports share limits across Worker instances; return useful retry information; test concurrent requests and failure handling; deploy | Implemented and tested — deployment waiting on workspace approval |
-| 3 | Settle account and guardian onboarding | Implement adult-only accounts with parents managing children’s profiles, guardian verification and recovery; test unrelated/disabled accounts; deploy | Adult-only confirmed — next implementation |
+| 3 | Settle account and guardian onboarding | Implement adult-only accounts with parents managing children’s profiles, guardian verification and recovery; test unrelated/disabled accounts; deploy | Adult-only boundary implemented; independent identity/guardian verification and recovery still outstanding |
 | 4 | Version forms and consent | Record the exact form/consent version submitted; separate photo/profile/stats permissions; provide an authenticated parent withdrawal path and registrar review history; deploy | Pending |
 | 5 | Restrict medical review and complete access recording | Separate access to medical details from ordinary club administration; record remaining child-data reads and controlled exports without copying sensitive content into logs; deploy | Pending |
 | 6 | Complete media acceptance | Verify real image processing, orientation and metadata removal using synthetic test images; check reviewer flow, group consent and withdrawal; handle legacy images/caches and cleanup; deploy fixes | Implementation complete; real provider and interaction checks outstanding |
@@ -64,3 +64,12 @@ These are decisions or external prerequisites, not reasons to stop unrelated imp
 - Next: implement the confirmed adult-only account model while deployment approval is pending.
 
 Implementation references: [Cloudflare D1 prepared statements](https://developers.cloudflare.com/d1/worker-api/prepared-statements/) and [Cloudflare visitor headers](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
+
+## Step 3 account boundary checkpoint — 7 September 2026
+
+- Public account creation accepts parent accounts only and requires an explicit adult declaration. Registration records the same declaration and version. Login requires the adult’s declaration after password verification. This is self-attestation, not independent proof of age or relationship.
+- Legacy junior credentials and JWTs are refused. Existing adult sessions must sign in again after migration 0008 to record the declaration. Checkout resume/capture also checks the current adult account before issuing a session or proceeding with payment. Historical child profiles and accounts are retained without converting child accounts into adults.
+- The active client contains parent, coach and admin portals. Old player-portal bookmarks lead to the parent login flow. Public copy explains the adult-only arrangement. Parent account names no longer borrow a child’s surname.
+- Remaining in step 3: verified adult identity/email, registrar-approved guardian links, restricted onboarding access and account recovery. The existing registration-created guardian link is still marked verified without independent review; this must be corrected before broad member opening.
+- Verification: 57 tests passed in `hs-20260907031638-3195920-c6c01bda`; typecheck passed in `hs-20260907031639-3196096-37b5a8df`. Client build passed in `hs-20260907031640-3196282-32033abd`. Deployment still awaits the host workspace approval.
+- Next: add explicit closed-by-default launch controls so incremental releases can be published while club details, identity onboarding and safeguarding sign-off remain outstanding.

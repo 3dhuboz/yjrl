@@ -14,6 +14,7 @@ import { checkoutFromSearch, confirmationEmailMessage } from '../../client/src/r
 const form = {
   season: '2027', firstName: 'Test', lastName: 'Player', dateOfBirth: '2018-03-05',
   ageGroup: 'U9', email: 'guardian@example.test', password: 'test-password-only',
+  adultConfirmed: true,
   guardianName: 'Test Guardian', guardianPhone: '0400000000', guardianEmail: 'guardian@example.test',
   emergencyContact: { name: 'Test Contact', phone: '0400000001', relationship: 'Guardian' },
   agreeToTerms: true, agreeToPhotoPolicy: false, paymentMethod: 'offline', quotedAmount: 120,
@@ -418,10 +419,10 @@ test('player accounts cannot use direct ownership or a stored link to read paren
   assert.equal((await chat.request('/?room_id=parent:team-test', { headers: parent }, env)).status, 200);
   for (const path of ['/my-player', `/${player.id}`]) {
     const response = await players.request(path, { headers: junior }, env);
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 403);
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
     const profile = await response.json();
-    assert.equal(profile.firstName, form.firstName);
+    assert.equal(profile.firstName, undefined);
     for (const field of ['medicalNotes', 'dateOfBirth', 'guardianEmail', 'emergencyContact']) assert.equal(profile[field], undefined);
   }
 });

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const { build } = createRequire(require.resolve('wrangler/package.json'))('esbuild');
 const root = fileURLToPath(new URL('../', import.meta.url));
-const entries = ['registration.test.mjs', 'media.test.mjs', 'rateLimit.test.mjs'];
+const entries = ['registration.test.mjs', 'media.test.mjs', 'rateLimit.test.mjs', 'adultAccounts.test.mjs'];
 const outdir = `${root}.wrangler/tests`;
 await build({
   entryPoints: entries.map(file => `${root}tests/${file}`),

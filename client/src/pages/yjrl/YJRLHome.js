@@ -287,15 +287,11 @@ const YJRLHome = () => {
           <div className="yjrl-section-header">
             <div className="yjrl-section-label">Digital Club Hub</div>
             <h2 className="yjrl-section-title">Your Portal Awaits</h2>
-            <p className="yjrl-section-desc">Every member of our club community has a personalised digital home — stats, schedules, badges, and more.</p>
+            <p className="yjrl-section-desc">Adult accounts keep families connected. Parents and guardians manage children’s profiles, registrations and team information.</p>
           </div>
 
-          <div className="yjrl-grid-4">
+          <div className="yjrl-grid-3">
             {[
-              {
-                icon: '⚡', title: 'Player Portal', desc: 'Track your stats, earn achievement badges, view your training attendance streak, and follow your pathway to rep football.',
-                to: '/portal/player', color: '#60a5fa', badge: 'Players'
-              },
               {
                 icon: '💛', title: 'Parent Portal', desc: "Stay connected with your child's team. RSVP to events, view training schedules, communicate with coaches, and manage registrations.",
                 to: '/portal/parent', color: '#c084fc', badge: 'Parents'
