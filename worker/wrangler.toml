@@ -22,6 +22,10 @@ database_id = "690424d2-5985-4576-9d4c-62e643ae5ed3"
 binding = "UPLOADS"
 bucket_name = "yjrl-uploads"
 
+# Re-encode uploads before storing them; no originals are published.
+[images]
+binding = "IMAGES"
+
 # Cron trigger for daily email reminders (8am AEST = 10pm UTC previous day)
 [triggers]
 crons = ["0 22 * * *"]

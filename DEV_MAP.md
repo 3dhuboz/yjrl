@@ -12,6 +12,9 @@
 - `worker/migrations/0004_registration_claims.sql`: apply before releasing the new registration Worker; protects concurrent submissions.
 - `worker/migrations/0005_child_access_log.sql` and `worker/src/lib/childAccess.ts`: required access recording for the five player GET routes; apply migration before Worker release.
 - `worker/src/lib/safeguarding.ts` and `worker/src/middleware/auth.ts`: guardian role boundaries and coach approval checked from the database on each request.
+- `worker/src/lib/media.ts`, `worker/src/routes/media.ts`, `worker/src/routes/upload.ts`: processed photo uploads, private preview and current consent at public reads.
+- `worker/migrations/0006_reviewed_media.sql`: required before the current Worker, including player reads. `MEDIA_REVIEW_ACCEPTANCE.md` records the release/legacy-image requirements.
+- `worker/tests/media.test.mjs` and `worker/tests/support.mjs`: isolated media/consent tests and shared database fixtures.
 - Run `npm test`, `npm run typecheck` and `npm run build` through `headsnap run yjrl -- ...`; all execution stays under `/srv/headsnap/workspaces`.
 - Preserve the existing Cloudflare Pages/Worker architecture and historical migrations. The legacy Express server is not the production API.
 

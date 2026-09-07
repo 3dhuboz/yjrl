@@ -357,7 +357,7 @@ register.post('/register-player', async (c) => {
     ).bind(
       playerId,
       body.agreeToPhotoPolicy ? 1 : 0,
-      body.agreeToPhotoPolicy ? 1 : 0,
+      0, // Photo consent does not grant a public player profile.
       0,
       'registration',
       user.id,

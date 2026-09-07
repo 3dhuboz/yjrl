@@ -2,10 +2,11 @@ import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
+import { approvedMediaUrl } from '../lib/media';
 
 const news = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function formatArticle(a: Record<string, unknown>, options: { includePrivate?: boolean } = {}) {
+function formatArticle(a: Record<string, unknown>, options: { includePrivate?: boolean; image?: string } = {}) {
   return {
     _id: a.id,
     id: a.id,
@@ -14,7 +15,7 @@ function formatArticle(a: Record<string, unknown>, options: { includePrivate?: b
     excerpt: a.excerpt,
     category: a.category,
     authorName: a.author_name,
-    image: a.image,
+    image: options.image || '',
     publishDate: a.publish_date,
     views: a.views,
     isActive: !!a.is_active, published: !!a.published, featured: !!a.featured,
@@ -39,14 +40,14 @@ news.get('/', async (c) => {
   sql += ' ORDER BY publish_date DESC, created_at DESC';
   if (limit) { sql += ' LIMIT ?'; params.push(parseInt(limit)); }
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(article => formatArticle(article)));
+  return c.json(await Promise.all((result.results || []).map(async article => formatArticle(article, { image: await approvedMediaUrl(c.env, c.req.url, article.image) }))));
 });
 
 // GET /yjrl/news/all — admin: all including drafts
 news.get('/all', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const result = await c.env.DB.prepare('SELECT * FROM news WHERE is_active = 1 ORDER BY created_at DESC').all();
-  return c.json((result.results || []).map(article => formatArticle(article, { includePrivate: true })));
+  return c.json(await Promise.all((result.results || []).map(async article => formatArticle(article, { includePrivate: true, image: await approvedMediaUrl(c.env, c.req.url, article.image) }))));
 });
 
 // GET /yjrl/news/:id
@@ -55,13 +56,15 @@ news.get('/:id', async (c) => {
   const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ? AND is_active = 1 AND published = 1').bind(id).first();
   if (!article) return c.json({ error: 'Article not found' }, 404);
   await c.env.DB.prepare('UPDATE news SET views = views + 1 WHERE id = ?').bind(id).run();
-  return c.json(formatArticle(article));
+  return c.json(formatArticle(article, { image: await approvedMediaUrl(c.env, c.req.url, article.image) }));
 });
 
 // POST /yjrl/news
 news.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const image = await approvedMediaUrl(c.env, c.req.url, body.image);
+  if (body.image && !image) return c.json({ error: 'Choose an approved reviewed image' }, 400);
   const user = c.get('user');
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
@@ -71,7 +74,7 @@ news.post('/', authMiddleware, async (c) => {
     id, body.title, body.content, body.excerpt || '',
     body.category || 'news', user.id,
     body.authorName || body.author_name || `${user.firstName} ${user.lastName}`.trim() || 'Yeppoon JRL',
-    body.image || '', body.published ? 1 : 0, body.featured ? 1 : 0,
+    image, body.published ? 1 : 0, body.featured ? 1 : 0,
     JSON.stringify(body.tags || []),
     body.publishDate || body.publish_date || new Date().toISOString()
   ).run();
@@ -81,13 +84,15 @@ news.post('/', authMiddleware, async (c) => {
     featured: !!body.featured,
   });
   const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ?').bind(id).first();
-  return c.json(formatArticle(article!, { includePrivate: true }), 201);
+  return c.json(formatArticle(article!, { includePrivate: true, image }), 201);
 });
 
 // PUT /yjrl/news/:id
 news.put('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const image = await approvedMediaUrl(c.env, c.req.url, body.image);
+  if (body.image && !image) return c.json({ error: 'Choose an approved reviewed image' }, 400);
   const id = c.req.param('id');
   const fields: string[] = [];
   const vals: unknown[] = [];
@@ -97,7 +102,7 @@ news.put('/:id', authMiddleware, async (c) => {
     publishDate: 'publish_date', publish_date: 'publish_date',
   };
   for (const [k, v] of Object.entries(body)) {
-    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(v); }
+    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(k === 'image' ? image : v); }
   }
   if (body.published !== undefined) { fields.push('published = ?'); vals.push(body.published ? 1 : 0); }
   if (body.featured !== undefined) { fields.push('featured = ?'); vals.push(body.featured ? 1 : 0); }
@@ -113,7 +118,7 @@ news.put('/:id', authMiddleware, async (c) => {
   });
   const article = await c.env.DB.prepare('SELECT * FROM news WHERE id = ?').bind(id).first();
   if (!article) return c.json({ error: 'Article not found' }, 404);
-  return c.json(formatArticle(article, { includePrivate: true }));
+  return c.json(formatArticle(article, { includePrivate: true, image: await approvedMediaUrl(c.env, c.req.url, article.image) }));
 });
 
 // DELETE /yjrl/news/:id

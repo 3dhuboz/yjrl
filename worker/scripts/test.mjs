@@ -6,13 +6,15 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const { build } = createRequire(require.resolve('wrangler/package.json'))('esbuild');
 const root = fileURLToPath(new URL('../', import.meta.url));
-const outfile = `${root}.wrangler/tests/registration.test.mjs`;
+const entries = ['registration.test.mjs', 'media.test.mjs'];
+const outdir = `${root}.wrangler/tests`;
 await build({
-  entryPoints: [`${root}tests/registration.test.mjs`],
-  outfile,
+  entryPoints: entries.map(file => `${root}tests/${file}`),
+  outdir,
+  outExtension: { '.js': '.mjs' },
   bundle: true,
   platform: 'node',
   format: 'esm',
 });
-const result = spawnSync(process.execPath, ['--test', outfile], { cwd: root, stdio: 'inherit' });
+const result = spawnSync(process.execPath, ['--test', ...entries.map(file => `${outdir}/${file}`)], { cwd: root, stdio: 'inherit' });
 process.exitCode = result.status ?? 1;

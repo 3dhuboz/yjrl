@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import YJRLLayout from './YJRLLayout';
+import MediaReviewPreview from '../../components/MediaReviewPreview';
 import './yjrl.css';
 
 const SEASON = seasonConfig.season;
@@ -47,6 +48,7 @@ const EMPTY_NEWS = {
   title: '',
   content: '',
   excerpt: '',
+  image: '',
   category: 'news',
   published: false,
   featured: false
@@ -117,6 +119,9 @@ const YJRLAdminPortal = () => {
   const [readinessError, setReadinessError] = useState('');
   const [safetyActionNotes, setSafetyActionNotes] = useState({});
   const [uploadReviewNotes, setUploadReviewNotes] = useState({});
+  const [uploadReviewSubjects, setUploadReviewSubjects] = useState({});
+  const [viewedUploads, setViewedUploads] = useState({});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [teamModal, setTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
@@ -315,6 +320,7 @@ const YJRLAdminPortal = () => {
       title: article.title || '',
       content: article.content || '',
       excerpt: article.excerpt || '',
+      image: article.image || '',
       category: article.category || 'news',
       published: !!article.published,
       featured: !!article.featured
@@ -344,17 +350,41 @@ const YJRLAdminPortal = () => {
     }
   };
 
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Choose a photo smaller than 5MB'); return; }
+    setUploadingPhoto(true);
+    try {
+      const data = new FormData();
+      data.set('file', file);
+      data.set('category', 'general');
+      await api.post('/upload', data, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 30000 });
+      toast.success('Photo saved for private review');
+      try {
+        const response = await api.get('/yjrl/safety/uploads');
+        setUploadRecords(response.data);
+      } catch { toast.error('Refresh the review list to see the saved photo'); }
+    } catch (error) { toast.error(error.response?.data?.error || 'The upload could not be confirmed. Refresh the list before retrying.'); }
+    finally { setUploadingPhoto(false); }
+  };
+
   const reviewUpload = async (record, status) => {
     try {
       const note = (uploadReviewNotes[record.key] || '').trim();
-      if (status === 'approved' && (record.playerId || record.player_id) && note.length < 10) {
-        toast.error('Add reviewer notes before approving child media');
+      const subjects = uploadReviewSubjects[record.key] || {};
+      if (status === 'approved' && (note.length < 10 || !subjects.classification || viewedUploads[record.key] !== record.sha256)) {
+        toast.error('Preview the image, confirm who is shown and add reviewer notes');
         return;
       }
-      const res = await api.put('/yjrl/safety/uploads/review', { key: record.key, status, reviewNotes: note });
+      const res = await api.put('/yjrl/safety/uploads/review', {
+        key: record.key, status, reviewNotes: note, reviewVersion: record.reviewVersion,
+        expectedSha256: record.sha256, containsChildren: subjects.classification === 'children',
+        playerIds: [...new Set([...(record.playerIds || []), ...(subjects.playerIds || [])])],
+        allChildrenIdentified: subjects.confirmed === true
+      });
       setUploadRecords(prev => prev.map(item => (item.key === record.key ? res.data : item)));
       setUploadReviewNotes(prev => ({ ...prev, [record.key]: '' }));
-      toast.success(`Upload ${status.replace('_', ' ')}`);
+      toast.success(res.data.cleanupPending ? 'Upload rejected. Storage cleanup is pending.' : `Upload ${status.replace('_', ' ')}`);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to review upload');
     }
@@ -855,6 +885,10 @@ const YJRLAdminPortal = () => {
             <div className="yjrl-card">
               <div className="yjrl-card-header">
                 <div className="yjrl-card-title"><Newspaper size={16} /> Upload Review ({uploadRecords.filter(record => record.status === 'pending_review').length})</div>
+                <label style={{ fontSize: '0.85rem' }}>
+                  {uploadingPhoto ? 'Uploading photo…' : 'Upload a photo for private review'}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingPhoto} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadPhoto(file); }} />
+                </label>
               </div>
               <table className="yjrl-table">
                 <thead>
@@ -866,8 +900,9 @@ const YJRLAdminPortal = () => {
                       <td style={{ maxWidth: 260, wordBreak: 'break-word' }}>
                         {record.url ? <a href={record.url} target="_blank" rel="noreferrer" style={{ color: 'var(--yjrl-blue)' }}>{record.key}</a> : record.key}
                         <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{record.mimeType || record.mime_type} · {Math.round((record.byteSize || record.byte_size || 0) / 1024)} KB</div>
+                        <MediaReviewPreview record={record} onViewed={(key, sha) => setViewedUploads(prev => ({ ...prev, [key]: sha }))} />
                       </td>
-                      <td>{record.playerName || record.player_id || '-'}</td>
+                      <td>{(record.playerIds || []).map(id => { const player = players.find(p => (p.id || p._id) === id); return player ? `${player.firstName} ${player.lastName}` : id; }).join(', ') || 'No players identified'}</td>
                       <td style={{ textTransform: 'capitalize' }}>{record.category}</td>
                       <td>{record.consentGranted || record.consent_granted ? 'Granted' : record.consentRequired || record.consent_required ? 'Required' : 'Not required'}</td>
                       <td style={{ textTransform: 'capitalize', fontWeight: 700 }}>{String(record.status || '').replace('_', ' ')}</td>
@@ -877,13 +912,27 @@ const YJRLAdminPortal = () => {
                           <input
                             className="yjrl-input"
                             value={uploadReviewNotes[record.key] || ''}
-                            placeholder="Reviewer note for child media"
+                            aria-label="Photo review notes"
+                            placeholder="Reviewer notes"
                             onChange={event => setUploadReviewNotes(prev => ({ ...prev, [record.key]: event.target.value }))}
                             style={{ fontSize: '0.78rem' }}
                           />
+                          <select className="yjrl-input" aria-label="Who is shown in the photo" value={uploadReviewSubjects[record.key]?.classification || ''} onChange={event => setUploadReviewSubjects(prev => ({ ...prev, [record.key]: { ...prev[record.key], classification: event.target.value, confirmed: false } }))}>
+                            <option value="">Who is shown?</option>
+                            <option value="children">Children are shown</option>
+                            <option value="no-children">No children are shown</option>
+                          </select>
+                          {uploadReviewSubjects[record.key]?.classification === 'children' && <>
+                            <label>Add any other players shown
+                              <select multiple className="yjrl-input" value={uploadReviewSubjects[record.key]?.playerIds || []} onChange={event => setUploadReviewSubjects(prev => ({ ...prev, [record.key]: { ...prev[record.key], playerIds: Array.from(event.target.selectedOptions, option => option.value), confirmed: false } }))}>
+                                {players.map(player => <option key={player.id || player._id} value={player.id || player._id}>{player.firstName} {player.lastName} ({player.ageGroup})</option>)}
+                              </select>
+                            </label>
+                            <label><input type="checkbox" checked={uploadReviewSubjects[record.key]?.confirmed === true} onChange={event => setUploadReviewSubjects(prev => ({ ...prev, [record.key]: { ...prev[record.key], confirmed: event.target.checked } }))} /> Every child shown is identified above. Reject the image if anyone cannot be identified.</label>
+                          </>}
                           <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            {record.status !== 'approved' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
-                            {record.status !== 'rejected' && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>Reject</button>}
+                            {record.status === 'pending_review' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" disabled={viewedUploads[record.key] !== record.sha256} onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
+                            {(record.status !== 'rejected' || record.cleanupPending) && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>{record.cleanupPending ? 'Retry removal' : 'Reject'}</button>}
                           </div>
                         </div>
                       </td>
@@ -1104,6 +1153,14 @@ const YJRLAdminPortal = () => {
               <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                 <label className="yjrl-label">Excerpt</label>
                 <input type="text" className="yjrl-input" value={newsForm.excerpt} onChange={event => setNewsForm(prev => ({ ...prev, excerpt: event.target.value }))} />
+              </div>
+              <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
+                <label className="yjrl-label" htmlFor="news-reviewed-image">Reviewed photo (optional)</label>
+                <select id="news-reviewed-image" className="yjrl-input" value={newsForm.image || ''} onChange={event => setNewsForm(prev => ({ ...prev, image: event.target.value }))}>
+                  <option value="">No photo</option>
+                  {uploadRecords.filter(record => record.status === 'approved' && record.url).map(record => <option key={record.key} value={record.url}>{record.reviewNotes || record.key}</option>)}
+                </select>
+                <p style={{ fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>Upload and review photos in the safety panel before adding them to news.</p>
               </div>
               <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                 <label className="yjrl-label">Content</label>

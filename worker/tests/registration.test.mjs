@@ -1,8 +1,6 @@
+import { environment, actor } from './support.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { SignJWT } from 'jose';
 import register from '../src/routes/register.ts';
 import players from '../src/routes/players.ts';
 import chat from '../src/routes/chat.ts';
@@ -12,43 +10,6 @@ import upload from '../src/routes/upload.ts';
 import { validateRegistrationFees, registrationFee } from '../../client/src/registrationFees.mjs';
 import { handleUnauthorized } from '../../client/src/apiErrors.mjs';
 import { checkoutFromSearch, confirmationEmailMessage } from '../../client/src/registrationCheckout.mjs';
-
-function database(t) {
-  const sqlite = new DatabaseSync(':memory:');
-  t.after(() => sqlite.close());
-  for (const file of ['0001_schema.sql', '0003_child_safety.sql', '0004_registration_claims.sql', '0005_child_access_log.sql']) {
-    sqlite.exec(readFileSync(`migrations/${file}`, 'utf8'));
-  }
-  function prepare(sql, args = []) {
-    return {
-      bind: (...values) => prepare(sql, values),
-      first: async () => sqlite.prepare(sql).get(...args) ?? null,
-      all: async () => ({ results: sqlite.prepare(sql).all(...args) }),
-      run: async () => ({ success: true, meta: sqlite.prepare(sql).run(...args) }),
-      execute: () => ({ success: true, meta: sqlite.prepare(sql).run(...args) }),
-    };
-  }
-  return {
-    sqlite,
-    prepare,
-    async batch(statements) {
-      sqlite.exec('BEGIN');
-      try {
-        const results = [];
-        for (const statement of statements) results.push(statement.execute());
-        sqlite.exec('COMMIT');
-        return results;
-      } catch (error) {
-        sqlite.exec('ROLLBACK');
-        throw error;
-      }
-    },
-  };
-}
-
-function environment(t) {
-  return { DB: database(t), JWT_SECRET: 'local-test-secret-only', ENVIRONMENT: 'production' };
-}
 
 const form = {
   season: '2027', firstName: 'Test', lastName: 'Player', dateOfBirth: '2018-03-05',
@@ -112,6 +73,15 @@ test('offline sign-up records the 2027 season, quoted fee, guardian link and con
   assert.equal(child.registrationYear, '2027');
   assert.equal(child.registrationPaymentStatus, 'offline');
   assert.equal(child.registrationFeeAmount, 120);
+});
+
+test('photo consent does not also create public profile or public statistics consent', async (t) => {
+  const env = environment(t);
+  assert.equal((await submit(env, { agreeToPhotoPolicy: true })).status, 201);
+  const row = env.DB.sqlite.prepare('SELECT media_consent, public_profile_consent, stats_public_consent FROM player_consents').get();
+  assert.equal(row.media_consent, 1);
+  assert.equal(row.public_profile_consent, 0);
+  assert.equal(row.stats_public_consent, 0);
 });
 
 test('the same parent can renew for 2027 and add a sibling, but cannot duplicate the same season', async (t) => {
@@ -427,17 +397,6 @@ test('PayPal orders and paid email content contain a reference, not child detail
     }
   }
 });
-
-async function actor(env, id, role) {
-  env.DB.sqlite.prepare('INSERT INTO users (id, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(id, 'PrivateAdult', 'PrivateSurname', `${id}@example.test`, 'unused-test-hash', role);
-  if (role === 'coach') {
-    env.DB.sqlite.prepare("INSERT INTO adult_role_approvals (id, user_id, requested_role, status, blue_card_status, blue_card_expiry, identity_checked, safeguarding_training_completed) VALUES (?, ?, 'coach', 'approved', 'verified', ?, 1, 1)")
-      .run(`approval-${id}`, id, new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
-  }
-  const token = await new SignJWT({ sub: id }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(env.JWT_SECRET));
-  return { Authorization: `Bearer ${token}` };
-}
 
 async function privatePlayer(t) {
   const env = environment(t);

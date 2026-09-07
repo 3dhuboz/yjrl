@@ -64,7 +64,7 @@ admin.get('/readiness', authMiddleware, async (c) => {
   }
 
   try {
-    await c.env.DB.prepare('SELECT actor_user_id, actor_role, action, player_ids, data_scope, created_at FROM child_access_log LIMIT 1').first();
+    await c.env.DB.prepare('SELECT actor_user_id, actor_role, action, player_ids, data_scope, created_at, media_key, media_sha256 FROM child_access_log LIMIT 1').first();
     const guards = await c.env.DB.prepare(
       "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'child_access_log' AND name IN ('child_access_log_no_update', 'child_access_log_no_delete', 'child_access_log_no_replace')"
     ).first<{ count: number }>();
@@ -73,6 +73,16 @@ admin.get('/readiness', authMiddleware, async (c) => {
   } catch {
     checks.push(check('child_access_log', 'Player access recording', 'fail', 'Apply the child access log migration before releasing player portal access.'));
   }
+
+  try {
+    await c.env.DB.prepare('SELECT processing_version, contains_children, reviewed_sha256, player_ids, review_version FROM upload_records LIMIT 1').first();
+    checks.push(check('media_review_schema', 'Photo review records', 'pass', 'Photo processing and review records are available.'));
+  } catch {
+    checks.push(check('media_review_schema', 'Photo review records', 'fail', 'Apply the reviewed media migration before release.'));
+  }
+  checks.push(c.env.IMAGES
+    ? check('image_processing', 'Photo processing', 'pass', 'Images binding is configured; verify a real processed test image before launch.')
+    : check('image_processing', 'Photo processing', 'fail', 'Configure the Images binding before accepting photo uploads.'));
 
   checks.push(paypalReady(c.env)
     ? check('paypal', 'PayPal live payments', 'pass', 'Live PayPal credentials are configured.')

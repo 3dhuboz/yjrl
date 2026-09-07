@@ -1,8 +1,9 @@
-import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
+import type { D1Database, R2Bucket, ImagesBinding } from '@cloudflare/workers-types';
 
 export interface Env {
   DB: D1Database;
   UPLOADS: R2Bucket;
+  IMAGES?: ImagesBinding;
   UPLOADS_PUBLIC_URL?: string;
   JWT_SECRET: string;
   ADMIN_EMAIL: string;

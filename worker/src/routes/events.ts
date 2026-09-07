@@ -2,10 +2,11 @@ import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
+import { approvedMediaUrl } from '../lib/media';
 
 const events = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>[], includeRsvps = false) {
+function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>[], includeRsvps = false, image = '') {
   const rsvpList = rsvps || [];
   return {
     _id: e.id,
@@ -18,7 +19,7 @@ function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>
     venue: e.venue,
     address: e.address,
     capacity: e.capacity,
-    image: e.image,
+    image,
     color: e.color,
     endDate: e.end_date, endTime: e.end_time,
     ageGroups: typeof e.age_groups === 'string' ? JSON.parse(e.age_groups as string) : e.age_groups,
@@ -47,7 +48,7 @@ events.get('/', async (c) => {
   const eventsWithRsvps = [];
   for (const e of (result.results || [])) {
     const rsvps = await c.env.DB.prepare('SELECT * FROM event_rsvps WHERE event_id = ?').bind(e.id).all();
-    eventsWithRsvps.push(formatEvent(e, rsvps.results || []));
+    eventsWithRsvps.push(formatEvent(e, rsvps.results || [], false, await approvedMediaUrl(c.env, c.req.url, e.image)));
   }
   return c.json(eventsWithRsvps);
 });
@@ -57,13 +58,15 @@ events.get('/:id', async (c) => {
   const e = await c.env.DB.prepare('SELECT * FROM events WHERE id = ? AND is_public = 1').bind(c.req.param('id')).first();
   if (!e) return c.json({ error: 'Event not found' }, 404);
   const rsvps = await c.env.DB.prepare('SELECT * FROM event_rsvps WHERE event_id = ?').bind(e.id).all();
-  return c.json(formatEvent(e, rsvps.results || []));
+  return c.json(formatEvent(e, rsvps.results || [], false, await approvedMediaUrl(c.env, c.req.url, e.image)));
 });
 
 // POST /yjrl/events
 events.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const image = await approvedMediaUrl(c.env, c.req.url, body.image);
+  if (body.image && !image) return c.json({ error: 'Choose an approved reviewed image' }, 400);
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO events (id, title, description, type, date, end_date, time, end_time, venue, address, age_groups, is_public, capacity, image, color)
@@ -75,7 +78,7 @@ events.post('/', authMiddleware, async (c) => {
     body.venue || '', body.address || '',
     JSON.stringify(body.ageGroups || body.age_groups || []),
     body.isPublic !== false ? 1 : 0, body.capacity || null,
-    body.image || '', body.color || '#f0a500'
+    image, body.color || '#f0a500'
   ).run();
   await writeAudit(c.env, c.get('user'), 'event_created', 'event', id, {
     type: body.type || 'other',
@@ -83,13 +86,15 @@ events.post('/', authMiddleware, async (c) => {
     isPublic: body.isPublic !== false,
   });
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(id).first();
-  return c.json(formatEvent(event!), 201);
+  return c.json(formatEvent(event!, [], false, image), 201);
 });
 
 // PUT /yjrl/events/:id
 events.put('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const image = await approvedMediaUrl(c.env, c.req.url, body.image);
+  if (body.image && !image) return c.json({ error: 'Choose an approved reviewed image' }, 400);
   const id = c.req.param('id');
   const fields: string[] = [];
   const vals: unknown[] = [];
@@ -101,7 +106,7 @@ events.put('/:id', authMiddleware, async (c) => {
     image: 'image', color: 'color',
   };
   for (const [k, v] of Object.entries(body)) {
-    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(v); }
+    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(k === 'image' ? image : v); }
   }
   if (body.ageGroups || body.age_groups) { fields.push('age_groups = ?'); vals.push(JSON.stringify(body.ageGroups || body.age_groups)); }
   if (body.isPublic !== undefined) { fields.push('is_public = ?'); vals.push(body.isPublic ? 1 : 0); }
@@ -115,7 +120,7 @@ events.put('/:id', authMiddleware, async (c) => {
   });
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(id).first();
   if (!event) return c.json({ error: 'Event not found' }, 404);
-  return c.json(formatEvent(event));
+  return c.json(formatEvent(event, [], false, await approvedMediaUrl(c.env, c.req.url, event.image)));
 });
 
 // POST /yjrl/events/:id/rsvp
@@ -146,7 +151,7 @@ events.post('/:id/rsvp', authMiddleware, async (c) => {
   // Return updated event
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id = ?').bind(eventId).first();
   const rsvps = await c.env.DB.prepare('SELECT * FROM event_rsvps WHERE event_id = ?').bind(eventId).all();
-  return c.json(formatEvent(event!, rsvps.results || []));
+  return c.json(formatEvent(event!, rsvps.results || [], false, await approvedMediaUrl(c.env, c.req.url, event!.image)));
 });
 
 // DELETE /yjrl/events/:id

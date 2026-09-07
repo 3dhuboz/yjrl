@@ -5,6 +5,7 @@ import { authMiddleware, requireAdmin, requireCoachOrAdmin } from '../middleware
 import { writeAudit } from '../lib/audit';
 import { canBeGuardian, hasVerifiedParentLink, isApprovedCoach } from '../lib/safeguarding';
 import { recordChildAccess, type ChildDataScope, type ChildReadAction } from '../lib/childAccess';
+import { isPublicMedia, mediaPlayerIds } from '../lib/media';
 
 const players = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -159,12 +160,15 @@ async function canManagePlayer(c: any, player: Record<string, unknown>) {
 async function isApprovedPlayerMedia(env: Env, playerId: string, value: string) {
   if (!value) return true;
   const row = await env.DB.prepare(
-    `SELECT key FROM upload_records
-     WHERE player_id = ?
-       AND status = 'approved'
-       AND (key = ? OR url = ?)`
-  ).bind(playerId, value, value).first();
-  return !!row;
+    'SELECT * FROM upload_records WHERE key = ? OR url = ?'
+  ).bind(value, value).first();
+  return !!row && (await mediaPlayerIds(env, String(row.key))).includes(playerId) && await isPublicMedia(env, row);
+}
+
+const consentKeys = ['mediaConsent', 'agreeToPhotoPolicy', 'publicProfileConsent', 'statsPublicConsent'];
+function invalidConsent(body: Record<string, unknown>) {
+  return consentKeys.some(key => body[key] !== undefined && typeof body[key] !== 'boolean')
+    || (body.mediaConsent !== undefined && body.agreeToPhotoPolicy !== undefined && body.mediaConsent !== body.agreeToPhotoPolicy);
 }
 
 // GET /yjrl/players
@@ -307,6 +311,7 @@ players.get('/:id', authMiddleware, async (c) => {
 players.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  if (invalidConsent(body)) return c.json({ error: 'Consent choices must be true or false' }, 400);
   if (body.photo) return c.json({ error: 'Player photos must be uploaded, reviewed, and approved before use' }, 400);
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
@@ -331,12 +336,12 @@ players.post('/', authMiddleware, async (c) => {
   ).run();
   const user = c.get('user');
   const mediaConsent = body.mediaConsent ?? body.agreeToPhotoPolicy;
-  if (body.mediaConsent !== undefined || body.agreeToPhotoPolicy !== undefined) {
+  if (consentKeys.some(key => body[key] !== undefined)) {
     await c.env.DB.prepare(
       `INSERT OR REPLACE INTO player_consents
        (player_id, media_consent, public_profile_consent, stats_public_consent, consent_source, consent_by_user_id, consent_by_name, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).bind(id, mediaConsent ? 1 : 0, mediaConsent ? 1 : 0, 0, 'admin-player-create', user.id, `${user.firstName} ${user.lastName}`.trim()).run();
+    ).bind(id, mediaConsent === true ? 1 : 0, body.publicProfileConsent === true ? 1 : 0, body.statsPublicConsent === true ? 1 : 0, 'admin-player-create', user.id, `${user.firstName} ${user.lastName}`.trim()).run();
   }
   const parentId = body.parentUserId || body.parent_user_id || body.userId || body.user_id;
   if (parentId) {
@@ -361,11 +366,14 @@ players.post('/', authMiddleware, async (c) => {
 players.put('/:id', authMiddleware, async (c) => {
   if (!requireCoachOrAdmin(c)) return c.json({ error: 'Coach or admin only' }, 403);
   const body = await c.req.json();
+  if (invalidConsent(body)) return c.json({ error: 'Consent choices must be true or false' }, 400);
   const id = c.req.param('id') || '';
   const existing = await c.env.DB.prepare('SELECT * FROM players WHERE id = ? AND is_active = 1').bind(id).first();
   if (!existing) return c.json({ error: 'Player not found' }, 404);
   if (!(await canManagePlayer(c, existing))) return c.json({ error: 'Not allowed to update this player' }, 403);
   const adminUpdate = isAdmin(c);
+  const consentUpdate = consentKeys.some(key => body[key] !== undefined);
+  if (consentUpdate && !adminUpdate) return c.json({ error: 'Only the registrar can update recorded consent here' }, 403);
   const fields: string[] = [];
   const vals: unknown[] = [];
   const adminMap: Record<string, string> = {
@@ -400,34 +408,38 @@ players.put('/:id', authMiddleware, async (c) => {
     if (body.emergencyContact.phone !== undefined) { fields.push('emergency_phone = ?'); vals.push(body.emergencyContact.phone); }
     if (body.emergencyContact.relationship !== undefined) { fields.push('emergency_relationship = ?'); vals.push(body.emergencyContact.relationship); }
   }
-  if (fields.length === 0) return c.json({ error: 'No fields to update' }, 400);
+  if (fields.length === 0 && !consentUpdate) return c.json({ error: 'No fields to update' }, 400);
   fields.push('updated_at = datetime(\'now\')');
   vals.push(id);
-  await c.env.DB.prepare(`UPDATE players SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
-  if (adminUpdate && (body.mediaConsent !== undefined || body.publicProfileConsent !== undefined || body.statsPublicConsent !== undefined)) {
+  const statements = [c.env.DB.prepare(`UPDATE players SET ${fields.join(', ')} WHERE id = ?`).bind(...vals)];
+  if (consentUpdate) {
     const user = c.get('user');
-    await c.env.DB.prepare(
+    statements.push(c.env.DB.prepare(
       `INSERT INTO player_consents
        (player_id, media_consent, public_profile_consent, stats_public_consent, consent_source, consent_by_user_id, consent_by_name)
        VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(player_id) DO UPDATE SET
-        media_consent = excluded.media_consent,
-        public_profile_consent = excluded.public_profile_consent,
-        stats_public_consent = excluded.stats_public_consent,
+        media_consent = CASE WHEN ? THEN excluded.media_consent ELSE player_consents.media_consent END,
+        public_profile_consent = CASE WHEN ? THEN excluded.public_profile_consent ELSE player_consents.public_profile_consent END,
+        stats_public_consent = CASE WHEN ? THEN excluded.stats_public_consent ELSE player_consents.stats_public_consent END,
         consent_source = excluded.consent_source,
         consent_by_user_id = excluded.consent_by_user_id,
         consent_by_name = excluded.consent_by_name,
         updated_at = datetime('now')`
     ).bind(
       id,
-      body.mediaConsent ? 1 : 0,
-      body.publicProfileConsent ? 1 : 0,
-      body.statsPublicConsent ? 1 : 0,
+      (body.mediaConsent ?? body.agreeToPhotoPolicy) === true ? 1 : 0,
+      body.publicProfileConsent === true ? 1 : 0,
+      body.statsPublicConsent === true ? 1 : 0,
       'admin-player-update',
       user.id,
       `${user.firstName} ${user.lastName}`.trim(),
-    ).run();
+      body.mediaConsent !== undefined || body.agreeToPhotoPolicy !== undefined ? 1 : 0,
+      body.publicProfileConsent !== undefined ? 1 : 0,
+      body.statsPublicConsent !== undefined ? 1 : 0,
+    ));
   }
+  await c.env.DB.batch(statements);
   await writeAudit(c.env, c.get('user'), 'player_updated', 'player', id, {
     actorScope: adminUpdate ? 'admin' : 'coach',
     fields: Object.keys(body),
@@ -435,8 +447,8 @@ players.put('/:id', authMiddleware, async (c) => {
     newTeamId: body.teamId ?? body.team_id ?? existing.team_id ?? null,
     previousRegistrationStatus: existing.registration_status || null,
     newRegistrationStatus: body.registrationStatus ?? body.registration_status ?? existing.registration_status ?? null,
-    consentChanged: adminUpdate && (body.mediaConsent !== undefined || body.publicProfileConsent !== undefined || body.statsPublicConsent !== undefined),
-    mediaConsent: body.mediaConsent,
+    consentChanged: consentUpdate,
+    mediaConsent: body.mediaConsent ?? body.agreeToPhotoPolicy,
     publicProfileConsent: body.publicProfileConsent,
     statsPublicConsent: body.statsPublicConsent,
   });
