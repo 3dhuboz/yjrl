@@ -1,3 +1,17 @@
+## Live release checkpoint — 7 September 2026, 04:05 UTC
+
+Objective: execute the 2027 delivery guide sequentially and deploy verified milestones. Branch `codex/2027-signup-readiness`; application HEAD `46ea14cecf05b277d5863a9b31c2be4e6f7d7915`. This checkout has one lead owner. The current delivery guide supersedes earlier checkpoint statuses below.
+
+**Production is deployed:** https://yjrl.pages.dev/register. Worker version `d66eebc8-4e34-4fff-a0a7-61f1dc5f8fc3`; Pages deployment `9cb8b591-e863-4640-919e-6e06f85b72af`. The matching client/Worker use 2027; fees and registration/member opening remain closed. Production migrations 0004–0008 are applied. Existing provider/admin/JWT secrets were retained; no real registrations, payments or messages were created. Closure probes wrote only operational request counters.
+
+Changes this continuation: exact approved host workspace addition; protected isolated review Worker/config with static-asset staging; review and production migration staging that avoids the legacy seed; real synthetic review acceptance script; production promotion and ledger/runbook updates. 63 tests, typecheck and production build pass. Real staged registration/duplicate/guardian read and Images/R2 preview/review/withdrawal/cleanup passed. Deployed public API and frontend HTTP/build checks pass. See `SIGNUP_2027_DELIVERY_GUIDE.md` for exact receipts.
+
+Remaining risk: independent identity/guardian verification and recovery, immutable forms and parent consent withdrawal, narrow medical permissions/wider access logging, remaining image/browser/provider acceptance, confirmed club season details and domains, actual safeguarding sign-off. Self-attestation remains distinct from verification. Production admin login was not tested with real credentials.
+
+Exact next action: implement guardian verification and recovery, verify in the protected review environment, then promote the next milestone with production opening closed. League Bot remains Norths-only.
+
+## Earlier checkpoints (historical)
+
 ## Release preparation checkpoint — 7 September 2026, 03:23 UTC
 
 Objective: execute `SIGNUP_2027_DELIVERY_GUIDE.md` one step at a time and deploy verified milestones. Branch `codex/2027-signup-readiness`; previous pushed HEAD `b63b363`. The lead exclusively owns this checkout.

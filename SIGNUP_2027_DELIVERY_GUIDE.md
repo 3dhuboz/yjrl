@@ -1,105 +1,71 @@
 # YJRL 2027 sign-up delivery guide
 
-Steve authorised working through the remaining work sequentially and deploying completed changes on 7 September 2026. Deployment permission persists: routine releases do not need another approval request. Club decisions and safeguarding sign-off must still be recorded accurately.
+Updated 7 September 2026 after the first production release. Steve authorised completing the work sequentially and deploying verified milestones. Adult-only accounts are confirmed; opening date, fees/payment options and registrar details are still awaited from the club.
 
-## Working order
+## Current public version
 
-| Step | Deliverable | Acceptance | Status |
-| --- | --- | --- | --- |
-| 1 | Establish incremental deployment | Register this workspace with the host deployment wrapper; prepare isolated review resources and a repeatable release/rollback procedure; deploy the already-tested branch and record its URL/version | Host workspace registered; protected review release in progress |
-| 2 | Durable abuse protection | Login, registration, checkout, chat, uploads and reports share limits across Worker instances; return useful retry information; test concurrent requests and failure handling; deploy | Implemented and tested — review deployment in progress |
-| 3 | Settle account and guardian onboarding | Implement adult-only accounts with parents managing children’s profiles, guardian verification and recovery; test unrelated/disabled accounts; deploy | Adult-only boundary implemented; independent identity/guardian verification and recovery still outstanding |
-| 4 | Version forms and consent | Record the exact form/consent version submitted; separate photo/profile/stats permissions; provide an authenticated parent withdrawal path and registrar review history; deploy | Pending |
-| 5 | Restrict medical review and complete access recording | Separate access to medical details from ordinary club administration; record remaining child-data reads and controlled exports without copying sensitive content into logs; deploy | Pending |
-| 6 | Complete media acceptance | Verify real image processing, orientation and metadata removal using synthetic test images; check reviewer flow, group consent and withdrawal; handle legacy images/caches and cleanup; deploy fixes | Implementation complete; real provider and interaction checks outstanding |
-| 7 | Finalise season details | Confirm opening date, fees, discounts, age eligibility, payment options, official competition registration link, registrar contact, teams/training and accurate public copy; deploy | Club details pending |
-| 8 | Finish payment/email operations | Configure designated test providers/recipients, exercise sandbox payment and retry/reconciliation, verify message delivery, then configure live providers; deploy | Credentials/configuration and designated test recipient pending |
-| 9 | Finish domains and release checks | Identify DNS operator, attach and verify club domains, deep links and checkout return URLs; complete parent/admin/mobile/accessibility acceptance and rollback checks; deploy | Branded domains currently return 404 |
-| 10 | Open 2027 sign-ups | Record actual club safeguarding/incident-process sign-off, confirm opening settings and operational contacts, then enable registration/member access and verify the public journey | Held until preceding requirements pass |
+**Live:** https://yjrl.pages.dev/register
 
-The lead works on one implementation step at a time. When a step needs a club decision or an external change, record the precise dependency and continue the next independent step. Do not describe an unverified or undeployed step as complete.
+The application now presents the 2027 preparation page. New registrations and member access remain closed, provisional fees are hidden, and administrators retain preparation access. Publishing this release does not constitute club safeguarding sign-off or opening the season.
 
-## Deploying as work progresses
+Production source: `46ea14cecf05b277d5863a9b31c2be4e6f7d7915` on `codex/2027-signup-readiness`. Draft PR: https://github.com/3dhuboz/yjrl/pull/2. Production remains Cloudflare Pages + Worker. League Bot remains specific to Norths Knights.
 
-1. Keep the current Cloudflare Pages + Worker architecture and branch `codex/2027-signup-readiness`; draft PR: https://github.com/3dhuboz/yjrl/pull/2.
-2. Use an isolated review deployment for test submissions, photos and provider checks. Do not point a review frontend at the production database. Restrict review access and use designated synthetic records.
-3. Before each release, inspect migrations, run checks appropriate to that change, commit and push the exact source, then use `headsnap cloudflare yjrl --cwd ... -- ...`. Record the deployed commit, environment, URLs and migration state below.
-4. Promote verified changes to the live application with registration/member opening controls kept closed until the club's launch requirements are satisfied. Publishing a build does not imply club sign-off or permission to invent dates/fees.
-5. For production schema changes, check the existing schema and recovery point first. Apply additive migrations in order; never rerun the legacy seed against live data. Deploy the Worker before the matching client. Record the prior deployment for rollback.
-6. After each milestone, update this guide and `SEASON_2027_READINESS.md` with verification, deployment evidence and the next action. Keep secrets and real child details out of these documents.
+## Work through these in order
 
-## Current release candidate
+| Step | Work | Current status / acceptance still needed |
+| --- | --- | --- |
+| 1 | Establish incremental deployment | **Done:** host workspace registered, isolated protected review service deployed, production migrated and released, recovery procedure recorded |
+| 2 | Durable abuse protection | **Deployed:** shared atomic counters, useful retry responses, fail-closed outages and hourly expiry cleanup; concurrency and deployed route checks pass |
+| 3 | Adult accounts and guardian onboarding | **Adult-only boundary deployed. Next:** independent adult/email verification, registrar-approved guardian relationships, limited onboarding access and account recovery. Registration currently marks its own guardian link verified; correct this before member opening |
+| 4 | Version forms and consent | Photo/profile/stats choices are separate. Still needed: immutable form/consent versions, parent withdrawal flow, registrar decision history and approved final wording |
+| 5 | Medical permissions and access recording | Player reads and private photo previews are recorded. Still needed: a distinct medical-review permission, remaining child-data read coverage, controlled exports and agreed retention/archival operations |
+| 6 | Complete media acceptance | Real PNG→WebP processing, synthetic metadata removal, private preview/review, stale review denial, withdrawal and deletion **passed in review**. Still needed: JPEG EXIF/GPS/orientation, other image variants and full reviewer/mobile/keyboard acceptance; see `MEDIA_REVIEW_ACCEPTANCE.md` |
+| 7 | Finalise 2027 club details | Awaiting opening date, fees/discounts, eligible age groups, payment options, registrar contact, official competition registration destination, teams/training and verified public copy |
+| 8 | Payment/email operations | Awaiting designated provider test accounts and test recipient. Complete real sandbox payment/retry/reconciliation and email delivery, then live configuration. No real email or payment was sent during this work |
+| 9 | Domains and complete acceptance | Identify the DNS operator and attach/verify club domains and return URLs. Complete parent/admin/browser/mobile/accessibility and recovery checks. The working public address is currently `yjrl.pages.dev` |
+| 10 | Open sign-ups | Only after the preceding launch requirements and actual club safeguarding/incident-process sign-off. Keep production opening controls closed until then |
 
-- Branch: `codex/2027-signup-readiness`; the latest pushed commit containing this guide is the candidate. Previous milestones: `13aa212` (media), `92c4d65` (guide/shared limits), `b63b363` (adult-only accounts).
-- Completed implementation: shared 2027 season, validated fee/form handling, duplicate protection, checkout recovery, minimal notices, player/guardian boundaries, current coach approval, player read auditing, processed/reviewed photos, durable request limits, adult-only authentication and closed-by-default opening controls.
-- Latest verification: 61 tests passed in `hs-20260907032009-3207831-8767ac93`; Worker typecheck passed in `hs-20260907032010-3208017-a7fd1c49`; client build passed in `hs-20260907032011-3208167-93426958`.
-- Required migrations before the current Worker: **0004 through 0008**, after the existing baseline. Missing tables/columns deliberately block sensitive routes.
-- Release procedure and known previous deployments: `ops/2027_RELEASE_RUNBOOK.md`.
-- Photo release instructions: `MEDIA_REVIEW_ACCEPTANCE.md`. Real Images binding acceptance is still outstanding.
+When a step needs a club decision or external change, record the dependency and continue independent implementation. Deploy a verified milestone through review first, then promote with opening controls closed. Do not equate a build or Git push with a deployment.
+
+## What is already implemented
+
+- Shared 2027 season and strict fee/form validation; unknown fees are never guessed and changed quotes require review.
+- Atomic duplicate registration claims, saved receipt recovery, PayPal cancellation/resume/capture retry and minimal truthful registration notices.
+- Adult-only account creation/login/checkout sessions with a versioned self-declaration. Existing adults sign in again; junior sessions are refused and historical player records are preserved. Self-declaration is **not** independent proof of age or guardianship.
+- Current coach approval checks, player/guardian access boundaries, required player read logging and private media-preview logging.
+- Processed photos only, private review, group consent, hash/version checks, revoked-image suppression and rejected-object cleanup.
+- Shared request limits and separate registration/member opening switches. Public registration requires actual safeguarding sign-off and the exact confirmed season; the committed production switches are false.
+
+## Verification evidence
+
+| Check | Result / receipt |
+| --- | --- |
+| Isolated API/SQLite suite | **63 passed** — `hs-20260907035215-3292621-41ca92e1` |
+| Worker typecheck | **Passed** — `hs-20260907035216-3292887-8be77553` |
+| Production client build | **Passed** — `hs-20260907040029-3315989-3ef47c93` |
+| Real protected review acceptance | **Passed** — `hs-20260907035703-3308085-c9d18063`; synthetic registration/duplicate/guardian reads and real Images/R2 review/withdrawal/cleanup |
+| Production API | **Passed** — `hs-20260907040049-3317846-2d0ef6b9`; health, season 2027, hidden fees and closed writes/checkout |
+| Production frontend | **Passed** — `hs-20260907040128-3319035-abce104e`; home/register/login/parent deep links return the expected build with preparation/adult-login copy |
+
+The frontend checks inspect deployed HTTP/build responses; full interactive browser acceptance and real production administrator login remain outstanding. Existing production admin/JWT secret bindings were retained and checked by name/type only. No existing secret value was retrieved or rotated.
 
 ## Deployment ledger
 
-| Time (UTC) | Candidate | Environment/action | Result |
-| --- | --- | --- | --- |
-| 2026-09-07 03:02 | `13aa212` | HeadSnap Cloudflare packaging dry-run | Blocked, exit 77: `Cloudflare commands are limited to approved project workspaces`; job `hs-20260907030222-3151647-d2ba60dd` |
+| UTC, 7 Sep 2026 | Source / action | Result |
+| --- | --- | --- |
+| 03:02 | `13aa212`, packaging attempt | Host workspace list rejected YJRL; no deployment |
+| 03:48 | Approved one-line YJRL workspace addition | Applied to root wrapper; root:root / 755 retained, syntax valid; packaging passed in `hs-20260907034858-3284376-d2a78491` |
+| 03:52 | Review database setup | Seven schema migrations, 0001 and 0003–0008, applied without old seed; `hs-20260907035206-3292188-335a5ef3` |
+| 03:53 | First review deployment attempt | Pages wildcard rewrite rejected by Worker Assets; fixed in review-only asset staging |
+| 03:55 | `51712ce`, protected review | Live at https://yjrl-review.steve-700.workers.dev; version after isolated secrets: `f9ebe00a-a95f-4035-86cb-5cabb839c6f6` |
+| 03:59 | Production schema | Migrations 0004–0008 applied successfully; `hs-20260907035935-3312773-559ac938`; no old schema/seed replay |
+| 04:00 | `46ea14c`, production Worker | Version `d66eebc8-4e34-4fff-a0a7-61f1dc5f8fc3` at 100%; `hs-20260907035958-3314370-3c240be8` |
+| 04:01 | `46ea14c`, production Pages | Deployment `9cb8b591-e863-4640-919e-6e06f85b72af`; https://9cb8b591.yjrl.pages.dev; public alias verified |
 
-Host readiness reports Cloudflare CLI/MCP and GitHub ready. The failure is the explicit workspace list in `/usr/local/libexec/headsnap-cloudflare-wrangler`, which excludes `/srv/headsnap/workspaces/yjrl`. The exact proposed one-line workspace addition is saved in `ops/headsnap-yjrl-workspace.patch`. Apply only that approved addition; preserve the wrapper and all credential/execution boundaries. No new deployment has yet succeeded.
+## Release controls and next action
 
-## Decisions needed from Steve/the club
+Use `ops/2027_RELEASE_RUNBOOK.md` for exact resources, build/migration commands and recovery evidence. Review has its own D1/R2, JWT/admin/access credentials, same-origin frontend/API and no payment/email providers or cron. Its synthetic launch settings do not apply to production. Both buckets have public managed access disabled and no custom domains.
 
-- **Confirmed:** adult-only accounts like Norths Knights, with parents managing children’s profiles.
-- **Awaiting the club:** 2027 opening date, fees/discounts, payment options, age eligibility and registrar contact; Steve has not received these yet.
-- Official competition registration destination and which steps the club application completes.
-- Designated provider test accounts/recipient and authority over the branded-domain DNS.
-- Named safeguarding reviewers, retention/incident operations and actual final club sign-off.
+Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Do not set actual safeguarding sign-off until the club adopts the incident playbook and approves launch.
 
-These are decisions or external prerequisites, not reasons to stop unrelated implementation work. League Bot remains specific to Norths Knights.
-
-## Step 2 implementation checkpoint — 7 September 2026
-
-- Shared D1 counters replace instance-local memory. Admission is one atomic upsert, so concurrent server instances cannot each grant a fresh allowance. Only keyed address digests are stored; forwarded headers cannot supply an alternate identity.
-- Login, account creation, registration, checkout, chat, uploads and reports are covered. Blocked requests return `Retry-After`; unavailable counters return 503 before sensitive work. Counters expire and hourly scheduled cleanup removes up to 10,000 expired rows per run. This is an application limit, not a volumetric DDoS defence.
-- Migration 0007 is additive and required before the Worker. The admin readiness page detects a missing counter table.
-- Verification: 53 tests passed in `hs-20260907031025-3174923-5ec991b8`; typecheck passed in `hs-20260907031026-3175144-c8d693df`. Tests include independent instances, concurrent admissions, expiry, spoofed forwarding headers, outage behaviour and every mounted route.
-- Deployment: waiting on Steve’s narrowly scoped approval to register this workspace in the host wrapper. No provider credentials or other project workspace were used to bypass the rejection.
-- Next: implement the confirmed adult-only account model while deployment approval is pending.
-
-Implementation references: [Cloudflare D1 prepared statements](https://developers.cloudflare.com/d1/worker-api/prepared-statements/) and [Cloudflare visitor headers](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
-
-## Step 3 account boundary checkpoint — 7 September 2026
-
-- Public account creation accepts parent accounts only and requires an explicit adult declaration. Registration records the same declaration and version. Login requires the adult’s declaration after password verification. This is self-attestation, not independent proof of age or relationship.
-- Legacy junior credentials and JWTs are refused. Existing adult sessions must sign in again after migration 0008 to record the declaration. Checkout resume/capture also checks the current adult account before issuing a session or proceeding with payment. Historical child profiles and accounts are retained without converting child accounts into adults.
-- The active client contains parent, coach and admin portals. Old player-portal bookmarks lead to the parent login flow. Public copy explains the adult-only arrangement. Parent account names no longer borrow a child’s surname.
-- Remaining in step 3: verified adult identity/email, registrar-approved guardian links, restricted onboarding access and account recovery. The existing registration-created guardian link is still marked verified without independent review; this must be corrected before broad member opening.
-- Verification: 57 tests passed in `hs-20260907031638-3195920-c6c01bda`; typecheck passed in `hs-20260907031639-3196096-37b5a8df`. Client build passed in `hs-20260907031640-3196282-32033abd`. Deployment still awaits the host workspace approval.
-- Next: add explicit closed-by-default launch controls so incremental releases can be published while club details, identity onboarding and safeguarding sign-off remain outstanding.
-
-## Step 1 opening controls checkpoint — 7 September 2026
-
-- `REGISTRATIONS_OPEN=false` and `MEMBER_ACCESS_OPEN=false` are committed production defaults. Member access requires actual safeguarding sign-off; registration additionally requires the exact confirmed season in `SEASON_DETAILS_CONFIRMED`. Missing settings keep the service closed.
-- While closed, the fee API hides carried-over prices/payment methods and the client shows a 2027 preparation page. Both public account creation and player registration refuse writes. Non-admin member sessions and checkout are closed; administrators can still sign in to prepare the service. Event reminders stay off while member access is closed.
-- New-registration closure is separate from member access, so after launch the club can stop accepting applications without preventing established members from finishing existing checkout.
-- Production CORS permits explicit origins, including the configured frontend. Arbitrary Pages previews and localhost are no longer implicitly trusted.
-- Verification: 61 tests, typecheck and client build passed; see current candidate receipts above. Read-only production checks confirmed migrations 0004–0008 are absent and recorded the existing Worker/Pages versions for release planning. No member records or secret values were retrieved.
-- Next action: obtain the pending host workspace approval, apply the exact one-line addition, then run the packaging and isolated deployment procedure. Keep season opening and member access closed in production.
-
-## Deployment path restored — 7 September 2026, 03:53 UTC
-
-Steve’s “continue” after the concrete host-setting request authorised the prepared YJRL addition. The exact one-line patch was applied to the root-owned wrapper; ownership and mode remain root:root / 755 and shell syntax validation passed. Packaging now succeeds (`hs-20260907034858-3284376-d2a78491`).
-
-Created isolated `yjrl-review-db` (`bf4d3aa4-b8c7-4dda-810e-e58070b1a6db`) and private `yjrl-review-uploads`. Seven schema migrations (0001 and 0003–0008, excluding the historical seed) applied successfully in `hs-20260907035206-3292188-335a5ef3`.
-
-The review-only Worker entry point protects both static assets and API routes with password access and an eight-hour Secure/HttpOnly session. Missing protection fails closed. Its frontend uses same-origin `/api`, its credentials are separate, and email/payment providers/cron are absent. Production keeps its existing Pages + Worker architecture and closed opening settings.
-
-63 tests passed in `hs-20260907035215-3292621-41ca92e1`; typecheck passed in `hs-20260907035216-3292887-8be77553`; review client build passed in `hs-20260907035242-3296195-bcf0ea5b`. Next: deploy this exact committed review source, set its isolated secrets, verify access and provider behaviour, then promote with production opening closed.
-
-## Review acceptance and promotion checkpoint — 7 September 2026, 03:59 UTC
-
-Review source `51712ce` is live at https://yjrl-review.steve-700.workers.dev behind password access. Initial review Worker version `1b79ac47-cbd3-44ff-ad7b-28370ba68129` was followed by isolated secret configuration. Anonymous access returns 401. The first upload attempt failed only because the Pages wildcard rewrite is incompatible with Worker Assets; the review staging helper now excludes it and rejects builds referencing the production API.
-
-Real staged acceptance passed in `hs-20260907035703-3308085-c9d18063`: administrator login/readiness, synthetic 2027 registration and duplicate rejection, guardian reads/auditing, Cloudflare Images PNG→WebP conversion with removed synthetic metadata, private preview, review/approval, stale-review rejection, consent withdrawal and R2 object deletion. No email or payment was sent. JPEG EXIF/orientation, broader browser and provider checks remain outstanding.
-
-Both production and review R2 buckets have no custom domains and managed public access disabled. Production’s historical migration journal is empty; `stage-production-migrations.mjs` exposes only migrations 0004 onward so neither the old schema nor seed is replayed. Pending migrations 0004–0008 were verified. Pre-migration recovery bookmark: `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` (`hs-20260907035723-3308785-7c9a8a70`).
-
-Next: apply the five incremental production migrations, publish the Worker with opening controls closed, deploy the matching Pages build and verify public closure.
+**Next implementation:** guardian verification and account recovery, then form/consent versioning and parent withdrawal. Keep deployments incremental and this table current.

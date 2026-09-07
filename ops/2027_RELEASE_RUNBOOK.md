@@ -1,56 +1,92 @@
 # 2027 incremental release procedure
 
-Deployment is authorised by Steve. The only pending host approval is the exact YJRL workspace addition in `headsnap-yjrl-workspace.patch`. All Wrangler operations go through HeadSnap; credentials remain in its wrapper. Do not run the legacy `db:migrate` scripts against production: they include the old seed.
+Steve authorised ongoing deployment and the exact YJRL host workspace addition. That addition is applied; the wrapper remains root:root / 755. All Wrangler commands still run through `headsnap cloudflare yjrl`. Keep production registration/member opening closed until genuine club readiness and sign-off.
 
-## Current release state
+## Environments and current recovery references
 
-Read-only Cloudflare checks on 7 September 2026 at approximately 03:22 UTC found:
+| Environment | Resource | Current identifier |
+| --- | --- | --- |
+| Production | Website | https://yjrl.pages.dev/register |
+| Production | API | https://yjrl-api.steve-700.workers.dev |
+| Production | D1 `yjrl-db` | `690424d2-5985-4576-9d4c-62e643ae5ed3` |
+| Production | Private R2 | `yjrl-uploads` |
+| Production | Worker version | `d66eebc8-4e34-4fff-a0a7-61f1dc5f8fc3` |
+| Production | Pages deployment | `9cb8b591-e863-4640-919e-6e06f85b72af` |
+| Review | Password-protected app/API | https://yjrl-review.steve-700.workers.dev |
+| Review | D1 `yjrl-review-db` | `bf4d3aa4-b8c7-4dda-810e-e58070b1a6db` |
+| Review | Private R2 | `yjrl-review-uploads` |
+| Review | Worker version after secrets | `f9ebe00a-a95f-4035-86cb-5cabb839c6f6` |
 
-- Production database `yjrl-db` (`690424d2-5985-4576-9d4c-62e643ae5ed3`) has the base and child-safety tables; registration claims, child access log, rate counters, processed media columns and adult attestation columns are absent. Apply **0004–0008**, in order, before the current Worker.
-- Current production Worker deployment: `dcc5251e-6b59-4b71-981f-d9ec88501543`; version `4bf3a447-c76b-43c5-8a6e-957fa1e69178` at 100%, released 26 May 2026.
-- Current production Pages deployment: `aecce5b3-c3ee-4d3c-ba54-33ddcd22cc85`; commit `1f3ef3ff4f0b057f6f2f588cc247dc9bf3e29aca`; https://aecce5b3.yjrl.pages.dev.
-- No candidate has been deployed. No production database writes, object changes, payments or messages were made by this release preparation.
+Production source is `46ea14cecf05b277d5863a9b31c2be4e6f7d7915`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
 
-Refresh this evidence immediately before a real release. A previous version is a recovery reference, not evidence it is safe to restore: the May Worker lacks the new opening/access/media controls.
+Before 0004–0008 were applied, the production D1 recovery bookmark was `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` at 03:57 UTC on 7 September (`hs-20260907035723-3308785-7c9a8a70`). Refresh recovery evidence before every subsequent production migration.
 
-## 1. Restore the approved release path
+The historical production journal was empty even though the base/child-safety schema existed. The release successfully applied only 0004–0008 and recorded them in the journal. Do not invent baseline journal entries, replay 0001/0003, or run the legacy 0002 seed against live data. The old package `db:migrate` scripts execute that seed and must not be used for production.
 
-After Steve approves the narrow host setting, have the authorised host operator apply only the supplied one-line patch to `/usr/local/libexec/headsnap-cloudflare-wrangler`, retaining root ownership, permissions and all other entries. Validate the wrapper syntax and retry:
+## Verify and release to review
+
+Review has separate random JWT/admin/access secrets, no real email/payment providers and no cron. Its gateway checks every request, including static assets, fails closed when unconfigured, and creates an eight-hour Secure/HttpOnly/SameSite session after password authentication. Synthetic opening settings behind this gateway do not represent real club sign-off.
+
+Run appropriate tests and Worker typecheck through HeadSnap. Then prepare the review build and staged schema:
 
 ```sh
-headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- deploy --dry-run --outdir .wrangler/release-check
+headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl -- env VITE_API_URL=/api npm run build
+headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/stage-review-assets.mjs
+headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/stage-review-migrations.mjs
+headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- d1 migrations list yjrl-review-db --remote --config wrangler.review.toml
 ```
 
-Treat another enforced rejection as a stop on deployment; do not run from a different project's allowlisted directory or expose credentials.
+The asset staging helper rejects a bundle referencing the production API and removes the Pages wildcard rewrite, which loops under Worker Assets. The review schema staging includes 0001 and 0003 onward, without old seed data. Review pending SQL before applying it:
 
-## 2. Isolated review deployment
+```sh
+headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- d1 migrations apply yjrl-review-db --remote --config wrangler.review.toml
+```
 
-Create dedicated review D1 and private R2 resources and a separate review Worker/config. Use a unique JWT secret and only synthetic records. Keep real email/payment credentials and daily reminders absent. Configure the Images binding. Do not copy the production database, member records or secrets.
+Commit and push the exact validated source before deployment:
 
-Configure access protection before opening a review frontend or enabling review registration. Use an exact review frontend origin and build `VITE_API_URL` against that review Worker. No test frontend may default to the production Worker. Baseline review tables come from 0001, 0003 and then 0004–0008; the production seed is unnecessary.
+```sh
+headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- deploy --config wrangler.review.toml
+headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/accept-review.mjs
+```
 
-Record resource IDs, private access policy, applied migration names, deployed source commit and URL in the delivery ledger. Run provider-independent acceptance with synthetic records; verify real Images processing as described in `MEDIA_REVIEW_ACCEPTANCE.md`. Never describe a test environment's synthetic launch settings as actual club sign-off.
+The acceptance script reads the existing restricted review-only credentials at `/home/steve/.local/share/yjrl/review-secrets.json`, never prints values, and targets only the fixed isolated review URL. It creates synthetic records and a coloured PNG, checks processing/review/withdrawal and deletes the test R2 object. Synthetic registration/audit rows are retained in review. Keep that secret file out of Git and logs; do not copy production credentials into it or repeatedly rotate working secrets.
 
-Review resources/config and access protection are **not yet provisioned** because the host deployment approval is pending.
+## Promote to production
 
-## 3. Production promotion
+1. Keep one deployer and an exclusive checkout. Confirm the reviewed source is pushed, relevant checks pass, and the review environment accepted the application change.
+2. Inspect the current schema and migration journal. Record a fresh recovery bookmark through `d1 time-travel info yjrl-db --json` using the wrapper. Do not export child records to Git or logs.
+3. Stage only incremental migrations and inspect pending names:
 
-1. Use the verified, pushed source from the isolated review release. Verify this checkout has no unrelated changes or other deployer.
-2. Inspect the current schema/migration journal and record the D1 recovery bookmark before mutation through the supported HeadSnap Cloudflare path. Keep member exports out of Git and logs.
-3. Apply only missing additive migrations in order. Use the D1 migration journal and verify its names against actual schema; do not blindly replay 0001/0002 or ALTER statements. Stop and reconcile an ambiguous migration result before retrying.
-4. Deploy the Worker with production `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Do not set `CHILD_SAFETY_SIGNOFF=approved`. Existing provider secrets must not be replaced or exposed.
-5. Verify health and the closed fee response, account/registration closure, staff login/readiness, exact CORS origins, private storage and current media behaviour. No real child or payment submission is needed for this release.
-6. Deploy the matching client build to the existing `yjrl` Pages project with the exact pushed commit recorded. Its current production branch is `master`; use deliberate production promotion instead of accidentally creating an unprotected preview against production data.
-7. Verify `/register` presents the preparation page, deep links resolve and adult login is clear. Record Worker/Pages deployment IDs and URLs in the guide. The branded domains remain a separate DNS task.
+```sh
+headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/stage-production-migrations.mjs
+headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- d1 migrations list yjrl-db --remote --config wrangler.toml
+headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- d1 migrations apply yjrl-db --remote --config wrangler.toml
+```
 
-The latest successful checks are recorded in the guide; reuse them if source is unchanged. Any implementation change requires the relevant checks again.
+The production helper excludes 0001–0003. Stop and reconcile an ambiguous migration result before retrying. Never apply changed schema blindly to a partially migrated database.
 
-## 4. Recovery
+4. Deploy the Worker, preserving existing runtime secrets/variables while applying the committed production settings:
 
-Prefer a forward fix with registration/member access still closed. After a successful gated release, retain its Worker and Pages deployment IDs as the rollback pair. Keep additive database changes when rolling back compatible code; do not delete new records or remove audit guards to restore an older schema.
+```sh
+headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- deploy --config wrangler.toml --keep-vars
+```
 
-Do not automatically restore the May Worker: that would remove adult-only access and consent/opening controls. If no compatible gated version exists, keep affected routes unavailable until the defect is fixed. Restore D1 to a recovery point only with a separately reviewed data-recovery plan that accounts for writes since that point.
+5. Verify health, 2027 fee response with `registrationOpen=false`, hidden prices, and `registration_closed` on account/player registration. Check configured origins and private media behaviour without creating real registrations or payments. Existing production administrator login requires the real operator; do not retrieve/rotate their password just to run a check.
+6. Build the production frontend explicitly against the production API:
 
-## 5. Actual season opening
+```sh
+headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl -- env VITE_API_URL=https://yjrl-api.steve-700.workers.dev/api npm run build
+```
 
-Work through the remaining delivery-guide items first. Only after genuine club confirmation and completed acceptance should the production season confirmation, safeguarding sign-off and opening controls change. An incremental deployment does not authorise inventing fees, dates, registrar details or sign-off.
+7. Deploy `client/build` to the existing `yjrl` Pages project with `--branch master`, the exact pushed source SHA as `--commit-hash`, and truthful clean-tree metadata. Use `headsnap cloudflare yjrl --cwd /srv/headsnap/workspaces/yjrl -- pages deploy ...`. The branch option selects Pages production; it does not merge the source branch. Do not publish a review bundle pointed at production.
+8. Verify the public alias and deep links serve the expected build and closed preparation flow. Record source, Worker/Pages IDs and URLs in the guide. Branded-domain configuration and full interaction/accessibility checks remain separate work.
+
+## Recovery and actual opening
+
+Prefer a forward fix while opening remains closed. Use the verified gated Worker/Pages pair above for a compatible rollback. Retain additive schema and new records; do not drop audit guards or delete data to fit old code. D1 point-in-time restoration requires a reviewed recovery plan accounting for writes since the bookmark.
+
+Do not restore the May Worker by default: it lacks current adult-only, consent and opening controls. Its historical version was `4bf3a447-c76b-43c5-8a6e-957fa1e69178`, with Pages `aecce5b3-c3ee-4d3c-ba54-33ddcd22cc85`; these are historical references, not the preferred rollback pair.
+
+Production stays `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Only after actual club details, complete acceptance and safeguarding sign-off should these settings change. Continue the outstanding guardian/identity, consent, medical, provider and domain work in the delivery guide.
+
+References: [Worker Assets routing](https://developers.cloudflare.com/workers/static-assets/binding/), [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/), [D1 recovery](https://developers.cloudflare.com/d1/reference/time-travel/).
