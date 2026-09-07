@@ -1,3 +1,15 @@
+## Admin tools checkpoint — 7 September 2026, 07:36 UTC
+
+Objective: finish Steve’s screenshot requests, deploy as we go, prepare Nathan’s testing guide, then resume the 2027 launch guide. Branch `codex/2027-signup-readiness`; application HEAD `93605816e6a75390846213848015745f97b8d3f7`, pushed. Lead-only checkout.
+
+**Deployed:** fixture validation/editing, editable team/training locations, Google Maps destinations and copied optional embed previews, Events admin calendar/draft/publication/removal, news photo upload/private review within article form, truthful draft/publish controls, manual pending player entry/public registration link, room search/numeric sorting, removal of the audit-log and obsolete technical cards from admin. Backend audit recording retained. Files: shared maps/fixture validation, migration 0009, Worker teams/fixtures/events/players/upload, client admin/public pages and new components, API tests and browser acceptance script.
+
+**Evidence:** 69 API/SQLite tests; typecheck; review and production builds. Real Chrome review acceptance passed (`hs-20260907073407-3795159-89abc4c4`) for fixture create/edit/validation, public game/training maps links, mobile Teams layout, event draft/publication, real Images upload/preview/review and public article visibility, manual pending player creation, room search/sort and no page exceptions. Synthetic review fixtures/events/news/images were removed; synthetic player audit history retained as inactive. No production sample data, payments or emails created.
+
+**Release:** review Worker `92c5cb27-146d-4c7f-9666-04430f7142b6`; production Worker `48709805-395b-45dd-9166-0ffd2d3464d0`; production Pages https://d8385052.yjrl.pages.dev at https://yjrl.pages.dev. Migration 0009 applied to both databases. Pre-migration production recovery bookmark: `00000093-00000000-000050df-ac99c91ed1b257e43a07f233a8c124db`. Production registration/member switches remain false.
+
+**Next action:** implement uniforms/merchandise catalogue and purchase setup with online payment and pay on collection, then deploy and finalise `NATHAN_TESTING_HANDOVER.md`. Nathan has not supplied products, prices, photos, sizes, supplier, fulfilment/payment information. Keep real ordering closed until configured. Original remaining sign-up work and Nathan’s full requested-input list remain in the delivery guide. Do not reopen public registrations from this admin release. Google destinations still need to be set/confirmed by the club; legacy venue names are not silently geocoded.
+
 ## Live release checkpoint — 7 September 2026, 04:05 UTC
 
 Objective: execute the 2027 delivery guide sequentially and deploy verified milestones. Branch `codex/2027-signup-readiness`; application HEAD `46ea14cecf05b277d5863a9b31c2be4e6f7d7915`. This checkout has one lead owner. The current delivery guide supersedes earlier checkpoint statuses below.

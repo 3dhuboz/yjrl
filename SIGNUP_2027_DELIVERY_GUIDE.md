@@ -33,14 +33,14 @@ These requests take priority over the remaining launch work above. Deploy throug
 
 | Request | Status |
 | --- | --- |
-| Fixture creation explains missing opponent/date; edit existing fixtures | Implemented; release verification in progress |
-| Admin Google Maps destinations and optional clickable previews for training, fixtures and events | Implemented; release verification in progress |
-| Events tab with calendar, create/edit, drafts, publishing and removal | Implemented; release verification in progress |
-| Upload, privately preview, approve and select a news photo inside the article editor | Implemented; release verification in progress |
-| Clear Save Draft / Publish Article actions and Publish button on draft list | Implemented; release verification in progress. Existing Test article is a draft |
-| Add Player in admin and link to the public registration page | Implemented; release verification in progress. Manual records stay pending; no junior login or payment is created |
-| Remove audit-log/technical status panels from admin | Implemented; backend activity history retained |
-| Search/sort chat rooms by age group, name or type | Implemented; numeric age ordering |
+| Fixture creation explains missing opponent/date; edit existing fixtures | **Deployed:** `9360581` |
+| Admin Google Maps destinations and optional clickable previews for training, fixtures and events | **Deployed:** `9360581` |
+| Events tab with calendar, create/edit, drafts, publishing and removal | **Deployed:** `9360581` |
+| Upload, privately preview, approve and select a news photo inside the article editor | **Deployed:** `9360581` |
+| Clear Save Draft / Publish Article actions and Publish button on draft list | **Deployed:** `9360581`. Existing Test article is a draft |
+| Add Player in admin and link to the public registration page | **Deployed:** `9360581`. Manual records stay pending; no junior login or payment is created |
+| Remove audit-log/technical status panels from admin | **Deployed:** backend activity history retained |
+| Search/sort chat rooms by age group, name or type | **Deployed:** numeric age ordering |
 | Uniforms and merchandise shop: online payment and pay on collection | Next implementation; products, provider and fulfilment details pending from Nathan |
 | Nathan handover and test checklist | Draft in `NATHAN_TESTING_HANDOVER.md`; finalise after deployments |
 
@@ -70,6 +70,7 @@ The frontend checks inspect deployed HTTP/build responses; full interactive brow
 
 | UTC, 7 Sep 2026 | Source / action | Result |
 | --- | --- | --- |
+| 07:34–07:36 | `9360581`, admin tools and maps | 69 tests/typecheck/build pass; Chrome acceptance `hs-20260907073407-3795159-89abc4c4`; migration 0009 applied; Worker `48709805-395b-45dd-9166-0ffd2d3464d0`; Pages https://d8385052.yjrl.pages.dev; live bundle verified |
 | 03:02 | `13aa212`, packaging attempt | Host workspace list rejected YJRL; no deployment |
 | 03:48 | Approved one-line YJRL workspace addition | Applied to root wrapper; root:root / 755 retained, syntax valid; packaging passed in `hs-20260907034858-3284376-d2a78491` |
 | 03:52 | Review database setup | Seven schema migrations, 0001 and 0003–0008, applied without old seed; `hs-20260907035206-3292188-335a5ef3` |

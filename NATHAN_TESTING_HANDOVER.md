@@ -13,7 +13,7 @@ Working site: https://yjrl.pages.dev. Season: **2027**. Adult accounts only; par
 - **Shop payments:** online payment provider/business account to use, payment-on-collection methods, person reconciling payments, order notification recipient. Provide account access through the agreed secure setup, not this document.
 - **Opening sign-off:** approved registration/consent wording and club incident/escalation arrangements, authorised adult administrators and coaches, designated testing accounts and email recipient.
 
-## Admin test sequence (release verification in progress)
+## Admin test sequence (deployed 7 September, 07:36 UTC)
 
 1. Teams → Edit: set training details and Google Maps Share link. Add an optional map preview using the copied embed code. Save and check Teams publicly; the location opens the selected Google Maps destination.
 2. Fixtures → Add Fixture: enter both teams (TBC if the opponent is unknown), round, date/time and venue. Save; edit it and check Fixtures publicly.
