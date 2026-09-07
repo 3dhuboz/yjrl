@@ -21,14 +21,16 @@ CREATE TRIGGER shop_stock_count_updated AFTER UPDATE ON shop_stock BEGIN
 END;
 -- The order status transition and every size deduction are one atomic write.
 -- A second collection attempt cannot deduct stock twice; an insufficient count rolls everything back.
-CREATE TRIGGER shop_stock_collected BEFORE UPDATE OF status ON shop_orders
-WHEN OLD.status = 'placed' AND NEW.status = 'fulfilled'
-BEGIN
-  SELECT CASE WHEN EXISTS (
+CREATE TRIGGER shop_stock_collection_check BEFORE UPDATE OF status ON shop_orders
+WHEN OLD.status = 'placed' AND NEW.status = 'fulfilled' AND EXISTS (
     SELECT 1 FROM json_each(NEW.items) item JOIN shop_stock stock
     ON stock.product_id = json_extract(item.value, '$.productId') AND stock.option = json_extract(item.value, '$.option')
     WHERE stock.on_hand < json_extract(item.value, '$.quantity')
-  ) THEN RAISE(ABORT, 'shop_stock_insufficient') END;
+  )
+BEGIN SELECT RAISE(ABORT, 'shop_stock_insufficient'); END;
+CREATE TRIGGER shop_stock_collected AFTER UPDATE OF status ON shop_orders
+WHEN OLD.status = 'placed' AND NEW.status = 'fulfilled'
+BEGIN
   UPDATE shop_stock SET on_hand = on_hand - (
     SELECT SUM(json_extract(item.value, '$.quantity')) FROM json_each(NEW.items) item
     WHERE json_extract(item.value, '$.productId') = product_id AND json_extract(item.value, '$.option') = option
