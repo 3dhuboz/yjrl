@@ -23,6 +23,8 @@ export interface Env {
   CLICKSEND_REQUIRED?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_REQUIRED?: string;
+  GOOGLE_PLACES_API_KEY?: string;
+  GOOGLE_MAPS_EMBED_KEY?: string;
   FROM_EMAIL: string;
   ENVIRONMENT: string;
   ALLOWED_ORIGINS?: string;

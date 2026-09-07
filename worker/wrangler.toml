@@ -46,3 +46,5 @@ crons = ["0 22 * * *", "0 0-21,23 * * *"]
 # CHILD_SAFETY_SIGNOFF (set to approved only after club launch sign-off)
 # CLICKSEND_USERNAME / CLICKSEND_API_KEY if SMS is required
 # OPENROUTER_API_KEY if AI features are required
+# GOOGLE_PLACES_API_KEY: server key restricted to Places API (New).
+# GOOGLE_MAPS_EMBED_KEY: separate public key restricted to Maps Embed API and the club website referrers.

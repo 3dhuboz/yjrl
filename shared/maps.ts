@@ -1,4 +1,24 @@
 // Accept Google Maps destinations, never arbitrary external URLs or raw HTML.
+export function googleMapsSearch(query: string, placeId = ''): string {
+  const url = new URL('https://www.google.com/maps/search/');
+  url.searchParams.set('api', '1');
+  url.searchParams.set('query', query.trim());
+  if (placeId && /^[A-Za-z0-9_-]{1,255}$/.test(placeId)) url.searchParams.set('query_place_id', placeId);
+  return url.href;
+}
+
+export function googlePlaceEmbed(link: string, key: string): string {
+  if (!key || !/^[A-Za-z0-9_-]{10,200}$/.test(key)) return '';
+  try {
+    const id = new URL(mapsUrl(link)).searchParams.get('query_place_id');
+    if (!id || !/^[A-Za-z0-9_-]{1,255}$/.test(id)) return '';
+    const url = new URL('https://www.google.com/maps/embed/v1/place');
+    url.searchParams.set('key', key);
+    url.searchParams.set('q', `place_id:${id}`);
+    return url.href;
+  } catch { return ''; }
+}
+
 export function mapsUrl(value: unknown, embed = false): string {
   if (value === undefined || value === null || value === '') return '';
   if (typeof value !== 'string' || value.length > 12000) throw new Error('Use a Google Maps link.');

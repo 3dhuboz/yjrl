@@ -282,6 +282,30 @@
 .venue-map-fields { min-width: 0; border: 1px solid #dbe4ef; border-radius: 10px; padding: 1rem; margin: 1rem 0 0; }
 .venue-map-fields legend { font-weight: 700; font-size: .9rem; padding: 0 .3rem; }
 .venue-map-fields p { font-size: .8rem; color: #64748b; margin: .4rem 0 1rem; }
+.map-search-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+.map-search-controls input { flex: 1; min-width: 180px; }
+.map-search-results { border: 1px solid #dbe4ef; border-radius: 8px; padding: .75rem; margin: 1rem 0; }
+.map-search-result { border-top: 1px solid #dbe4ef; padding: .75rem 0; }
+.map-search-result p { margin-bottom: .5rem; }
+.venue-map-fields .google-maps-attribution { white-space: nowrap; font-weight: 400; font-style: normal; color: #5e5e5e; font-size: 14px; }
+.venue-map-fields > .yjrl-label { margin-top: 1rem; }
+.product-size-fields { min-width: 0; border: 1px solid #dbe4ef; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
+.product-size-fields > legend { font-weight: 700; }
+.product-size-fields p { font-size: .8rem; color: #64748b; }
+.product-size-group { border: 0; padding: .5rem 0 1rem; margin: 0; min-width: 0; }
+.product-size-group legend { font-weight: 700; font-size: .9rem; }
+.product-size-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: .4rem; }
+.product-size-grid label { display: flex; align-items: center; gap: .5rem; padding: .55rem; border: 1px solid #dbe4ef; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+.product-size-grid label:has(input:checked) { background: #eff6ff; border-color: #1d4ed8; }
+.product-size-grid input { width: 16px; height: 16px; flex-shrink: 0; }
+.stocktake-list { display: grid; gap: .75rem; }
+.stocktake-row { padding: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.stocktake-row > div { flex: 1; min-width: 160px; }
+.stocktake-row dl { display: flex; flex: 2; flex-wrap: wrap; gap: 1rem; margin: 0; }
+.stocktake-row dt { font-size: .8rem; color: #64748b; }
+.stocktake-row dd { margin: .25rem 0 0; font-weight: 700; }
+.stocktake-row small { font-weight: 400; }
+.stocktake-low { display: block; color: #b45309; }
 .admin-toolbar { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
 .admin-toolbar > input { width: auto; flex: 1; min-width: 150px; }
 .admin-toolbar label { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }

@@ -74,6 +74,11 @@ const YJRLLegal = () => {
             ))}
           </div>
 
+          {(page === 'privacy' || page === 'terms') && <article className="yjrl-card" style={{ padding: '1.5rem', marginTop: '1rem' }}>
+            <h2 style={{ fontSize: '1rem' }}>Google Maps</h2>
+            <p>Venue searches and embedded maps use Google Maps. Google receives the search or map request when you use these features. Use of Google Maps is subject to the <a href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noopener noreferrer">Google Maps terms</a> and <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.</p>
+          </article>}
+
           <div style={{ marginTop: '2rem', padding: '1.25rem', background: '#f8fafc', border: '1px solid var(--yjrl-border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ color: 'var(--yjrl-muted)' }}>Questions or corrections?</span>
             <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-primary">Contact the Club</a>

@@ -142,7 +142,13 @@ shop.put('/orders/:id', authMiddleware, async c => {
   else if (body?.action === 'fulfilled') { condition = "status = 'placed' AND payment_status = 'paid'"; update = "status = 'fulfilled'"; }
   else if (body?.action === 'cancel') { condition = "payment_method = 'collection' AND status = 'placed' AND payment_status = 'unpaid'"; update = "status = 'cancelled'"; }
   else return c.json({ error: 'Choose a valid order action.' }, 400);
-  const result = await c.env.DB.prepare(`UPDATE shop_orders SET ${update}, updated_at = datetime('now') WHERE id = ? AND ${condition}`).bind(id).run();
+  let result;
+  try {
+    result = await c.env.DB.prepare(`UPDATE shop_orders SET ${update}, fulfilled_by = CASE WHEN ? = 'fulfilled' THEN ? ELSE fulfilled_by END, updated_at = datetime('now') WHERE id = ? AND ${condition}`).bind(body.action, c.get('user').id, id).run();
+  } catch (error) {
+    if (String(error).includes('shop_stock_insufficient')) return c.json({ error: 'There is not enough counted stock to collect this order. Check the Stocktake page and record any new stock first.' }, 409);
+    throw error;
+  }
   if (!result.meta.changes) return c.json({ error: 'The order has changed or is not eligible for that action. Refresh the order list.' }, 409);
   await writeAudit(c.env, c.get('user'), 'shop_order_updated', 'shop_order', id, { action: body.action });
   return c.json(order((await c.env.DB.prepare('SELECT * FROM shop_orders WHERE id = ?').bind(id).first())!, true));

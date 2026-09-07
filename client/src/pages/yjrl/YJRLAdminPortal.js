@@ -1,4 +1,5 @@
 import AdminShop from '../../components/AdminShop';
+import AdminStocktake from '../../components/AdminStocktake';
 import AdminAddPlayer from '../../components/AdminAddPlayer';
 import ArticlePhotoUpload from '../../components/ArticlePhotoUpload';
 import { fixtureError } from '../../../../shared/fixture';
@@ -109,6 +110,7 @@ const YJRLAdminPortal = () => {
   const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
 
   const [tab, setTab] = useState('overview');
+  const [stockProduct, setStockProduct] = useState('');
   const [stats, setStats] = useState({ teamCount: 0, playerCount: 0, fixtureCount: 0, upcomingCount: 0 });
   const [teams, setTeams] = useState([]);
   const [fixtures, setFixtures] = useState([]);
@@ -488,11 +490,12 @@ const YJRLAdminPortal = () => {
               ['fixtures', 'Fixtures'],
               ['events', 'Events'],
               ['shop', 'Shop'],
+              ['stocktake', 'Stocktake'],
               ['news', 'News'],
               ['players', 'Players'],
               ['moderation', 'Chat Safety']
             ].map(([key, label]) => (
-              <button key={key} className={`yjrl-tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>
+              <button key={key} className={`yjrl-tab ${tab === key ? 'active' : ''}`} onClick={() => { if (key === 'stocktake') setStockProduct(''); setTab(key); }}>{label}</button>
             ))}
           </div>
         </div>
@@ -700,7 +703,8 @@ const YJRLAdminPortal = () => {
         )}
 
         {tab === 'events' && <AdminEvents />}
-        {tab === 'shop' && <AdminShop players={players} />}
+        {tab === 'shop' && <AdminShop players={players} onStocktake={id => { setStockProduct(id || ''); setTab('stocktake'); }} />}
+        {tab === 'stocktake' && <AdminStocktake productId={stockProduct} onShop={() => setTab('shop')} />}
         {tab === 'news' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>

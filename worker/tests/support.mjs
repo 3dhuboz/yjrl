@@ -6,7 +6,7 @@ import adultAccount from '../../shared/adultAccount.json';
 function database(t) {
   const sqlite = new DatabaseSync(':memory:');
   t.after(() => sqlite.close());
-  for (const file of ['0001_schema.sql', '0003_child_safety.sql', '0004_registration_claims.sql', '0005_child_access_log.sql', '0006_reviewed_media.sql', '0007_rate_limits.sql', '0008_adult_accounts.sql', '0009_venue_maps.sql', '0010_shop.sql']) {
+  for (const file of ['0001_schema.sql', '0003_child_safety.sql', '0004_registration_claims.sql', '0005_child_access_log.sql', '0006_reviewed_media.sql', '0007_rate_limits.sql', '0008_adult_accounts.sql', '0009_venue_maps.sql', '0010_shop.sql', '0011_shop_stock.sql']) {
     sqlite.exec(readFileSync(`migrations/${file}`, 'utf8'));
   }
   function prepare(sql, args = []) {
