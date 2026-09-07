@@ -206,11 +206,11 @@ const YJRLAdminPortal = () => {
       locationFields(teamForm, {}, true);
       const selectedCoach = approvedCoaches.find(coach => coach.id === teamForm.coachId);
       const payload = {
-        ...teamForm,
+        ...Object.fromEntries(Object.keys(EMPTY_TEAM).map(key => [key, teamForm[key]])),
         coachName: teamForm.coachName || selectedCoach?.label || '',
         ...(editingTeam ? {} : { coachId: teamForm.coachId || null })
       };
-      if (editingTeam) { delete payload.coachId; delete payload.coachName; }
+      if (editingTeam && payload.coachId === '__unchanged') delete payload.coachId;
       const res = editingTeam ? await api.put(`/yjrl/teams/${editingTeam}`, payload) : await api.post('/yjrl/teams', payload);
       setTeams(prev => editingTeam ? prev.map(t => t._id === editingTeam ? res.data : t) : [...prev, res.data]);
       setStats(prev => ({ ...prev, teamCount: (prev.teamCount || 0) + (editingTeam ? 0 : 1) }));
@@ -256,7 +256,8 @@ const YJRLAdminPortal = () => {
     setSavingFixture(true); setFixtureErrorMessage('');
     try {
       locationFields(fixtureForm);
-      const payload = { ...fixtureForm, round: Number(fixtureForm.round) };
+      const payload = { ...Object.fromEntries(Object.keys(EMPTY_FIXTURE).map(key => [key, fixtureForm[key]])), round: Number(fixtureForm.round) };
+      if (editingFixture) { delete payload.status; delete payload.teamId; }
       // Team assignment is fixed once results exist; other fixture details remain editable.
       const res = editingFixture ? await api.put(`/yjrl/fixtures/${editingFixture}`, payload) : await api.post('/yjrl/fixtures', payload);
       setFixtures(prev => editingFixture ? prev.map(f => f._id === editingFixture ? res.data : f) : [res.data, ...prev]);
@@ -618,7 +619,7 @@ const YJRLAdminPortal = () => {
                         <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>{team.ageGroup}</div>
                       </div>
                     </div>
-                    <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setTeamForm({ ...EMPTY_TEAM, ...team }); setEditingTeam(team._id); setTeamModal(true); }} aria-label={`Edit ${team.name}`}><Edit size={14} /> Edit</button>
+                    <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setTeamForm({ ...EMPTY_TEAM, ...team, coachId: '__unchanged' }); setEditingTeam(team._id); setTeamModal(true); }} aria-label={`Edit ${team.name}`}><Edit size={14} /> Edit</button>
                     <button onClick={() => deleteTeam(team._id || team.id)} aria-label={`Deactivate ${team.name}`} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0.25rem' }}>
                       <Trash2 size={14} />
                     </button>
@@ -1034,6 +1035,7 @@ const YJRLAdminPortal = () => {
                     setTeamForm(prev => ({ ...prev, coachId: event.target.value, coachName: selected?.label || prev.coachName }));
                   }}>
                     <option value="">Unassigned</option>
+                    {editingTeam && <option value="__unchanged">Keep current coach</option>}
                     {approvedCoaches.map(coach => <option key={coach.id} value={coach.id}>{coach.label}{coach.email ? ` - ${coach.email}` : ''}</option>)}
                   </select>
                 </div>
@@ -1110,6 +1112,7 @@ const YJRLAdminPortal = () => {
                   </div>
                 ))}
               </div>
+              <label className="admin-check"><input type="checkbox" checked={fixtureForm.isHomeGame} onChange={event => setFixtureForm(prev => ({ ...prev, isHomeGame: event.target.checked }))} />Yeppoon is the home team</label>
               <MapLocationFields form={fixtureForm} setForm={setFixtureForm} />
             </div>
             <div className="yjrl-modal-footer">

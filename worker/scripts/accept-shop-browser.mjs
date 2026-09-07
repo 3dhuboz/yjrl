@@ -26,7 +26,7 @@ const page = await context.newPage();
 const errors = []; page.on('pageerror', error => errors.push(error.message));
 const name = `Synthetic shop ${Date.now().toString(36)}`;
 const before = (await api('/yjrl/shop/admin')).settings;
-let productId;
+let productId, teamId;
 mkdirSync('.wrangler/shop-browser', { recursive: true });
 try {
   await page.goto(`${base}/portal/admin`); await page.getByRole('button', { name: 'Shop', exact: true }).click();
@@ -69,12 +69,21 @@ try {
   await card.getByText('Pay on collection · Paid · fulfilled', { exact: true }).waitFor();
   assert.equal((await api('/yjrl/shop/admin')).orders.find(item => item.id === orderId).status, 'fulfilled');
   await page.screenshot({ path: '.wrangler/shop-browser/admin-shop.png', fullPage: true });
+  const team = await api('/yjrl/teams', 'POST', { name, ageGroup: 'U14', coachName: 'Original display' }); teamId = team.id;
+  await page.goto(`${base}/portal/admin`); await page.getByRole('button', { name: 'Teams', exact: true }).click();
+  await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
+  await page.locator('.yjrl-modal input').nth(2).fill('Updated coach display');
+  await page.getByLabel('Google Maps Share link').fill('https://maps.app.goo.gl/SyntheticMapTest');
+  await api('/yjrl/teams/' + team.id, 'PUT', { wins: 2 });
+  await page.getByRole('button', { name: 'Save Team', exact: true }).click(); await page.locator('.yjrl-modal').waitFor({ state: 'hidden' });
+  const editedTeam = await api('/yjrl/teams/' + team.id); assert.equal(editedTeam.wins, 2); assert.equal(editedTeam.coachName, 'Updated coach display'); assert.equal(editedTeam.trainingMapsUrl, 'https://maps.app.goo.gl/SyntheticMapTest');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ result: 'passed', environment: 'isolated review', checks: ['draft/public catalogue', 'admin variants and pricing', 'shop opening configuration', 'basket quantities and sizes', 'unconfigured online option hidden', 'collection order receipt and reload', 'mobile layout', 'payment recording then collection', 'no browser exceptions'], realPayments: false, emailsSent: false }));
+  console.log(JSON.stringify({ result: 'passed', environment: 'isolated review', checks: ['draft/public catalogue', 'admin variants and pricing', 'shop opening configuration', 'basket quantities and sizes', 'unconfigured online option hidden', 'collection order receipt and reload', 'mobile layout', 'payment recording then collection', 'team edit and map save', 'no browser exceptions'], realPayments: false, emailsSent: false }));
 } catch (error) {
   console.error('Browser exceptions:', errors); await page.screenshot({ path: '.wrangler/shop-browser/failure.png', fullPage: true }); throw error;
 } finally {
   await api('/yjrl/shop/settings', 'PUT', before);
+  if (teamId) await api('/yjrl/teams/' + teamId, 'DELETE');
   if (productId) await api('/yjrl/shop/products/' + productId, 'DELETE');
   await context.close(); await browser.close();
 }
