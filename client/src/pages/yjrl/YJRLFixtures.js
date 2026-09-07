@@ -1,7 +1,8 @@
 import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Clock, Filter, ChevronUp, ChevronDown, TrendingUp } from 'lucide-react';
+import { Calendar, Clock, Filter, ChevronUp, ChevronDown, TrendingUp } from 'lucide-react';
 import api from '../../api';
+import VenueMap from '../../components/VenueMap';
 import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
 
@@ -67,7 +68,7 @@ const YJRLFixtures = () => {
   };
 
   const FixtureCard = ({ fixture }) => (
-    <div className="yjrl-fixture-card">
+    <div className="yjrl-fixture-card" style={{ flexWrap: 'wrap' }}>
       <div style={{ textAlign: 'center', minWidth: 60 }}>
         <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--yjrl-gold)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Rnd {fixture.round}
@@ -90,10 +91,7 @@ const YJRLFixtures = () => {
             <Clock size={11} />
             {fixture.time || 'TBC'}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>
-            <MapPin size={11} />
-            {fixture.venue}
-          </div>
+
         </div>
       </div>
 
@@ -109,6 +107,7 @@ const YJRLFixtures = () => {
           </span>
         )}
       </div>
+      <div style={{ flexBasis: '100%' }}><VenueMap venue={fixture.venue} url={fixture.mapsUrl} embedUrl={fixture.mapsEmbedUrl} /></div>
     </div>
   );
 

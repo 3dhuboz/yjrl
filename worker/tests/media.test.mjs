@@ -81,7 +81,7 @@ test('all uploads wait for review and only processed bytes with anonymous filena
   for (const category of ['general', 'unknown-category', 'team']) {
     const response = await post({ category, playerIds: category === 'team' ? ['child-one', 'child-two'] : [] });
     assert.equal(response.status, 201);
-    assert.deepEqual(await response.json(), { url: null, status: 'pending_review' });
+    assert.deepEqual(await response.json(), { key: row().key, url: null, status: 'pending_review' });
     const record = row();
     assert.match(record.key, /\.webp$/);
     assert.ok(!record.key.includes('private-child-name'));

@@ -1,3 +1,5 @@
+import { fixtureError } from '../../../shared/fixture';
+import { locationFields } from '../../../shared/maps';
 import seasonConfig from '../../../shared/season.json';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
@@ -42,6 +44,7 @@ function formatFixture(f: Record<string, unknown>, options: { includePrivate?: b
     date: f.date,
     time: f.time,
     venue: f.venue,
+    mapsUrl: f.maps_url || '', mapsEmbedUrl: f.maps_embed_url || '',
     status: f.status,
     notes: f.notes,
     isActive: !!f.is_active,
@@ -120,16 +123,20 @@ fixtures.get('/:id', async (c) => {
 fixtures.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const validation = fixtureError(body, c.req.method === 'PUT');
+  if (validation) return c.json({ error: validation }, 400);
+  let location;
+  try { location = locationFields(body, {}, false); } catch (error) { return c.json({ error: (error as Error).message }, 400); }
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
-    `INSERT INTO fixtures (id, team_id, age_group, season, round, home_team_name, away_team_name, is_home_game, date, time, venue, status, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO fixtures (id, team_id, age_group, season, round, home_team_name, away_team_name, is_home_game, date, time, venue, status, notes, maps_url, maps_embed_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, body.teamId || body.team_id || null, body.ageGroup || body.age_group,
     body.season || seasonConfig.season, body.round,
     body.homeTeamName || body.home_team_name, body.awayTeamName || body.away_team_name,
     body.isHomeGame !== false ? 1 : 0, body.date, body.time || '',
-    body.venue || 'Nev Skuse Oval, Yeppoon', body.status || 'scheduled', body.notes || ''
+    body.venue || 'Nev Skuse Oval, Yeppoon', body.status || 'scheduled', body.notes || '', location.link, location.embed
   ).run();
   await writeAudit(c.env, c.get('user'), 'fixture_created', 'fixture', id, {
     teamId: body.teamId || body.team_id || null,
@@ -143,15 +150,23 @@ fixtures.post('/', authMiddleware, async (c) => {
 // PUT /yjrl/fixtures/:id — update or enter result
 fixtures.put('/:id', authMiddleware, async (c) => {
   const body = await c.req.json();
+  const validation = fixtureError(body, c.req.method === 'PUT');
+  if (validation) return c.json({ error: validation }, 400);
   const id = c.req.param('id');
   const existing = await c.env.DB.prepare('SELECT * FROM fixtures WHERE id = ? AND is_active = 1').bind(id).first();
   if (!existing) return c.json({ error: 'Fixture not found' }, 404);
   if (!(await canManageFixture(c, existing))) return c.json({ error: 'Not allowed to update this fixture' }, 403);
 
+  if (!requireAdmin(c) && (body.mapsUrl !== undefined || body.mapsEmbedUrl !== undefined)) return c.json({ error: 'Only admins can change map locations' }, 403);
+  try {
+    const location = locationFields(body, existing, false);
+    body.mapsUrl = location.link; body.mapsEmbedUrl = location.embed;
+  } catch (error) { return c.json({ error: (error as Error).message }, 400); }
   // Build dynamic update
   const fields: string[] = [];
   const vals: unknown[] = [];
   const map: Record<string, string> = {
+    mapsUrl: 'maps_url', mapsEmbedUrl: 'maps_embed_url',
     ageGroup: 'age_group', age_group: 'age_group', season: 'season', round: 'round',
     homeTeamName: 'home_team_name', home_team_name: 'home_team_name',
     awayTeamName: 'away_team_name', away_team_name: 'away_team_name',
@@ -164,7 +179,7 @@ fixtures.put('/:id', authMiddleware, async (c) => {
     matchReport: 'match_report', match_report: 'match_report', notes: 'notes',
   };
   for (const [k, v] of Object.entries(body)) {
-    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(v); }
+    if (map[k]) { fields.push(`${map[k]} = ?`); vals.push(typeof v === 'boolean' ? Number(v) : v); }
   }
   if (fields.length > 0) {
     fields.push('updated_at = datetime(\'now\')');

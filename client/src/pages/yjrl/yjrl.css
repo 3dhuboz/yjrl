@@ -267,3 +267,31 @@
   .yjrl-grid-3, .yjrl-grid-4 { grid-template-columns: 1fr; }
   .yjrl-footer-grid { grid-template-columns: 1fr; }
 }
+/* Venue maps and compact admin controls */
+.venue-label, .venue-map-caption { display: flex; align-items: center; gap: .6rem; }
+.venue-map { display: block; width: 100%; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 10px; background: #f8fafc; color: #1d4ed8; text-decoration: none; margin: .5rem 0; }
+.venue-map:hover { border-color: #1d4ed8; }
+.venue-map:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+.venue-map iframe { display: block; width: 100%; height: 190px; border: 0; pointer-events: none; }
+.venue-map-caption { padding: .8rem; font-size: .85rem; }
+.venue-map-caption > span { flex: 1; }
+.venue-map-caption small { display: block; font-size: .72rem; margin-top: .2rem; }
+.venue-map-compact { display: inline-flex; width: auto; border: 0; background: none; margin: 0; }
+.venue-map-compact .venue-map-caption { padding: 0; }
+.venue-map-compact small { display: none; }
+.venue-map-fields { min-width: 0; border: 1px solid #dbe4ef; border-radius: 10px; padding: 1rem; margin: 1rem 0 0; }
+.venue-map-fields legend { font-weight: 700; font-size: .9rem; padding: 0 .3rem; }
+.venue-map-fields p { font-size: .8rem; color: #64748b; margin: .4rem 0 1rem; }
+.admin-toolbar { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.admin-toolbar > input { width: auto; flex: 1; min-width: 150px; }
+.admin-toolbar label { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
+.yjrl-form-error { color: #b91c1c; padding: .75rem; border-radius: 8px; background: #fef2f2; }
+.yjrl-btn:disabled { opacity: .5; cursor: not-allowed; }
+.admin-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.admin-calendar > strong { text-align: center; font-size: .8rem; padding: .5rem 0; }
+.admin-calendar-day { min-height: 80px; background: #f8fafc; border: 1px solid #dbe4ef; border-radius: 6px; text-align: left; padding: .5rem; color: #172554; cursor: pointer; }
+.admin-calendar-day:hover, .admin-calendar-day:focus-visible { background: #eff6ff; outline: 2px solid #1d4ed8; }
+.admin-calendar-day span { display: block; margin-top: 4px; background: #dbeafe; border-radius: 3px; padding: 2px; font-size: .7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.admin-check { display: flex; align-items: center; gap: .6rem; margin: 1rem 0; }
+@media (max-width: 540px) { .admin-calendar-day { min-height: 60px; padding: 4px; } .admin-calendar-day span { font-size: .6rem; } }

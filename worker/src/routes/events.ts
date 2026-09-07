@@ -1,3 +1,4 @@
+import { locationFields } from '../../../shared/maps';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
@@ -17,6 +18,7 @@ function formatEvent(e: Record<string, unknown>, rsvps?: Record<string, unknown>
     date: e.date,
     time: e.time,
     venue: e.venue,
+    mapsUrl: e.maps_url || '', mapsEmbedUrl: e.maps_embed_url || '',
     address: e.address,
     capacity: e.capacity,
     image,
@@ -53,24 +55,48 @@ events.get('/', async (c) => {
   return c.json(eventsWithRsvps);
 });
 
+events.get('/all', authMiddleware, async (c) => {
+  if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
+  const result = await c.env.DB.prepare('SELECT * FROM events WHERE is_active = 1 ORDER BY date ASC').all();
+  return c.json(await Promise.all((result.results || []).map(async e => formatEvent(e, [], false, await approvedMediaUrl(c.env, c.req.url, e.image)))));
+});
+
 // GET /yjrl/events/:id
 events.get('/:id', async (c) => {
-  const e = await c.env.DB.prepare('SELECT * FROM events WHERE id = ? AND is_public = 1').bind(c.req.param('id')).first();
+  const e = await c.env.DB.prepare('SELECT * FROM events WHERE id = ? AND is_public = 1 AND is_active = 1').bind(c.req.param('id')).first();
   if (!e) return c.json({ error: 'Event not found' }, 404);
   const rsvps = await c.env.DB.prepare('SELECT * FROM event_rsvps WHERE event_id = ?').bind(e.id).all();
   return c.json(formatEvent(e, rsvps.results || [], false, await approvedMediaUrl(c.env, c.req.url, e.image)));
 });
 
+function eventError(body: Record<string, unknown>, partial: boolean) {
+  if ((!partial || body.title !== undefined) && (typeof body.title !== 'string' || !body.title.trim() || body.title.length > 150)) return 'Enter an event title (up to 150 characters).';
+  for (const key of ['date', 'endDate']) {
+    if (key === 'endDate' && !body[key]) continue;
+    if (partial && body[key] === undefined) continue;
+    const value = String(body[key] || '');
+    const date = new Date(`${value}T00:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) return 'Choose a valid event date.';
+  }
+  if (body.endDate && body.date && String(body.endDate) < String(body.date)) return 'The end date must be on or after the start date.';
+  if (body.type !== undefined && !['training', 'game', 'fundraiser', 'social', 'presentation', 'registration', 'photo-day', 'gala-day', 'other'].includes(String(body.type))) return 'Choose a valid event type.';
+  return '';
+}
+
 // POST /yjrl/events
 events.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const validation = eventError(body, c.req.method === 'PUT');
+  if (validation) return c.json({ error: validation }, 400);
   const image = await approvedMediaUrl(c.env, c.req.url, body.image);
   if (body.image && !image) return c.json({ error: 'Choose an approved reviewed image' }, 400);
+  let location;
+  try { location = locationFields(body, {}, false); } catch (error) { return c.json({ error: (error as Error).message }, 400); }
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
-    `INSERT INTO events (id, title, description, type, date, end_date, time, end_time, venue, address, age_groups, is_public, capacity, image, color)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO events (id, title, description, type, date, end_date, time, end_time, venue, address, age_groups, is_public, capacity, image, color, maps_url, maps_embed_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, body.title, body.description || '', body.type || 'other',
     body.date, body.endDate || body.end_date || null,
@@ -78,7 +104,7 @@ events.post('/', authMiddleware, async (c) => {
     body.venue || '', body.address || '',
     JSON.stringify(body.ageGroups || body.age_groups || []),
     body.isPublic !== false ? 1 : 0, body.capacity || null,
-    image, body.color || '#f0a500'
+    image, body.color || '#f0a500', location.link, location.embed
   ).run();
   await writeAudit(c.env, c.get('user'), 'event_created', 'event', id, {
     type: body.type || 'other',
@@ -93,12 +119,21 @@ events.post('/', authMiddleware, async (c) => {
 events.put('/:id', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  const validation = eventError(body, c.req.method === 'PUT');
+  if (validation) return c.json({ error: validation }, 400);
   const image = await approvedMediaUrl(c.env, c.req.url, body.image);
   if (body.image && !image) return c.json({ error: 'Choose an approved reviewed image' }, 400);
   const id = c.req.param('id');
+  const existing = await c.env.DB.prepare('SELECT * FROM events WHERE id = ? AND is_active = 1').bind(id).first();
+  if (!existing) return c.json({ error: 'Event not found' }, 404);
+  try {
+    const location = locationFields(body, existing, false);
+    body.mapsUrl = location.link; body.mapsEmbedUrl = location.embed;
+  } catch (error) { return c.json({ error: (error as Error).message }, 400); }
   const fields: string[] = [];
   const vals: unknown[] = [];
   const map: Record<string, string> = {
+    mapsUrl: 'maps_url', mapsEmbedUrl: 'maps_embed_url',
     title: 'title', description: 'description', type: 'type',
     date: 'date', endDate: 'end_date', end_date: 'end_date',
     time: 'time', endTime: 'end_time', end_time: 'end_time',

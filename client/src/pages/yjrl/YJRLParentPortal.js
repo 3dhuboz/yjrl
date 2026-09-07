@@ -1,3 +1,4 @@
+import VenueMap from '../../components/VenueMap';
 import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -186,7 +187,7 @@ const YJRLParentPortal = () => {
                 {[
                   { icon: Calendar, label: 'Training Days', value: child.teamId?.trainingDay || 'TBC' },
                   { icon: Clock, label: 'Training Time', value: child.teamId?.trainingTime || 'TBC' },
-                  { icon: MapPin, label: 'Venue', value: child.teamId?.trainingVenue || 'Nev Skuse Oval' },
+                  { icon: MapPin, label: 'Venue', value: <VenueMap compact venue={child.teamId?.trainingVenue} url={child.teamId?.trainingMapsUrl} /> },
                   { icon: Shield, label: 'Head Coach', value: child.teamId?.coachName || 'TBC' },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -220,7 +221,7 @@ const YJRLParentPortal = () => {
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem' }}>{f.homeTeamName} vs {f.awayTeamName}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--yjrl-muted)', display: 'flex', gap: '0.75rem' }}>
                         <span><Clock size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} />{f.time}</span>
-                        <span><MapPin size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} />{f.venue}</span>
+                        <VenueMap compact venue={f.venue} url={f.mapsUrl} />
                       </div>
                     </div>
                   </div>
@@ -289,7 +290,7 @@ const YJRLParentPortal = () => {
                     <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Round {f.round}: {f.homeTeamName} vs {f.awayTeamName}</div>
                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>
                       <span><Clock size={11} style={{ marginRight: 3 }} />{f.time}</span>
-                      <span><MapPin size={11} style={{ marginRight: 3 }} />{f.venue}</span>
+                      <VenueMap compact venue={f.venue} url={f.mapsUrl} />
                     </div>
                   </div>
                 </div>

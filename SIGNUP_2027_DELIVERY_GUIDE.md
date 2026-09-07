@@ -27,6 +27,23 @@ Production source: `46ea14cecf05b277d5863a9b31c2be4e6f7d7915` on `codex/2027-sig
 
 When a step needs a club decision or external change, record the dependency and continue independent implementation. Deploy a verified milestone through review first, then promote with opening controls closed. Do not equate a build or Git push with a deployment.
 
+## Admin testing requests — 7 September
+
+These requests take priority over the remaining launch work above. Deploy through protected review, then production, in completed groups.
+
+| Request | Status |
+| --- | --- |
+| Fixture creation explains missing opponent/date; edit existing fixtures | Implemented; release verification in progress |
+| Admin Google Maps destinations and optional clickable previews for training, fixtures and events | Implemented; release verification in progress |
+| Events tab with calendar, create/edit, drafts, publishing and removal | Implemented; release verification in progress |
+| Upload, privately preview, approve and select a news photo inside the article editor | Implemented; release verification in progress |
+| Clear Save Draft / Publish Article actions and Publish button on draft list | Implemented; release verification in progress. Existing Test article is a draft |
+| Add Player in admin and link to the public registration page | Implemented; release verification in progress. Manual records stay pending; no junior login or payment is created |
+| Remove audit-log/technical status panels from admin | Implemented; backend activity history retained |
+| Search/sort chat rooms by age group, name or type | Implemented; numeric age ordering |
+| Uniforms and merchandise shop: online payment and pay on collection | Next implementation; products, provider and fulfilment details pending from Nathan |
+| Nathan handover and test checklist | Draft in `NATHAN_TESTING_HANDOVER.md`; finalise after deployments |
+
 ## What is already implemented
 
 - Shared 2027 season and strict fee/form validation; unknown fees are never guessed and changed quotes require review.
@@ -68,4 +85,4 @@ Use `ops/2027_RELEASE_RUNBOOK.md` for exact resources, build/migration commands 
 
 Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Do not set actual safeguarding sign-off until the club adopts the incident playbook and approves launch.
 
-**Next implementation:** guardian verification and account recovery, then form/consent versioning and parent withdrawal. Keep deployments incremental and this table current.
+**Next implementation:** finish the admin testing requests and shop setup above, then return to guardian verification, recovery and form/consent versioning. Keep deployments incremental and this table current.

@@ -1,7 +1,8 @@
 import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useState } from 'react';
-import { Calendar, MapPin, Shield, Users } from 'lucide-react';
+import { Calendar, Shield, Users } from 'lucide-react';
 import api from '../../api';
+import VenueMap from '../../components/VenueMap';
 import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
 
@@ -78,10 +79,7 @@ const YJRLTeams = () => {
                     <Calendar size={15} style={{ color: 'var(--yjrl-gold)' }} />
                     <span>{team.trainingDay || 'Training TBC'}{team.trainingTime ? ` at ${team.trainingTime}` : ''}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--yjrl-muted)', fontSize: '0.86rem' }}>
-                    <MapPin size={15} style={{ color: 'var(--yjrl-gold)' }} />
-                    <span>{team.trainingVenue || 'Nev Skuse Oval, Yeppoon'}</span>
-                  </div>
+                  <VenueMap venue={team.trainingVenue} url={team.trainingMapsUrl} embedUrl={team.trainingMapsEmbedUrl} />
                 </div>
               </div>
             ))}

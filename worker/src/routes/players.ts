@@ -200,11 +200,11 @@ players.get('/my-player', authMiddleware, async (c) => {
     c.env.DB.prepare('SELECT * FROM player_stats WHERE player_id = ?').bind(p.id).all(),
     c.env.DB.prepare('SELECT a.*, pa.awarded_at, pa.season AS award_season, pa.notes AS award_notes FROM achievements a JOIN player_achievements pa ON a.id = pa.achievement_id WHERE pa.player_id = ?').bind(p.id).all(),
     c.env.DB.prepare('SELECT * FROM attendance_records WHERE player_id = ? ORDER BY date DESC LIMIT 30').bind(p.id).all(),
-    p.team_id ? c.env.DB.prepare('SELECT id, name, age_group, training_day, training_time, training_venue, coach_name FROM teams WHERE id = ?').bind(p.team_id).first() : null,
+    p.team_id ? c.env.DB.prepare('SELECT id, name, age_group, training_day, training_time, training_venue, training_maps_url, training_maps_embed_url, coach_name FROM teams WHERE id = ?').bind(p.team_id).first() : null,
   ]);
   const formatted = formatPlayer(p, statsR.results || [], achR.results || [], attR.results || [], { scope: 'player' });
   if (teamR) {
-    formatted.teamId = { _id: teamR.id, name: teamR.name, ageGroup: teamR.age_group, trainingDay: teamR.training_day, trainingTime: teamR.training_time, trainingVenue: teamR.training_venue, coachName: teamR.coach_name } as unknown as string;
+    formatted.teamId = { _id: teamR.id, name: teamR.name, ageGroup: teamR.age_group, trainingDay: teamR.training_day, trainingTime: teamR.training_time, trainingVenue: teamR.training_venue, trainingMapsUrl: teamR.training_maps_url, trainingMapsEmbedUrl: teamR.training_maps_embed_url, coachName: teamR.coach_name } as unknown as string;
   }
   return auditedPlayerResponse(c, formatted, [p.id], 'player_self', 'player');
 });
@@ -216,7 +216,7 @@ players.get('/my-children', authMiddleware, async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT p.*, t.name AS team_name, t.age_group AS team_age_group,
             t.training_day AS team_training_day, t.training_time AS team_training_time,
-            t.training_venue AS team_training_venue, t.coach_name AS team_coach_name,
+            t.training_venue AS team_training_venue, t.training_maps_url AS team_maps_url, t.training_maps_embed_url AS team_maps_embed_url, t.coach_name AS team_coach_name,
             r.payment_status AS registration_payment_status,
             r.fee_amount AS registration_fee_amount,
             r.paid_at AS registration_paid_at
@@ -249,7 +249,7 @@ players.get('/my-children', authMiddleware, async (c) => {
         ageGroup: p.team_age_group,
         trainingDay: p.team_training_day,
         trainingTime: p.team_training_time,
-        trainingVenue: p.team_training_venue,
+        trainingVenue: p.team_training_venue, trainingMapsUrl: p.team_maps_url, trainingMapsEmbedUrl: p.team_maps_embed_url,
         coachName: p.team_coach_name,
       } as unknown as string;
     }
@@ -270,7 +270,7 @@ players.get('/my-team', authMiddleware, async (c) => {
   const teamFormatted = {
     _id: team.id, id: team.id, name: team.name, division: team.division, season: team.season,
     ageGroup: team.age_group, coachName: team.coach_name,
-    trainingDay: team.training_day, trainingTime: team.training_time, trainingVenue: team.training_venue,
+    trainingDay: team.training_day, trainingTime: team.training_time, trainingVenue: team.training_venue, trainingMapsUrl: team.training_maps_url, trainingMapsEmbedUrl: team.training_maps_embed_url,
     wins: team.wins, losses: team.losses, draws: team.draws,
     pointsFor: team.points_for, pointsAgainst: team.points_against,
     colors: { primary: team.color_primary, secondary: team.color_secondary },
@@ -313,6 +313,21 @@ players.post('/', authMiddleware, async (c) => {
   const body = await c.req.json();
   if (invalidConsent(body)) return c.json({ error: 'Consent choices must be true or false' }, 400);
   if (body.photo) return c.json({ error: 'Player photos must be uploaded, reviewed, and approved before use' }, 400);
+  for (const [camel, snake] of [['firstName', 'first_name'], ['lastName', 'last_name']]) {
+    const value = body[camel] ?? body[snake];
+    if (typeof value !== 'string' || !value.trim() || value.length > 100) return c.json({ error: 'Enter the player’s first and last names (up to 100 characters each).' }, 400);
+    body[camel] = value.trim();
+  }
+  const dob = body.dateOfBirth || body.date_of_birth;
+  if (dob) {
+    const date = new Date(`${dob}T00:00:00Z`);
+    if (typeof dob !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dob) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== dob || dob > new Date().toISOString().slice(0, 10)) return c.json({ error: 'Enter a valid date of birth.' }, 400);
+    const duplicate = await c.env.DB.prepare('SELECT id FROM players WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?) AND date_of_birth = ? AND registration_year = ? AND is_active = 1')
+      .bind(body.firstName, body.lastName, dob, body.registrationYear || body.registration_year || seasonConfig.season).first();
+    if (duplicate) return c.json({ error: 'A player with this name and date of birth already exists for this season. Check the Players list.' }, 409);
+  }
+  const teamId = body.teamId || body.team_id;
+  if (teamId && !(await c.env.DB.prepare('SELECT id FROM teams WHERE id = ? AND is_active = 1').bind(teamId).first())) return c.json({ error: 'Choose an active team.' }, 400);
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO players (id, user_id, first_name, last_name, date_of_birth, age_group, team_id, position, jersey_number, guardian_name, guardian_phone, guardian_email, emergency_name, emergency_phone, emergency_relationship, medical_notes, registration_status, registration_year, playhq_id, coach_notes, pathway_level, pathway_notes, photo)

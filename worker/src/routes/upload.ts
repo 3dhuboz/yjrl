@@ -47,7 +47,7 @@ upload.post('/', authMiddleware, bodyLimit({ maxSize: MAX_IMAGE_SIZE + 64 * 1024
     return c.json({ error: 'The upload could not be saved. Please try again.' }, 503);
   }
   await writeAudit(c.env, user, 'upload_created', 'upload', key, { category, playerIds: ids, processingVersion: MEDIA_PROCESSING_VERSION });
-  return c.json({ url: null, status: 'pending_review' }, 201);
+  return c.json({ key, url: null, status: 'pending_review' }, 201);
 });
 
 export default upload;
