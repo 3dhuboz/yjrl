@@ -3,7 +3,6 @@ import ArticlePhotoUpload from '../../components/ArticlePhotoUpload';
 import { fixtureError } from '../../../../shared/fixture';
 import { locationFields } from '../../../../shared/maps';
 import MapLocationFields from '../../components/MapLocationFields';
-import VenueMap from '../../components/VenueMap';
 import AdminEvents from '../../components/AdminEvents';
 import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -11,7 +10,7 @@ import {
   Users, Trophy, Calendar, Newspaper, Plus, Edit, Trash2, Save,
   Shield, X, CheckCircle, AlertCircle
 } from 'lucide-react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
@@ -158,13 +157,13 @@ const YJRLAdminPortal = () => {
     }))
     .filter(coach => coach.id), [adultApprovals]);
 
-  useEffect(() => {
-    const visibleRooms = [...rooms].filter(room => `${room.name || ''} ${room.type || ''} ${room.age_group || room.ageGroup || ''}`.toLowerCase().includes(roomSearch.trim().toLowerCase())).sort((a, b) => {
+  const visibleRooms = [...rooms].filter(room => `${room.name || ''} ${room.type || ''} ${room.age_group || room.ageGroup || ''}`.toLowerCase().includes(roomSearch.trim().toLowerCase())).sort((a, b) => {
     const value = room => roomSort === 'age' ? (room.age_group || room.ageGroup || 'ZZ') : roomSort === 'type' ? room.type || '' : room.name || '';
     return value(a).localeCompare(value(b), 'en', { numeric: true }) || (a.name || '').localeCompare(b.name || '', 'en', { numeric: true });
   });
 
-  if (!isAdmin) return;
+  useEffect(() => {
+    if (!isAdmin) return;
     let alive = true;
     setLoading(true);
 
