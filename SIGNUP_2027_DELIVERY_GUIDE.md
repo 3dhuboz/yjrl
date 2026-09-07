@@ -34,6 +34,8 @@ These requests take priority over the remaining launch work above. Deploy throug
 | Request | Status |
 | --- | --- |
 | Fixture creation explains missing opponent/date; edit existing fixtures | **Deployed:** `9360581` |
+| Google venue search/select | **Implemented and deployed; connection pending.** No Places/Embed keys found; current fallback searches Google Maps in a new tab. Actual provider acceptance still required |
+| Product size tick boxes and linked stocktake | **Deployed:** per-size counts/thresholds, pending collections and atomic collection deductions. Product ordering availability remains manual |
 | Admin Google Maps destinations and optional clickable previews for training, fixtures and events | **Deployed:** `9360581` |
 | Events tab with calendar, create/edit, drafts, publishing and removal | **Deployed:** `9360581` |
 | Upload, privately preview, approve and select a news photo inside the article editor | **Deployed:** `9360581` |
@@ -70,6 +72,7 @@ Real Chrome acceptance now passes for the requested admin and shop flows: `hs-20
 
 | UTC, 7 Sep 2026 | Source / action | Result |
 | --- | --- | --- |
+| 09:35–09:38 | `f88e4db`, sizes/stocktake and Maps connection preparation | Migration 0011 applied; Worker `f353e754-bce1-4687-b502-c4ee570bc0f4`; Pages https://ec1fc387.yjrl.pages.dev; 90 tests, browser checks and live HTTP checks pass. Google provider setup pending; orders closed |
 | 08:02–08:08 | `fa7f355`, shop and edit preservation | Migration 0010 applied; Worker `83151c72-9a94-4086-b6d9-879fe8411019`; Pages https://1171f88e.yjrl.pages.dev; 82 tests and both browser suites pass; shop closed with no products and online provider unconfigured |
 | 07:34–07:36 | `9360581`, admin tools and maps | 69 tests/typecheck/build pass; Chrome acceptance `hs-20260907073407-3795159-89abc4c4`; migration 0009 applied; Worker `48709805-395b-45dd-9166-0ffd2d3464d0`; Pages https://d8385052.yjrl.pages.dev; live bundle verified |
 | 03:02 | `13aa212`, packaging attempt | Host workspace list rejected YJRL; no deployment |
@@ -87,4 +90,4 @@ Use `ops/2027_RELEASE_RUNBOOK.md` for exact resources, build/migration commands 
 
 Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Do not set actual safeguarding sign-off until the club adopts the incident playbook and approves launch.
 
-**Next action:** Nathan’s admin testing and information collection using the handover. Resume guardian verification, recovery and form/consent versioning for season opening; complete real provider acceptance and confirmed catalogue/fulfilment setup before shop opening. Keep deployments incremental and this table current.
+**Next action:** connect the approved Google Maps project and run real-provider acceptance; obtain opening stock counts. Nathan’s admin testing and information collection using the handover. Resume guardian verification, recovery and form/consent versioning for season opening; complete real provider acceptance and confirmed catalogue/fulfilment setup before shop opening. Keep deployments incremental and this table current.

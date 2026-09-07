@@ -2,6 +2,8 @@
 
 ## Active 2027 sign-up work
 
+- `worker/src/routes/stock.ts`, migration 0011, `AdminStocktake`/`ProductSizeFields`: size tick boxes, counted inventory and atomic collection deductions.
+- `worker/src/routes/maps.ts`, `useMapsConfig`, `ops/GOOGLE_MAPS_SETUP.md`: Google venue selection; real Places/Embed connection is still required.
 - `NATHAN_TESTING_HANDOVER.md`: delivered admin/shop test steps and club information still needed.
 - `shared/maps.ts`, migration 0009, `VenueMap`/`MapLocationFields`: admin Google Maps destinations and public links/previews.
 - `AdminEvents`, `AdminAddPlayer`, `ArticlePhotoUpload`: calendar, manual pending player and inline reviewed photo tools.

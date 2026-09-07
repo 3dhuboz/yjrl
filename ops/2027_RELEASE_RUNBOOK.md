@@ -1,3 +1,9 @@
+## Latest incremental release — 7 September 2026, 09:38 UTC
+
+Source `f88e4db7fec8f200660ca2973812f9860f51a98c`; production Worker `f353e754-bce1-4687-b502-c4ee570bc0f4`; Pages https://ec1fc387.yjrl.pages.dev (alias verified), bundle `index-DB6Ofdu3.js`. Review `fdebc836-5f65-41dc-b064-eb4989cdd3b0` includes the same application code before the final CSS map-height adjustment. Migration 0011 is journaled in both DBs. The D1 collection guard uses a separate trigger to avoid CASE/END migration parsing; do not rewrite applied migrations.
+
+Recovery bookmark before 0011: `0000009e-00000000-000050df-66750f03e6df565c5d4a90c0917b34ba`. Stock deductions and count history are database triggers, so retain these with the shop order workflow. Never replay collection events or manually subtract stock after the application marks an order collected. Counts are physical totals; pending orders are displayed separately and product availability remains manually managed. Google keys are absent; follow `GOOGLE_MAPS_SETUP.md`. Opening settings are unchanged and closed. See the latest readiness checkpoint for exact check receipts.
+
 # 2027 incremental release procedure
 
 Steve authorised ongoing deployment and the exact YJRL host workspace addition. That addition is applied; the wrapper remains root:root / 755. All Wrangler commands still run through `headsnap cloudflare yjrl`. Keep production registration/member opening closed until genuine club readiness and sign-off.
