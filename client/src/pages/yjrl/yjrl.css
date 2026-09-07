@@ -272,7 +272,7 @@
 .venue-map { display: block; width: 100%; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 10px; background: #f8fafc; color: #1d4ed8; text-decoration: none; margin: .5rem 0; }
 .venue-map:hover { border-color: #1d4ed8; }
 .venue-map:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
-.venue-map iframe { display: block; width: 100%; height: 190px; border: 0; pointer-events: none; }
+.venue-map iframe { display: block; width: 100%; height: 220px; border: 0; pointer-events: none; }
 .venue-map-caption { padding: .8rem; font-size: .85rem; }
 .venue-map-caption > span { flex: 1; }
 .venue-map-caption small { display: block; font-size: .72rem; margin-top: .2rem; }
