@@ -42,4 +42,6 @@ export interface AuthUser {
 
 export type Variables = {
   user: AuthUser;
+  checklistActor: string;
+  checklistAdmin: boolean;
 };

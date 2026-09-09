@@ -104,3 +104,15 @@ Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEAS
 The previous stock note about manually controlling all order availability is superseded: on-hand counts minus pending orders now determine size availability automatically. Unknown stock is unavailable. Pending unpaid orders reserve stock until collected or eligible cancellation; do not manually double-deduct reservations.
 
 Final validation for this delivery: 99 API/SQLite tests, Worker typecheck, production build, and protected-review Chrome tests passed. Production deep links serve the expected bundle; communication APIs require authentication and shop ordering stays closed. No real family messages, payments or emails were sent.
+
+## Nathan’s simple content handover
+
+- [x] Short eight-item checklist with the detailed test manual moved to `ops/ADMIN_TESTING_REFERENCE.md`.
+- [x] Checklist notes, save-for-later/submission status and per-item private photo uploads; admin photo-review handover.
+- [x] Private 90-day link with no admin/player access, hashed server storage and immediate revocation.
+- [x] Protected-review Chrome acceptance: save/reload, real processed private photo upload, admin review handover, mobile layout and immediate link revocation (`hs-20260909063101-2203664-fba27f7f`). All 103 API/SQLite tests and Worker typecheck pass.
+- [ ] Production deployment; hand one private link to Steve for Nathan.
+
+The private link is not stored in this repository. Club admins can create/turn off links under **Website checklist**. Website content stays private until the usual admin publication/review steps.
+
+Checkpoint, 9 September 06:32 UTC: checklist implementation ready for promotion on `codex/2027-signup-readiness` (base `fa5f756`). Changed files cover the shared eight-item list, private checklist route/component, admin entry, scoped API, migration 0014, acceptance tests and handover docs. Review Worker `4c9a951c-0282-43ef-b772-719ba44f1e81` passed browser acceptance. Production pre-0014 recovery bookmark is `000000e5-00000000-000050e1-14db8f86ac1fd1b24e39df86d3482a0c`; only 0014 is pending. Next: push the validated source, apply 0014, deploy matching Worker/Pages, provision the hashed Nathan invite and verify the live private link. Existing season-opening dependencies remain unchanged.

@@ -13,6 +13,7 @@ import YJRLRegister from './pages/yjrl/YJRLRegister';
 import adultAccount from '../../shared/adultAccount.json';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
 import YJRLParentPortal from './pages/yjrl/YJRLParentPortal';
+import YJRLChecklist from './pages/yjrl/YJRLChecklist';
 import YJRLCommunication from './pages/yjrl/YJRLCommunication';
 import YJRLShop from './pages/yjrl/YJRLShop';
 import YJRLAdminPortal from './pages/yjrl/YJRLAdminPortal';
@@ -171,6 +172,7 @@ const ProtectedRoute = ({ children, adminOnly = false, roles = [] }) => {
 const AppRoutes = () => (
   <Routes>
     {/* Public */}
+    <Route path="/website-checklist" element={<YJRLChecklist />} />
     <Route path="/" element={<YJRLHome />} />
     <Route path="/fixtures" element={<YJRLFixtures />} />
     <Route path="/teams" element={<YJRLTeams />} />

@@ -202,3 +202,12 @@ Provider reference checks: [PayPal Orders flow](https://developer.paypal.com/api
 - Boundaries: registration/member/shop gates remain closed. No Google/PayPal/email credentials introduced. Chat uses foreground polling, no background notifications. Group schedule is separate from published fixtures/events; RSVP counts are adult accounts/families, not individual children.
 - Legal limitation: versioned acknowledgement is not a blanket liability waiver or legal sign-off; Nathan must arrange club legal/insurer review and confirm safeguarding/report handling before member opening.
 - Exact next action: use `NATHAN_TESTING_HANDOVER.md` for club testing and outstanding details; next engineering launch item is independent guardian verification/account recovery in `SIGNUP_2027_DELIVERY_GUIDE.md`. Do not infer legal approval or launch permission from test acceptance.
+
+## Checkpoint — 9 September 2026: Nathan checklist ready for review
+
+- Objective: simplify Nathan’s handover and supply a private upload/information link without admin access, as Steve selected.
+- Branch `codex/2027-signup-readiness`, base HEAD `fa5f756`; changes are not yet committed.
+- Files: short Nathan guide, separate detailed admin reference, shared eight-section checklist, checklist component/page/admin tab, migration 0014, routes, focused tests/browser script.
+- Evidence: 103 API/SQLite tests, typecheck and review build pass (`hs-20260909061754-2172680-a407c87e`, `hs-20260909061755-2172965-7696afdd`, `hs-20260909061756-2173092-28355384`). Private links are hashed, expire in 90 days, revoke immediately and do not grant admin/player access. Photos process to metadata-free WebP, stay private and enter existing review only through an admin action.
+- Next: apply only 0014 to review and run browser acceptance; then commit/push, production recovery bookmark/migration/deploy and create one Nathan invite. Never put the raw invite in Git, docs, logs or PR; hand it to Steve privately in the final response.
+- Limits: one shared club preparation checklist. Photos only (JPG/PNG/WebP); other information goes into notes/links. Removal hides checklist photos while retaining review/history; club retention operations remain a launch follow-up.

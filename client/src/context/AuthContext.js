@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('yjrl_token');
     if (token) {
-      api.get('/auth/me')
+      api.get('/auth/me', { skipAuthRedirect: window.location.pathname === '/website-checklist' })
         .then(res => setUser(res.data))
         .catch(() => localStorage.removeItem('yjrl_token'))
         .finally(() => setLoading(false));

@@ -24,6 +24,7 @@ import mediaRoutes from './routes/media';
 import shopRoutes from './routes/shop';
 import mapsRoutes from './routes/maps';
 import stockRoutes from './routes/stock';
+import checklistRoutes from './routes/checklist';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -55,7 +56,7 @@ function allowedOrigin(origin: string | undefined, env: Env): string | undefined
 app.use('*', cors({
   origin: (origin, c) => allowedOrigin(origin, c.env),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Checklist-Token'],
   exposeHeaders: ['Retry-After'],
   maxAge: 86400,
 }));
@@ -135,6 +136,8 @@ app.use('/api/yjrl/shop/orders/:id/capture', rateLimit('shop-payment', 30, 15 * 
 app.route('/api/yjrl/shop', shopRoutes);
 app.route('/api/yjrl/maps', mapsRoutes);
 app.route('/api/yjrl/stock', stockRoutes);
+app.use('/api/yjrl/checklist/*', rateLimit('checklist-write', 60, 3600, ['POST', 'PUT', 'DELETE']));
+app.route('/api/yjrl/checklist', checklistRoutes);
 app.route('/api/yjrl/news', newsRoutes);
 app.route('/api/yjrl/events', eventsRoutes);
 app.route('/api/yjrl/achievements', achievementsRoutes);

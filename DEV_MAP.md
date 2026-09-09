@@ -2,6 +2,9 @@
 
 ## Active 2027 sign-up work
 
+- `shared/websiteChecklist.json`, `WebsiteChecklist`, `/website-checklist`, `worker/src/routes/checklist.ts`, migration 0014: Nathan’s private content checklist, saved notes/photos and revocable links. Admin forwards photos to existing review; submissions never auto-publish.
+- `ops/ADMIN_TESTING_REFERENCE.md`: detailed testing instructions separated from the short Nathan guide.
+
 - `worker/src/routes/communication.ts`, `lib/chatRooms.ts`, migration 0013: adult team/coaches/committee groups, read/reactions, announcements and private schedules/RSVPs.
 - `shared/chatAgreement.json`, `middleware/chatAgreement.ts`, `ChatAgreement`: versioned adult communication acknowledgement. Club legal review remains pending.
 - `CommunicationHub`, `GroupSchedule`, `YJRLChat`, `worker/tests/communication.test.mjs`, `scripts/accept-chat-browser.mjs`: communication UX and acceptance.

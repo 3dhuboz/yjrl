@@ -1,0 +1,10 @@
+[
+  {"id":"season","title":"2027 sign-ups","hint":"When can families register, and what will it cost?","prompts":["Opening and closing dates","Age groups, fees and what is included","Discounts, payment plans and registration link"]},
+  {"id":"contacts","title":"Club contacts","hint":"Who should families contact?","prompts":["Registrar and general enquiries: name, email and phone","Who will help test the website?","Who manages the club website address and Google Maps account?"]},
+  {"id":"teams","title":"Teams, training and games","hint":"Send the details you have so far.","prompts":["Team names, age groups and coaches","Training days, times and locations","Fixture draw and Google Maps links for the grounds"]},
+  {"id":"news","title":"News and events","hint":"What would you like families to see?","prompts":["News stories or announcements","Event name, date, time and location","Photos, with a short description of where each belongs"]},
+  {"id":"shop","title":"Uniforms and merchandise","hint":"Tell us what the club will sell.","prompts":["Product names, prices and photos","Available sizes, colours and quantity of each","Supplier details and size charts"]},
+  {"id":"collection","title":"Payments and collection","hint":"How will families pay and receive their orders?","prompts":["Collection location, times and contact","Payment methods on collection and who manages online payments","Delivery or preorders, if needed; exchange and refund rules"]},
+  {"id":"photos","title":"Club photos and sponsors","hint":"Add the pictures and logos you want on the site.","prompts":["Club logos, grounds and general club photos","Sponsor names, logos and website links","Photo captions and where each image should appear"]},
+  {"id":"approval","title":"Final checks","hint":"Let us know who will check everything before opening.","prompts":["Approved admins, coaches and committee members","Contact for safety reports or account misuse","Who will review the registration, consent and account-use wording?","Anything you found while testing that needs fixing"]}
+]

@@ -1,3 +1,4 @@
+import WebsiteChecklist from '../../components/WebsiteChecklist';
 import CommunicationHub from '../../components/CommunicationHub';
 import AdminShop from '../../components/AdminShop';
 import AdminStocktake from '../../components/AdminStocktake';
@@ -494,6 +495,7 @@ const YJRLAdminPortal = () => {
               ['stocktake', 'Stocktake'],
               ['news', 'News'],
               ['players', 'Players'],
+              ['checklist', 'Website checklist'],
               ['communication', 'Messages'],
               ['moderation', 'Chat Safety']
             ].map(([key, label]) => (
@@ -799,6 +801,7 @@ const YJRLAdminPortal = () => {
           </div>
         )}
 
+        {tab === 'checklist' && <WebsiteChecklist />}
         {tab === 'communication' && <CommunicationHub />}
         {tab === 'moderation' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

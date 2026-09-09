@@ -375,3 +375,55 @@
 .yjrl-activity-fields .yjrl-input { margin-top:.4rem; }
 .yjrl-committee-members { display:flex; flex-direction:column; gap:1rem; margin-top:1rem; }
 @media(max-width:760px) { .yjrl-communication-grid { grid-template-columns:1fr; } .yjrl-group-picker nav { max-height:180px; } .yjrl-chat-messages { height:420px; } .yjrl-chat-message, .yjrl-chat-message.is-own { margin-left:0; margin-right:0; } .yjrl-chat-compose { flex-direction:column; align-items:stretch; } .yjrl-chat-tabs button { font-size:.8rem; padding:.8rem .4rem; } }
+
+/* Club website content handover */
+.checklist-page { min-height:100vh; background:#f5f7fb; }
+.checklist-brand { padding:1.1rem max(1.2rem,calc((100% - 1000px)/2)); background:#172554; color:white; display:flex; gap:1rem; flex-wrap:wrap; justify-content:space-between; }
+.checklist-brand a { color:white; font-weight:800; text-decoration:none; }
+.checklist-brand span { color:#dce7ff; }
+.checklist-page main { max-width:1000px; margin:auto; padding:2rem 1.2rem 3rem; }
+.website-checklist { max-width:1000px; margin:auto; }
+.checklist-heading { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; color:#172554; }
+.checklist-heading h1 { font-size:clamp(1.5rem,3vw,2rem); font-weight:800; margin-bottom:.2rem; }
+.checklist-heading p, .checklist-intro { color:#52637c; line-height:1.6; }
+.checklist-progress { display:flex; align-items:center; gap:1rem; padding:1rem 0; margin-bottom:.6rem; font-weight:600; }
+.checklist-progress progress { flex:1; height:10px; max-width:360px; accent-color:#1d47dd; }
+.checklist-items { display:grid; gap:1rem; }
+.website-checklist-item { background:white; border:1px solid #dce3ed; border-radius:12px; overflow:hidden; }
+.website-checklist-item > summary { display:flex; align-items:center; gap:.85rem; padding:1.1rem; cursor:pointer; list-style:none; }
+.website-checklist-item > summary::-webkit-details-marker { display:none; }
+.checklist-step { display:flex; width:36px; height:36px; flex-shrink:0; align-items:center; justify-content:center; border-radius:50%; color:#1d47dd; background:#eef3ff; font-weight:800; }
+.checklist-step.is-done { color:#128247; background:#eaf9f0; }
+.checklist-item-title { flex:1; min-width:0; }
+.checklist-item-title strong, .checklist-item-title small { display:block; }
+.checklist-item-title strong { font-size:1rem; }
+.checklist-item-title small { color:#63738a; margin-top:.25rem; font-size:.82rem; }
+.checklist-status { font-size:.73rem; background:#f1f3f6; padding:.35rem .6rem; border-radius:20px; white-space:nowrap; }
+.checklist-status.submitted { background:#fff5d5; color:#795300; }
+.checklist-status.complete { background:#eaf9f0; color:#128247; }
+.checklist-item-body { padding:0 1.2rem 1.2rem; border-top:1px solid #edf0f5; }
+.checklist-item-body ul { list-style:disc; padding:1rem 0 1rem 1.25rem; color:#52637c; line-height:1.8; }
+.checklist-item-body label { display:block; font-weight:600; }
+.checklist-item-body .yjrl-input { margin-top:.4rem; }
+.checklist-save-buttons { display:flex; flex-wrap:wrap; align-items:center; gap:.7rem; margin:1rem 0; }
+.checklist-save-buttons > span { font-size:.8rem; color:#63738a; }
+.checklist-upload { background:#f8fafc; border-radius:10px; padding:1rem; margin-top:1.4rem; }
+.checklist-upload h3 { display:flex; gap:.5rem; align-items:center; font-weight:700; }
+.checklist-upload > p { margin:.5rem 0 1rem; font-size:.83rem; color:#63738a; }
+.checklist-upload input[type=file] { display:block; margin-top:.5rem; width:100%; font-size:.85rem; }
+.checklist-upload-details { display:grid; gap:1rem; margin-top:1rem; }
+.checklist-upload-details label.checklist-permission { display:flex; gap:.7rem; align-items:flex-start; font-size:.85rem; font-weight:400; }
+.checklist-permission input { margin-top:.25rem; }
+.checklist-photos { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; }
+.checklist-photo { min-width:0; background:white; border:1px solid #dce3ed; border-radius:8px; overflow:hidden; }
+.checklist-photo img { width:100%; height:160px; object-fit:contain; background:#f1f3f7; }
+.checklist-photo p { padding:.7rem; overflow-wrap:anywhere; font-size:.85rem; }
+.checklist-photo-actions { display:flex; gap:.5rem; flex-wrap:wrap; padding:0 .7rem .7rem; font-size:.8rem; }
+.checklist-fine-print { font-size:.8rem; color:#63738a; line-height:1.5; margin-top:1rem; }
+.checklist-link-settings { margin-bottom:1.4rem; padding:1rem; border:1px solid #ccd9f5; background:#f1f5ff; border-radius:10px; }
+.checklist-link-settings summary { display:flex; gap:.5rem; align-items:center; cursor:pointer; font-weight:700; }
+.checklist-link-settings p { margin:.7rem 0; }
+.checklist-share { margin-top:1rem; display:grid; gap:.6rem; }
+.checklist-link-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; margin-top:.7rem; font-size:.85rem; }
+.checklist-error { padding:1rem; color:#a42121; background:#fff0f0; border-radius:8px; margin-bottom:1rem; }
+@media(max-width:600px) { .website-checklist-item > summary { flex-wrap:wrap; gap:.5rem; padding:.9rem; } .checklist-item-title { flex-basis:calc(100% - 72px); } .checklist-status { margin-left:44px; } .checklist-chevron { margin-left:auto; } .checklist-save-buttons .yjrl-btn { flex:1; justify-content:center; font-size:.8rem; padding:.7rem; } .checklist-progress { flex-wrap:wrap; } .checklist-progress progress { min-width:120px; } }
