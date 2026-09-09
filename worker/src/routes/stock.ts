@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { stockWrite, validStockCount } from '../lib/stock';
 
 const stock = new Hono<{ Bindings: Env; Variables: Variables }>();
 stock.use('*', authMiddleware, async (c, next) => {
@@ -29,21 +30,16 @@ stock.get('/', async c => {
 });
 stock.put('/:productId', async c => {
   const body = await c.req.json().catch(() => null), productId = c.req.param('productId');
-  if (!body || typeof body.option !== 'string' || !body.option.trim() || body.option.length > 100
-    || !Number.isInteger(body.onHand) || body.onHand < 0 || body.onHand > 100000
-    || !Number.isInteger(body.lowStockAt) || body.lowStockAt < 0 || body.lowStockAt > 100000
-    || !Number.isInteger(body.version) || body.version < 0
-    || typeof body.note !== 'string' || body.note.trim().length < 3 || body.note.length > 300) return c.json({ error: 'Enter whole stock counts, a low-stock threshold and a short reason for the count.' }, 400);
+  if (!validStockCount(body)) return c.json({ error: 'Enter whole stock counts, a low-stock threshold and a short reason for the count.' }, 400);
   const known = await c.env.DB.prepare(`SELECT id FROM shop_products WHERE id = ? AND (
     EXISTS(SELECT 1 FROM json_each(options) WHERE value = ?) OR EXISTS(SELECT 1 FROM shop_stock WHERE product_id = ? AND option = ?)
     OR EXISTS(SELECT 1 FROM shop_orders orders, json_each(orders.items) item WHERE orders.status = 'placed' AND json_extract(item.value, '$.productId') = ? AND json_extract(item.value, '$.option') = ?))`).bind(productId, body.option, productId, body.option, productId, body.option).first();
   if (!known) return c.json({ error: 'Product or size not found. Refresh the stocktake page.' }, 404);
-  const saved = await c.env.DB.prepare(`INSERT INTO shop_stock(product_id, option, on_hand, low_stock_at, note, updated_by)
-    SELECT ?, ?, ?, ?, ?, ? WHERE ? = 0 OR EXISTS(SELECT 1 FROM shop_stock WHERE product_id = ? AND option = ?)
-    ON CONFLICT(product_id, option) DO UPDATE SET on_hand = excluded.on_hand, low_stock_at = excluded.low_stock_at,
-    version = shop_stock.version + 1, note = excluded.note, updated_by = excluded.updated_by, updated_at = datetime('now')
-    WHERE shop_stock.version = ? RETURNING version`).bind(productId, body.option, body.onHand, body.lowStockAt, body.note.trim(), c.get('user').id, body.version, productId, body.option, body.version).first();
-  if (!saved) return c.json({ error: 'Stock changed while this form was open. Close it, refresh the stocktake and check the count again.' }, 409);
-  return c.json({ message: 'Stock count saved.', version: saved.version });
+  try { await stockWrite(c.env, productId, body, c.get('user').id).run(); }
+  catch (error) {
+    if (String(error).includes('shop_stock_conflict')) return c.json({ error: 'Stock changed while this form was open. Close it, refresh the stocktake and check the count again.' }, 409);
+    throw error;
+  }
+  return c.json({ message: 'Stock count saved.', version: body.version + 1 });
 });
 export default stock;

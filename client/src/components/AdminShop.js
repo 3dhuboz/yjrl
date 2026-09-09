@@ -22,6 +22,12 @@ export default function AdminShop({ players, onStocktake }) {
       if (!/^\d+(\.\d{1,2})?$/.test(form.price)) throw new Error('Enter a price with no more than two decimal places.');
       const payload = { ...form, priceCents: Math.round(Number(form.price) * 100), options: form.optionText.split('\n').map(value => value.trim()).filter(Boolean) };
       if (!payload.options.length) throw new Error('Select at least one size, or add a custom option.');
+      payload.stockCounts = [...new Set(payload.options)].flatMap(option => {
+        const original = form.stock?.find(item => item.option === option), value = form.counts[option];
+        if (value === undefined || (value === '' && original?.onHand == null) || (value !== '' && Number(value) === original?.onHand)) return [];
+        if (!/^\d+$/.test(value)) throw new Error(`Enter a whole stock quantity for ${option}.`);
+        return [{ option, onHand: Number(value), version: original?.version || 0, lowStockAt: original?.lowStockAt ?? 2, note: 'Count recorded in product editor' }];
+      });
       const res = await api.put(`/yjrl/shop/products/${form.id}`, payload);
       setData(prev => ({ ...prev, products: [...prev.products.filter(item => item.id !== res.data.id), res.data] })); setForm(null); toast.success(res.data.published ? 'Product published' : 'Product draft saved');
     } catch (e) { setError(e.response?.data?.error || e.message || 'Could not save product'); }
@@ -35,7 +41,7 @@ export default function AdminShop({ players, onStocktake }) {
     catch (e) { setError(e.response?.data?.error || 'Could not update order'); }
     finally { setBusy(false); }
   };
-  const edit = product => { setError(''); setForm({ ...product, price: (product.priceCents / 100).toFixed(2), optionText: product.options.join('\n') }); };
+  const edit = product => { setError(''); setForm({ ...product, counts: {}, price: (product.priceCents / 100).toFixed(2), optionText: product.options.join('\n') }); };
   if (!data) return <p role="status">{error || 'Loading shop…'}</p>;
   return <div>
     <div className="admin-toolbar" style={{ justifyContent: 'space-between' }}><h2>Uniforms & merchandise</h2><button className="yjrl-btn yjrl-btn-primary" onClick={() => edit({ id: crypto.randomUUID(), name: '', category: 'uniform', description: '', priceCents: 0, options: [], image: '', available: false, published: false })}><Plus size={16} /> Add Product</button></div>
@@ -58,7 +64,7 @@ export default function AdminShop({ players, onStocktake }) {
         <label>Product name<input aria-label="Product name" required maxLength={150} className="yjrl-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
         <div className="admin-form-grid"><label>Category<select aria-label="Product category" className="yjrl-input" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}><option value="uniform">Uniform</option><option value="merchandise">Merchandise</option></select></label><label>Price (AUD)<input aria-label="Price (AUD)" required type="number" min="0" step="0.01" className="yjrl-input" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} /></label></div>
         <label>Description<textarea aria-label="Product description" className="yjrl-input" rows={3} maxLength={2000} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label>
-        <ProductSizeFields value={form.optionText} onChange={optionText => setForm(prev => ({ ...prev, optionText }))} />
+        <ProductSizeFields value={form.optionText} onChange={optionText => setForm(prev => ({ ...prev, optionText }))} stock={form.stock} counts={form.counts} onCountChange={(size, value) => setForm(prev => ({ ...prev, counts: { ...prev.counts, [size]: value } }))} />
         {form.image && <><img src={form.image} alt={form.name || 'Product'} style={{ maxWidth: '100%', maxHeight: 180 }} /><button type="button" className="yjrl-btn yjrl-btn-secondary" onClick={() => setForm({ ...form, image: '' })}>Remove Photo</button></>}
         <ArticlePhotoUpload purpose="product" players={players} onRecords={() => {}} onBusy={setPhotoBusy} onApproved={record => setForm(prev => ({ ...prev, image: record.url }))} />
         <label className="admin-check"><input type="checkbox" checked={form.available} onChange={e => setForm({ ...form, available: e.target.checked })} /> Available to order</label><label className="admin-check"><input type="checkbox" checked={form.published} onChange={e => setForm({ ...form, published: e.target.checked })} /> Publish product on the website</label>

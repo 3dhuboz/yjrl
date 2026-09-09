@@ -4,6 +4,7 @@ import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
 import { approvedMediaUrl } from '../lib/media';
 import { createOrder, captureOrder, resumeOrder } from '../lib/paypal';
+import { stockWrite, validStockCount, type StockCount } from '../lib/stock';
 
 const shop = new Hono<{ Bindings: Env; Variables: Variables }>();
 type Row = Record<string, unknown>;
@@ -17,8 +18,15 @@ async function settings(env: Env) {
   const row = await env.DB.prepare('SELECT * FROM shop_settings WHERE id = 1').first();
   return { ordersOpen: flag(row?.orders_open), collectionEnabled: flag(row?.collection_enabled), onlineEnabled: flag(row?.online_enabled), collectionDetails: row?.collection_details || '', policies: row?.policies || '', onlineReady: paypalReady(env) };
 }
-async function product(env: Env, url: string, row: Row) {
-  return { id: row.id, name: row.name, category: row.category, description: row.description, priceCents: row.price_cents, options: JSON.parse(String(row.options)), image: await approvedMediaUrl(env, url, row.image), available: flag(row.available), published: flag(row.published) };
+async function product(env: Env, url: string, row: Row, admin = false) {
+  const options = JSON.parse(String(row.options)) as string[];
+  const counts = await env.DB.prepare('SELECT * FROM shop_stock_availability WHERE product_id = ?').bind(row.id).all();
+  const stock = options.map(option => {
+    const count = counts.results?.find(item => item.option === option);
+    return { option, available: Math.max(0, Number(count?.on_hand || 0) - Number(count?.reserved || 0)),
+      ...(admin ? { onHand: count?.on_hand ?? null, reserved: count?.reserved || 0, version: count?.version || 0, lowStockAt: count?.low_stock_at ?? 2 } : {}) };
+  });
+  return { id: row.id, name: row.name, category: row.category, description: row.description, priceCents: row.price_cents, options, stock, image: await approvedMediaUrl(env, url, row.image), available: flag(row.available), published: flag(row.published) };
 }
 function order(row: Row, admin = false) {
   return { id: row.id, items: JSON.parse(String(row.items)), totalCents: row.total_cents, paymentMethod: row.payment_method, paymentStatus: row.payment_status, status: row.status, createdAt: row.created_at, collectionDetails: row.collection_snapshot, policies: row.policies_snapshot,
@@ -33,7 +41,7 @@ shop.get('/admin', authMiddleware, async c => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const rows = await c.env.DB.prepare('SELECT * FROM shop_products WHERE is_active = 1 ORDER BY category, name').all();
   const orders = await c.env.DB.prepare('SELECT * FROM shop_orders ORDER BY created_at DESC LIMIT 100').all();
-  return c.json({ settings: await settings(c.env), products: await Promise.all((rows.results || []).map(row => product(c.env, c.req.url, row))), orders: (orders.results || []).map(row => order(row, true)) });
+  return c.json({ settings: await settings(c.env), products: await Promise.all((rows.results || []).map(row => product(c.env, c.req.url, row, true))), orders: (orders.results || []).map(row => order(row, true)) });
 });
 shop.put('/settings', authMiddleware, async c => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
@@ -58,11 +66,20 @@ shop.put('/products/:id', authMiddleware, async c => {
   if (body.image && !image) return c.json({ error: 'Choose an approved product photo.' }, 400);
   const id = c.req.param('id') || '';
   if (!/^[a-f0-9-]{36}$/.test(id)) return c.json({ error: 'Invalid product reference.' }, 400);
-  await c.env.DB.prepare(`INSERT INTO shop_products (id, name, category, description, price_cents, options, image, available, published)
+  const options = [...new Set(body.options.map((value: string) => value.trim()))];
+  const counts = body.stockCounts ?? [];
+  if (!Array.isArray(counts) || counts.length > 60 || counts.some(count => !validStockCount(count) || !options.includes(count.option))
+    || new Set(counts.map(count => count.option)).size !== counts.length) return c.json({ error: 'Enter valid whole stock counts for the selected sizes.' }, 400);
+  const saveProduct = c.env.DB.prepare(`INSERT INTO shop_products (id, name, category, description, price_cents, options, image, available, published)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, category=excluded.category, description=excluded.description, price_cents=excluded.price_cents, options=excluded.options, image=excluded.image, available=excluded.available, published=excluded.published, is_active=1, updated_at=datetime('now')`)
-    .bind(id, text(body.name, 150), body.category, text(body.description), body.priceCents, JSON.stringify([...new Set(body.options.map((value: string) => value.trim()))]), image, Number(body.available), Number(body.published)).run();
+    .bind(id, text(body.name, 150), body.category, text(body.description), body.priceCents, JSON.stringify(options), image, Number(body.available), Number(body.published));
+  try { await c.env.DB.batch([saveProduct, ...counts.map((count: StockCount) => stockWrite(c.env, id, count, c.get('user').id))]); }
+  catch (error) {
+    if (String(error).includes('shop_stock_conflict')) return c.json({ error: 'Stock changed while this product was open. Nothing was saved. Close and reopen it to check the latest counts.' }, 409);
+    throw error;
+  }
   await writeAudit(c.env, c.get('user'), 'shop_product_saved', 'shop_product', id, { published: body.published });
-  return c.json(await product(c.env, c.req.url, (await c.env.DB.prepare('SELECT * FROM shop_products WHERE id = ?').bind(id).first())!));
+  return c.json(await product(c.env, c.req.url, (await c.env.DB.prepare('SELECT * FROM shop_products WHERE id = ?').bind(id).first())!, true));
 });
 shop.delete('/products/:id', authMiddleware, async c => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
@@ -94,8 +111,12 @@ shop.post('/orders', authMiddleware, async c => {
   }
   if (body.expectedTotalCents !== total) return c.json({ error: 'Prices have changed. Refresh the shop and confirm the new total before ordering.' }, 409);
   const id = crypto.randomUUID();
-  await c.env.DB.prepare(`INSERT INTO shop_orders (id, user_id, request_id, payment_method, total_cents, items, contact_name, contact_email, contact_phone, policies_snapshot, collection_snapshot)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, request_id) DO NOTHING`).bind(id, user.id, body.requestId, body.paymentMethod, total, JSON.stringify(items), name, user.email, phone, config.policies, config.collectionDetails).run();
+  try { await c.env.DB.prepare(`INSERT INTO shop_orders (id, user_id, request_id, payment_method, total_cents, items, contact_name, contact_email, contact_phone, policies_snapshot, collection_snapshot)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, request_id) DO NOTHING`).bind(id, user.id, body.requestId, body.paymentMethod, total, JSON.stringify(items), name, user.email, phone, config.policies, config.collectionDetails).run(); }
+  catch (error) {
+    if (String(error).includes('shop_stock_unavailable')) return c.json({ error: 'An item has insufficient stock or its details changed. Refresh stock and reduce the quantity or choose another size.', code: 'stock_changed' }, 409);
+    throw error;
+  }
   const saved = (await c.env.DB.prepare('SELECT * FROM shop_orders WHERE user_id = ? AND request_id = ?').bind(user.id, body.requestId).first())!;
   if (saved.id === id) await writeAudit(c.env, user, 'shop_order_created', 'shop_order', id, { totalCents: total, paymentMethod: body.paymentMethod });
   return c.json(order(saved), 201);

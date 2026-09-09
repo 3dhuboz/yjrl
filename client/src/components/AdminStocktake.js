@@ -28,7 +28,7 @@ export default function AdminStocktake({ productId = '', onShop }) {
   return <div>
     <div className="admin-toolbar" style={{ justifyContent: 'space-between' }}><h2>Stocktake</h2><div className="admin-toolbar"><button className="yjrl-btn yjrl-btn-secondary" onClick={onShop}>Manage Products</button><button className="yjrl-btn yjrl-btn-primary" onClick={load} disabled={loading}>Refresh Stock</button></div></div>
     <p>Count stock by product and size, including items put aside for collection. Marking a paid order collected deducts its stock once. Orders awaiting collection include unpaid orders.</p>
-    <p>Stock counts help plan orders. Use a product’s availability in Shop to stop new orders.</p>
+    <p>Available stock is the count on hand minus orders awaiting collection. Zero or uncounted sizes cannot be ordered. Unpaid orders also hold stock until resolved.</p>
     <div className="admin-toolbar" style={{ margin: '1rem 0' }}>
       <input aria-label="Search stock" className="yjrl-input" placeholder="Search product or size" value={search} onChange={e => setSearch(e.target.value)} />
       <select aria-label="Filter stock" className="yjrl-input" style={{ width: 'auto' }} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All stock</option><option value="low">Low stock / shortfall</option><option value="uncounted">Not counted</option></select>

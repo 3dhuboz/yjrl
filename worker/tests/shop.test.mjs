@@ -10,7 +10,7 @@ async function setup(t, online = false) {
   const admin = await actor(env, 'admin', 'admin'), parent = await actor(env, 'parent', 'parent'), other = await actor(env, 'other', 'parent');
   const id = crypto.randomUUID(), details = { name: 'Synthetic jersey', category: 'uniform', description: 'Test product', priceCents: 2500, options: ['Size 10 / Blue', 'Size 12 / Blue'], published: true, available: true, image: '' };
   assert.equal((await send(env, admin, '/settings', 'PUT', config)).status, 200);
-  assert.equal((await send(env, admin, '/products/' + id, 'PUT', details)).status, 200);
+  assert.equal((await send(env, admin, '/products/' + id, 'PUT', { ...details, stockCounts: details.options.map(option => ({ option, onHand: 50, lowStockAt: 2, version: 0, note: 'Opening test stock' })) })).status, 200);
   const basket = { requestId: crypto.randomUUID(), items: [{ productId: id, option: 'Size 10 / Blue', quantity: 2 }], expectedTotalCents: 5000, paymentMethod: online ? 'paypal' : 'collection', name: 'Synthetic Adult', phone: '0400000000', acceptPolicies: true };
   return { env, admin, parent, other, id, details, basket, post: changes => send(env, parent, '/orders', 'POST', { ...basket, ...changes }) };
 }
@@ -99,4 +99,33 @@ test('production cannot offer unconfigured or sandbox online payment', async t =
   const { env, post } = await setup(t); env.PAYPAL_CLIENT_ID = 'test'; env.PAYPAL_CLIENT_SECRET = 'test'; env.PAYPAL_MODE = 'sandbox';
   assert.equal((await (await send(env, {}, '/')).json()).settings.onlineReady, false);
   assert.equal((await post({ paymentMethod: 'paypal' })).status, 400);
+});
+test('inline product counts and details save atomically; stale counts roll the whole edit back', async t => {
+  const { env, admin, id, details } = await setup(t);
+  const counts = details.options.map(option => ({ option, onHand: 4, lowStockAt: 2, version: 1, note: 'Counted in product editor' }));
+  const saved = await send(env, admin, '/products/' + id, 'PUT', { ...details, stockCounts: counts }); assert.equal(saved.status, 200);
+  assert.equal((await saved.json()).stock[0].onHand, 4);
+  const stale = await send(env, admin, '/products/' + id, 'PUT', { ...details, name: 'Must not save', stockCounts: [{ ...counts[0], version: 2, onHand: 99 }, counts[1]] });
+  assert.equal(stale.status, 409);
+  assert.equal(env.DB.sqlite.prepare('SELECT name FROM shop_products WHERE id=?').get(id).name, details.name);
+  assert.equal(env.DB.sqlite.prepare('SELECT on_hand FROM shop_stock WHERE product_id=? AND option=?').get(id, counts[0].option).on_hand, 4);
+  assert.equal((await send(env, admin, '/products/' + id, 'PUT', { ...details, stockCounts: [{ ...counts[0], onHand: -1 }] })).status, 400);
+});
+test('the final available units cannot be oversold by simultaneous orders, and retries retain one hold', async t => {
+  const { env, admin, id, details, post } = await setup(t);
+  await send(env, admin, '/products/' + id, 'PUT', { ...details, stockCounts: [{ option: details.options[0], onHand: 2, lowStockAt: 1, version: 1, note: 'Last two units' }] });
+  const results = await Promise.all(Array.from({ length: 6 }, () => post({ requestId: crypto.randomUUID() })));
+  assert.equal(results.filter(result => result.status === 201).length, 1); assert.equal(results.filter(result => result.status === 409).length, 5);
+  const row = env.DB.sqlite.prepare('SELECT * FROM shop_orders').get();
+  assert.equal((await post({ requestId: row.request_id })).status, 200);
+  let catalogue = await (await send(env, {}, '/')).json(); assert.equal(catalogue.products[0].stock[0].available, 0); assert.ok(!('onHand' in catalogue.products[0].stock[0]));
+  await send(env, admin, '/orders/' + row.id, 'PUT', { action: 'cancel' });
+  catalogue = await (await send(env, {}, '/')).json(); assert.equal(catalogue.products[0].stock[0].available, 2);
+});
+test('uncounted sizes cannot be ordered and one unavailable basket line prevents all holds', async t => {
+  const { env, admin, id, details, post } = await setup(t);
+  await send(env, admin, '/products/' + id, 'PUT', { ...details, options: [...details.options, 'New size'] });
+  const result = await post({ items: [{ productId: id, option: details.options[0], quantity: 1 }, { productId: id, option: 'New size', quantity: 1 }] });
+  assert.equal(result.status, 409); assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) n FROM shop_orders').get().n, 0);
+  assert.equal(env.DB.sqlite.prepare('SELECT reserved FROM shop_stock_availability LIMIT 1').get().reserved, 0);
 });

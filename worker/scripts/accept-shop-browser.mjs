@@ -38,6 +38,7 @@ try {
   await page.getByLabel("Women's 12", { exact: true }).check();
   await page.getByLabel('Adult / unisex 7XL', { exact: true }).check();
   await page.getByRole('textbox', { name: 'Other sizes / colours', exact: true }).fill('Size 10 / Blue\nSize 12 / Blue');
+  for (const [size, count] of [['Youth 10', '4'], ["Men's XL", '0'], ["Women's 12", '3'], ['Adult / unisex 7XL', '1'], ['Size 10 / Blue', '0'], ['Size 12 / Blue', '10']]) await page.getByLabel(`Stock on hand for ${size}`, { exact: true }).fill(count);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await page.screenshot({ path: '.wrangler/shop-browser/sizes-mobile.png', fullPage: true });
@@ -47,6 +48,8 @@ try {
   assert.ok(!(await api('/yjrl/shop')).products.some(item => item.id === productId));
   await page.locator('.yjrl-card').filter({ has: page.getByRole('heading', { name, exact: true }) }).getByRole('button', { name: 'Edit Product' }).click();
   for (const size of ['Youth 10', "Men's XL", "Women's 12", 'Adult / unisex 7XL']) assert.equal(await page.getByLabel(size, { exact: true }).isChecked(), true);
+  assert.equal(await page.getByLabel('Stock on hand for Youth 10', { exact: true }).inputValue(), '4');
+  assert.equal(await page.getByLabel('Stock on hand for Size 12 / Blue', { exact: true }).inputValue(), '10');
   assert.equal(await page.getByRole('textbox', { name: 'Other sizes / colours', exact: true }).inputValue(), 'Size 10 / Blue\nSize 12 / Blue');
   await page.getByLabel('Available to order', { exact: true }).check(); await page.getByLabel('Publish product on the website').check();
   await page.getByRole('button', { name: 'Save Product', exact: true }).click(); await page.locator('.yjrl-modal').waitFor({ state: 'hidden' });
@@ -62,6 +65,7 @@ try {
   assert.equal((await api('/yjrl/stock')).rows.find(row => row.productId === productId && row.option === 'Size 12 / Blue').onHand, 10);
   await page.goto(`${base}/shop`); await page.getByRole('heading', { name, exact: true }).waitFor();
   const offeredSizes = await page.getByRole('combobox', { name: `Size / colour for ${name}`, exact: true }).locator('option').allTextContents();
+  assert.equal(await page.getByRole('option', { name: "Men's XL — Out of stock", exact: true }).isDisabled(), true);
   assert.ok(offeredSizes.includes("Women's 12")); assert.ok(offeredSizes.includes('Youth 10')); assert.ok(!offeredSizes.includes('One size'));
   await page.getByRole('combobox', { name: `Size / colour for ${name}`, exact: true }).selectOption('Size 12 / Blue');
   await page.getByRole('button', { name: 'Add to Basket', exact: true }).click();
