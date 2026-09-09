@@ -97,8 +97,10 @@ Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEAS
 - [x] Stock quantities beside selected youth/men’s/women’s/custom sizes; atomic stocktake saves, pending-order reservations and checkout availability guards. Live at https://yjrl.pages.dev; Worker `bace9e8b-0da3-4662-a57a-41b50cc1842e`, Pages `a8e43605`, source `5f3c6ff`.
 - [x] Implement adult team/coaches/committee communication, announcements/pins, saved reactions/read indicators and private group activities with attendance replies.
 - [x] Add required versioned adult communication acknowledgement, recorded server-side; never treat it as a guarantee against liability.
-- [ ] Finish protected-review browser acceptance and deploy communication.
+- [x] Protected-review browser acceptance passed; communication and agreement deployed. Source `ac429d0ec94593d04a2a01546fe5819593389180`, Worker `2bec87d8-78ca-448d-9b9c-e895fde16b67`, Pages https://e2e1b887.yjrl.pages.dev, public alias verified.
 - [ ] Nathan/club legal reviewer: confirm account responsibilities, conduct handling, escalation and approved wording before member access opens.
 - [ ] Optional further Heja-style work: background notifications/reminders, polls, approved attachments and public-fixture synchronisation.
 
 The previous stock note about manually controlling all order availability is superseded: on-hand counts minus pending orders now determine size availability automatically. Unknown stock is unavailable. Pending unpaid orders reserve stock until collected or eligible cancellation; do not manually double-deduct reservations.
+
+Final validation for this delivery: 99 API/SQLite tests, Worker typecheck, production build, and protected-review Chrome tests passed. Production deep links serve the expected bundle; communication APIs require authentication and shop ordering stays closed. No real family messages, payments or emails were sent.

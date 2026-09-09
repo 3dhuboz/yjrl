@@ -1,8 +1,10 @@
-## Latest incremental release — 7 September 2026, 09:38 UTC
+## Latest incremental release — 9 September 2026, 05:48 UTC
 
-Source `f88e4db7fec8f200660ca2973812f9860f51a98c`; production Worker `f353e754-bce1-4687-b502-c4ee570bc0f4`; Pages https://ec1fc387.yjrl.pages.dev (alias verified), bundle `index-DB6Ofdu3.js`. Review `fdebc836-5f65-41dc-b064-eb4989cdd3b0` includes the same application code before the final CSS map-height adjustment. Migration 0011 is journaled in both DBs. The D1 collection guard uses a separate trigger to avoid CASE/END migration parsing; do not rewrite applied migrations.
+Source `ac429d0ec94593d04a2a01546fe5819593389180`; production Worker `2bec87d8-78ca-448d-9b9c-e895fde16b67`; Pages https://e2e1b887.yjrl.pages.dev, bundle `index-DjTEnEi0.js`. Review `56194d26-090d-4b6c-95df-666e2cb60e55` runs the same application with its protected gateway and same-origin build. Migrations 0004–0013 are journaled in production.
 
-Recovery bookmark before 0011: `0000009e-00000000-000050df-66750f03e6df565c5d4a90c0917b34ba`. Stock deductions and count history are database triggers, so retain these with the shop order workflow. Never replay collection events or manually subtract stock after the application marks an order collected. Counts are physical totals; pending orders are displayed separately and product availability remains manually managed. Google keys are absent; follow `GOOGLE_MAPS_SETUP.md`. Opening settings are unchanged and closed. See the latest readiness checkpoint for exact check receipts.
+Pre-0013 recovery bookmark: `000000e0-00000000-000050e1-d0b718703477cf46f426b2506d7382f5` (`hs-20260909054401-2098841-1ea58dfd`). Pre-0012 bookmark: `000000dc-00000000-000050e1-5dc0575c2d9af147cf0341f71f5fefc4`. Retain additive schema/history on rollback. Stock guards reserve all placed orders and deduct physical counts only once at paid collection; unpaid orders do not expire automatically. Do not double-deduct reservations.
+
+99 API/SQLite tests, typecheck, build and real review Chrome acceptance passed. Communication adds adult group access, saved read/reactions, announcements/pins and private activity attendance. `chat_agreements` stores immutable versioned wording and acceptance time; any approved wording change must use a new version in `shared/chatAgreement.json`. It is not a blanket liability waiver. Club legal/insurer and safeguarding review remain launch requirements. Google/provider connections and public opening remain pending.
 
 # 2027 incremental release procedure
 
@@ -16,14 +18,14 @@ Steve authorised ongoing deployment and the exact YJRL host workspace addition. 
 | Production | API | https://yjrl-api.steve-700.workers.dev |
 | Production | D1 `yjrl-db` | `690424d2-5985-4576-9d4c-62e643ae5ed3` |
 | Production | Private R2 | `yjrl-uploads` |
-| Production | Worker version | `83151c72-9a94-4086-b6d9-879fe8411019` |
-| Production | Pages deployment | https://1171f88e.yjrl.pages.dev |
+| Production | Worker version | `2bec87d8-78ca-448d-9b9c-e895fde16b67` |
+| Production | Pages deployment | https://e2e1b887.yjrl.pages.dev |
 | Review | Password-protected app/API | https://yjrl-review.steve-700.workers.dev |
 | Review | D1 `yjrl-review-db` | `bf4d3aa4-b8c7-4dda-810e-e58070b1a6db` |
 | Review | Private R2 | `yjrl-review-uploads` |
-| Review | Worker version after secrets | `90696a2e-b003-43a3-97d7-8e7bfec89e4d` |
+| Review | Worker version after secrets | `56194d26-090d-4b6c-95df-666e2cb60e55` |
 
-Production source is `fa7f355591122852a3af15a05c8e17dc6549d3af`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
+Production source is `ac429d0ec94593d04a2a01546fe5819593389180`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
 
 Before 0004–0008 were applied, the production D1 recovery bookmark was `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` at 03:57 UTC on 7 September (`hs-20260907035723-3308785-7c9a8a70`). Refresh recovery evidence before every subsequent production migration.
 
@@ -31,7 +33,7 @@ The historical production journal was empty even though the base/child-safety sc
 
 Migrations 0009 (venue maps) and 0010 (shop) are now applied too. The latest pre-shop recovery bookmark is `00000096-00000000-000050df-72a0627feb24d1ad74bcfd98d5e40ee9` (`hs-20260907075616-3841354-afcd7958`). Shop settings remain `orders_open = 0`; no catalogue products were added to production. Do not open ordering before confirmed collection/policies/products and provider acceptance. Existing orders snapshot prices/options/policies; product removal retains order history. Current online integration reuses the existing PayPal provider, with production requiring live mode and a verified working return domain as an operational launch check.
 
-The real-browser scripts use HeadSnap’s installed Playwright and project Chrome profile. Start/status Chrome with `headsnap browser start yjrl` / `headsnap browser status yjrl`, then run each script through `headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/accept-admin-browser.mjs` or `scripts/accept-shop-browser.mjs`. They target the isolated review hostname only, use synthetic content and restore the shop’s original settings. Provider payment tests in the unit suite are simulated; obtain designated sandbox accounts for real acceptance.
+The real-browser scripts use HeadSnap’s installed Playwright and project Chrome profile. Start/status Chrome with `headsnap browser start yjrl` / `headsnap browser status yjrl`, then run each script through `headsnap run yjrl --cwd /srv/headsnap/workspaces/yjrl/worker -- node scripts/accept-admin-browser.mjs` , `scripts/accept-shop-browser.mjs` or `scripts/accept-chat-browser.mjs`. They target the isolated review hostname only, use synthetic content and restore the shop’s original settings. Provider payment tests in the unit suite are simulated; obtain designated sandbox accounts for real acceptance.
 
 ## Verify and release to review
 
