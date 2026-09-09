@@ -91,3 +91,14 @@ Use `ops/2027_RELEASE_RUNBOOK.md` for exact resources, build/migration commands 
 Production has `REGISTRATIONS_OPEN=false`, `MEMBER_ACCESS_OPEN=false`, and `SEASON_DETAILS_CONFIRMED=""`. Do not set actual safeguarding sign-off until the club adopts the incident playbook and approves launch.
 
 **Next action:** connect the approved Google Maps project and run real-provider acceptance; obtain opening stock counts. Nathan’s admin testing and information collection using the handover. Resume guardian verification, recovery and form/consent versioning for season opening; complete real provider acceptance and confirmed catalogue/fulfilment setup before shop opening. Keep deployments incremental and this table current.
+
+## 9 September follow-up: stock and communication
+
+- [x] Stock quantities beside selected youth/men’s/women’s/custom sizes; atomic stocktake saves, pending-order reservations and checkout availability guards. Live at https://yjrl.pages.dev; Worker `bace9e8b-0da3-4662-a57a-41b50cc1842e`, Pages `a8e43605`, source `5f3c6ff`.
+- [x] Implement adult team/coaches/committee communication, announcements/pins, saved reactions/read indicators and private group activities with attendance replies.
+- [x] Add required versioned adult communication acknowledgement, recorded server-side; never treat it as a guarantee against liability.
+- [ ] Finish protected-review browser acceptance and deploy communication.
+- [ ] Nathan/club legal reviewer: confirm account responsibilities, conduct handling, escalation and approved wording before member access opens.
+- [ ] Optional further Heja-style work: background notifications/reminders, polls, approved attachments and public-fixture synchronisation.
+
+The previous stock note about manually controlling all order availability is superseded: on-hand counts minus pending orders now determine size availability automatically. Unknown stock is unavailable. Pending unpaid orders reserve stock until collected or eligible cancellation; do not manually double-deduct reservations.

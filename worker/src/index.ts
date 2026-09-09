@@ -100,6 +100,7 @@ app.use('/api/auth/register', rateLimit('auth-register', 5, 60 * 60));
 app.use('/api/register-player', rateLimit('player-register', 5, 60 * 60));
 app.use('/api/register-player/:id/resume', rateLimit('registration-checkout', 30, 15 * 60));
 app.use('/api/register-player/:id/capture', rateLimit('registration-checkout', 30, 15 * 60));
+app.use('/api/yjrl/chat/*', rateLimit('chat-actions', 120, 60, ['POST', 'PUT', 'DELETE']));
 app.use('/api/yjrl/chat', rateLimit('chat', 120, 60, ['GET', 'POST']));
 app.use('/api/upload', rateLimit('upload', 20, 60 * 60));
 app.use('/api/yjrl/safety/reports', rateLimit('safety-report', 30, 60 * 60));

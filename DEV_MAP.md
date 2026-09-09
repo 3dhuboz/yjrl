@@ -2,6 +2,11 @@
 
 ## Active 2027 sign-up work
 
+- `worker/src/routes/communication.ts`, `lib/chatRooms.ts`, migration 0013: adult team/coaches/committee groups, read/reactions, announcements and private schedules/RSVPs.
+- `shared/chatAgreement.json`, `middleware/chatAgreement.ts`, `ChatAgreement`: versioned adult communication acknowledgement. Club legal review remains pending.
+- `CommunicationHub`, `GroupSchedule`, `YJRLChat`, `worker/tests/communication.test.mjs`, `scripts/accept-chat-browser.mjs`: communication UX and acceptance.
+- `worker/migrations/0012_stock_ordering.sql`, `lib/stock.ts`: atomic product stock editing and pending-order availability guards.
+
 - `worker/src/routes/stock.ts`, migration 0011, `AdminStocktake`/`ProductSizeFields`: size tick boxes, counted inventory and atomic collection deductions.
 - `worker/src/routes/maps.ts`, `useMapsConfig`, `ops/GOOGLE_MAPS_SETUP.md`: Google venue selection; real Places/Embed connection is still required.
 - `NATHAN_TESTING_HANDOVER.md`: delivered admin/shop test steps and club information still needed.

@@ -17,6 +17,7 @@ const NAV_ITEMS = [
 ];
 
 const PORTAL_ITEMS = [
+  { to: '/portal/messages', label: 'Team Messages', icon: Heart, roles: ['all'] },
   { to: '/portal/parent', label: 'Parent Portal', icon: Heart, roles: ['all'] },
   { to: '/portal/coach', label: 'Coach Portal', icon: Shield, roles: ['all'] },
   { to: '/portal/admin', label: 'Club Admin', icon: Trophy, roles: ['admin', 'dev'] },

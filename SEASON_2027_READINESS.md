@@ -171,3 +171,22 @@ headsnap run yjrl -- npm run build
 Tests require Node 24's built-in SQLite and use Wrangler's installed bundler; they do not invoke Wrangler, access Cloudflare or require credentials. Install the existing client and Worker lockfiles with `npm ci` through `headsnap run` when dependencies are missing. Route actual Wrangler commands through `headsnap cloudflare`.
 
 Provider reference checks: [PayPal Orders flow](https://developer.paypal.com/api/rest/integration/orders-api/) and [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys). Resend keys are a 24-hour provider deduplication window, not a permanent delivery guarantee; repeated capture is also suppressed in the application.
+
+## Checkpoint — 9 September 2026: inline stock and order availability
+
+- Objective: counts beside ticked product sizes, shared with Stocktake; reserve pending orders and prevent overselling.
+- Branch `codex/2027-signup-readiness`; deployed source `5f3c6ff069df309457d38c8352ff2597998c67db`.
+- Changes: product size/editor/shop UI, shared stock writes, migration 0012 with atomic availability and version guards; API and browser acceptance.
+- Verification: 93 API/SQLite tests, Worker typecheck, frontend build and protected-review Chrome acceptance passed. Review version `4eb4072b-6fd0-49e9-a72f-50c697a1283d`.
+- Production migration 0012 applied; Worker `bace9e8b-0da3-4662-a57a-41b50cc1842e`, Pages https://a8e43605.yjrl.pages.dev, bundle `index-Dzmkd6l1.js`. D1 pre-migration bookmark `000000dc-00000000-000050e1-5dc0575c2d9af147cf0341f71f5fefc4`.
+- Remaining risk: unpaid pending orders hold inventory until collection or eligible cancellation; PayPal credentials and payment reconciliation acceptance remain pending. No automatic reservation expiry. Production registration/member/shop gates remain closed.
+- Next: implement the confirmed Heja-style adult group communication request (private team/coaches/committee groups, announcements, saved reactions/read indicators, activity attendance).
+
+## Checkpoint — 9 September 2026: communication ready for browser acceptance
+
+- Objective: confirmed Heja-style adult group communication, plus Steve’s required adult account-security/conduct checkbox. Branch `codex/2027-signup-readiness`, base HEAD `5f3c6ff`; communication changes are not yet committed.
+- Files: migration 0013; shared chat agreement; chat room access, communication routes and agreement middleware; CommunicationHub, GroupSchedule, ChatAgreement, rewritten YJRLChat and portal wiring; focused API/browser tests and handover.
+- Evidence: 99 API/SQLite tests pass (`hs-20260909054008-2088834-ec359444`), typecheck passes (`hs-20260909054009-2089047-3335cbf0`), review build passes (`hs-20260909054011-2089221-db99f147`).
+- Review migration 0013 applied. Review Worker `9f5fa3d3-7803-43d5-888b-09f5f962411c` with bundle `index-COD6PMkI.js`. First browser run found slow checkbox feedback in committee management; fixed with immediate selection feedback and disabled Done until persistence completes.
+- Remaining: rerun browser acceptance, then commit/push, fresh production recovery bookmark, stage/apply only 0013, deploy Worker and production-targeted Pages build. Do not change public opening flags.
+- Legal risk: acknowledgement is drafted product wording, not a blanket waiver or solicitor approval. Nathan’s checklist now requests legal/insurer review and report-response ownership before opening member access.

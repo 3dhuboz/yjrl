@@ -13,6 +13,7 @@ import YJRLRegister from './pages/yjrl/YJRLRegister';
 import adultAccount from '../../shared/adultAccount.json';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
 import YJRLParentPortal from './pages/yjrl/YJRLParentPortal';
+import YJRLCommunication from './pages/yjrl/YJRLCommunication';
 import YJRLShop from './pages/yjrl/YJRLShop';
 import YJRLAdminPortal from './pages/yjrl/YJRLAdminPortal';
 import './pages/yjrl/yjrl.css';
@@ -181,6 +182,7 @@ const AppRoutes = () => (
     <Route path="/login" element={<Login />} />
 
     {/* Portals */}
+    <Route path="/portal/messages" element={<ProtectedRoute><YJRLCommunication /></ProtectedRoute>} />
     <Route path="/portal/player" element={<Navigate to="/portal/parent" replace />} />
     <Route path="/portal/coach" element={<ProtectedRoute roles={['coach']}><YJRLCoachPortal /></ProtectedRoute>} />
     <Route path="/portal/parent" element={<ProtectedRoute roles={['parent', 'coach']}><YJRLParentPortal /></ProtectedRoute>} />

@@ -1,0 +1,12 @@
+{
+  "version": "2027-adult-communication-v1",
+  "title": "Adult account and communication agreement",
+  "statement": "I am 18 or older. I have read and agree to the adult account and communication rules below, including keeping my account private and taking reasonable steps to prevent children or other people using it.",
+  "sections": [
+    ["Your account is for you", "Do not share your password or let a child or another person use your account to read or send club messages. Keep your device locked, keep login details private and sign out after using a shared device. Parents and authorised guardians communicate on behalf of their family; children do not have access to club chat."],
+    ["Account security and supervision", "You are responsible for taking reasonable steps to secure your account and supervise access to devices you control. If you suspect a child or another person has accessed it, sign out, secure your device and notify the club promptly so access can be reviewed. Tell the club which messages may not have been sent by you."],
+    ["Respectful communication", "Keep messages relevant to club activities. Do not post bullying, abuse, threats, sexual or discriminatory material, or disclose another person's private information. Do not use club accounts to contact children privately. Use the Report control on a message to raise a concern with the club."],
+    ["Club response", "The club may review reported content and restrict or suspend account access while a concern is assessed. Messages, read indicators, reactions, attendance replies and this acknowledgement are recorded for club communication and administration. Reporting is not an emergency service; if anyone is in immediate danger, call 000."],
+    ["Rights and responsibilities", "This acknowledgement does not make the club responsible for every message posted by a member and does not guarantee that inappropriate content will be prevented. It does not waive any rights or exclude any duty or liability that cannot lawfully be excluded. The club retains its safeguarding responsibilities."]
+  ]
+}

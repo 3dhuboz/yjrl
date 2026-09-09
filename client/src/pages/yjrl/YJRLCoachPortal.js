@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import YJRLLayout from './YJRLLayout';
-import YJRLChat from './YJRLChat';
+import CommunicationHub from '../../components/CommunicationHub';
 import './yjrl.css';
 
 const POSITIONS = ['Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row', 'Interchange'];
@@ -356,20 +356,13 @@ const YJRLCoachPortal = () => {
         )}
         {/* ── COACHES CHAT ── */}
         {tab === 'chat' && (
-          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div>
             <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
               <div style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                 📋 Coaching staff discussion — all age groups
               </div>
             </div>
-            <YJRLChat
-              theme="coach"
-              roomId="coach-all"
-              roomName="Coaches Room"
-              teamName="All Yeppoon JRL Coaches"
-              userName={user?.firstName || 'Coach'}
-              onlineCount={3}
-            />
+            <CommunicationHub initialRoomId="coach-all" />
           </div>
         )}
       </div>

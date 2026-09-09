@@ -19,7 +19,7 @@ The site is prepared for **2027**. Adults hold the accounts and parents/guardian
 | Collection and delivery | Collection location/hours/contact, lead times and preorder cut-offs; confirm whether delivery is also required and its charges |
 | Shop payments | Confirm the PayPal business account for the current integration, or identify the preferred alternative. Confirm payment methods accepted on collection and who reconciles orders/payments |
 | Opening stock | Physical stock count for each product and size, low-stock thresholds, who counts deliveries and who marks orders collected |
-| Shop operations | Approved ordering/exchange/refund wording, who fulfils orders, stock-management needs and order notification recipient. Current fulfilment is club collection with availability controlled by admin |
+| Shop operations | Approved ordering/exchange/refund wording, who fulfils orders, stock-management needs and order notification recipient. Current fulfilment is club collection. Confirm opening counts and low-stock thresholds for every size; pending orders reserve stock automatically |
 | Season opening | Final registration/consent wording, club incident/escalation arrangements, approved adult administrators/coaches and designated provider test accounts/email recipient |
 
 Supply account access through the agreed secure setup, rather than putting passwords or payment credentials in this document.
@@ -38,7 +38,7 @@ Use synthetic player/contact details for testing. Full order and payment tests b
 8. **Shop order test in review:** select a size/colour, add quantity to the basket, place a pay-on-collection order and reload its receipt. In admin, record the simulated collection payment, then mark the order collected. Keep production ordering closed until the catalogue, fulfilment and provider checks are approved.
 
 9. **Stocktake:** open the tab or **View Stock** beside a shop product. Every selected size appears, initially **Not counted**. Record the physical total, a low-stock threshold and a reason. Include items already set aside for collection in this count. Check product/size search and the low-stock filter.
-10. **Stock and collections in review:** count ten units, order two, then mark the paid test order collected. Stock should become eight and the awaiting-collection count should fall by two. Removed products/sizes retain their stock records. Stock counts support planning; product availability in Shop still controls whether customers can order.
+10. **Stock and collections in review:** count ten units, order two, then mark the paid test order collected. Stock should become eight and the awaiting-collection count should fall by two. Removed products/sizes retain their stock records. Available stock is the physical count minus pending orders. Zero or uncounted sizes cannot be ordered, and the server rejects simultaneous orders for the last unit. Pending unpaid orders also reserve stock until collection or eligible cancellation; PayPal reconciliation must be tested before online ordering opens.
 
 ## What still needs a separate acceptance check
 
@@ -49,3 +49,19 @@ Use synthetic player/contact details for testing. Full order and payment tests b
 - Complete the remaining guardian/account verification, registration consent, medical-access and launch requirements listed in `SIGNUP_2027_DELIVERY_GUIDE.md` before opening sign-ups.
 
 The two payment choices are supported in the implementation. An online payment option appears for customers only after the provider is configured; all shop orders are currently closed.
+
+## Group communication and account responsibility
+
+The Heja reference is its [team messaging, updates, seen indicators and activity attendance](https://help.heja.io/en/articles/2483013-heja-s-main-features), adapted to adult-only accounts here.
+
+- **Admin → Messages** or **Portals → Team Messages**: read the adult communication agreement and tick the unchecked declaration. Acceptance records the adult account, version, full wording and date. Changing the policy version requires fresh acceptance.
+- Parents see their assigned teams; approved coaches see their assigned team families, coaching staff groups and All coaches. Admins can use **Manage Committee** to select active adult accounts for the private Committee group. Removing a committee member, guardian link or coach approval removes the corresponding access.
+- Send a message, react, reload, and check the reaction remains. Post as **Announcement**, pin the update and find it in **Announcements** or **Pinned updates**. Unread badges and read indicators are saved; there is no simulated online count.
+- **Schedule → Add Activity**: create training, game, meeting or event details, an AEST time and optional Google Maps destination. Adults reply Going, Maybe or Unavailable; each account supplies one reply, and parents reply for their family. Organisers can inspect names, edit or cancel the activity. These private group activities are separate from the published club calendar and fixtures.
+- Use **Report** on a message for a conduct concern. Reporting remains available through the API without accepting the communication agreement; the acceptance screen also directs urgent concerns to a club official.
+
+Nathan to provide: committee membership, approved team coaches and managers, who responds to reports and suspected account misuse, response/escalation arrangements, retention expectations, and a club solicitor/insurer review of the account-responsibility wording before opening member access.
+
+The checkbox sets account-security and conduct expectations. It is not a blanket liability waiver and does not replace safeguarding, appropriate moderation or rights that cannot legally be excluded. Reference: [eSafety guidance for sport parents](https://www.esafety.gov.au/communities/sport/parents) and [ACCC consumer rights](https://www.accc.gov.au/consumers/buying-products-and-services/consumer-rights-and-guarantees).
+
+This delivery uses in-app polling while open. Native/background push notifications, automatic reminders, individual child RSVPs, private direct messages, polls, document/video sharing and automatic public-fixture synchronisation are not part of this release. No real messages, emails or notifications were sent to club families during testing.

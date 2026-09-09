@@ -1,3 +1,4 @@
+import CommunicationHub from '../../components/CommunicationHub';
 import AdminShop from '../../components/AdminShop';
 import AdminStocktake from '../../components/AdminStocktake';
 import AdminAddPlayer from '../../components/AdminAddPlayer';
@@ -493,6 +494,7 @@ const YJRLAdminPortal = () => {
               ['stocktake', 'Stocktake'],
               ['news', 'News'],
               ['players', 'Players'],
+              ['communication', 'Messages'],
               ['moderation', 'Chat Safety']
             ].map(([key, label]) => (
               <button key={key} className={`yjrl-tab ${tab === key ? 'active' : ''}`} onClick={() => { if (key === 'stocktake') setStockProduct(''); setTab(key); }}>{label}</button>
@@ -797,6 +799,7 @@ const YJRLAdminPortal = () => {
           </div>
         )}
 
+        {tab === 'communication' && <CommunicationHub />}
         {tab === 'moderation' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="yjrl-card">
