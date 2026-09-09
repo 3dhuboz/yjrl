@@ -65,7 +65,7 @@ try {
   assert.equal((await api('/yjrl/stock')).rows.find(row => row.productId === productId && row.option === 'Size 12 / Blue').onHand, 10);
   await page.goto(`${base}/shop`); await page.getByRole('heading', { name, exact: true }).waitFor();
   const offeredSizes = await page.getByRole('combobox', { name: `Size / colour for ${name}`, exact: true }).locator('option').allTextContents();
-  assert.equal(await page.getByRole('option', { name: "Men's XL — Out of stock", exact: true }).isDisabled(), true);
+  assert.equal(await page.getByRole('option', { name: "Men's XL — Out of stock", exact: true }).evaluate(option => option.disabled), true);
   assert.ok(offeredSizes.includes("Women's 12")); assert.ok(offeredSizes.includes('Youth 10')); assert.ok(!offeredSizes.includes('One size'));
   await page.getByRole('combobox', { name: `Size / colour for ${name}`, exact: true }).selectOption('Size 12 / Blue');
   await page.getByRole('button', { name: 'Add to Basket', exact: true }).click();
