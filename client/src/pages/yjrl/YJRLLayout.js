@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Home, Calendar, Trophy, Newspaper, Users, LogIn, LogOut,
-  Menu, X, ChevronDown, User, Shield, Heart, Zap, Mail
+  Menu, X, ChevronDown, User, Shield, Heart, Mail, ShoppingBag
 } from 'lucide-react';
 import './yjrl.css';
 
@@ -13,10 +13,11 @@ const NAV_ITEMS = [
   { to: '/teams', label: 'Teams', icon: Users },
   { to: '/news', label: 'News', icon: Newspaper },
   { to: '/events', label: 'Events', icon: Heart },
+  { to: '/shop', label: 'Shop', icon: ShoppingBag },
 ];
 
 const PORTAL_ITEMS = [
-  { to: '/portal/player', label: 'Player Portal', icon: Zap, roles: ['all'] },
+  { to: '/portal/messages', label: 'Team Messages', icon: Heart, roles: ['all'] },
   { to: '/portal/parent', label: 'Parent Portal', icon: Heart, roles: ['all'] },
   { to: '/portal/coach', label: 'Coach Portal', icon: Shield, roles: ['all'] },
   { to: '/portal/admin', label: 'Club Admin', icon: Trophy, roles: ['admin', 'dev'] },
@@ -34,7 +35,7 @@ const YJRLLayout = ({ children }) => {
     if (role === 'admin' || role === 'dev') return '/portal/admin';
     if (role === 'coach') return '/portal/coach';
     if (role === 'parent') return '/portal/parent';
-    return '/portal/player';
+    return '/login';
   };
 
   const handleLogout = async () => {
@@ -294,6 +295,7 @@ const YJRLLayout = ({ children }) => {
               <ul>
                 <li><Link to="/register">Join the Club</Link></li>
                 <li><Link to="/events">Events</Link></li>
+                <li><Link to="/shop">Uniforms & Merchandise</Link></li>
                 <li><a href="mailto:yeppoonjrl@outlook.com?subject=Volunteer%20enquiry">Volunteer</a></li>
                 <li><a href="mailto:yeppoonjrl@outlook.com?subject=Sponsorship%20enquiry">Sponsors</a></li>
                 <li><a href="mailto:yeppoonjrl@outlook.com">Contact Us</a></li>

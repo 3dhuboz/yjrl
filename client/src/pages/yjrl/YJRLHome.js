@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -49,9 +50,9 @@ const YJRLHome = () => {
     setLoading(true);
     Promise.all([
       api.get('/yjrl/news?limit=3&published=true').catch(() => ({ data: [] })),
-      api.get('/yjrl/fixtures?upcoming=true&limit=3').catch(() => ({ data: [] })),
-      api.get('/yjrl/teams').catch(() => ({ data: [] })),
-      api.get('/yjrl/stats/overview').catch(() => ({ data: {} }))
+      api.get(`/yjrl/fixtures?season=${seasonConfig.season}&upcoming=true&limit=3`).catch(() => ({ data: [] })),
+      api.get(`/yjrl/teams?season=${seasonConfig.season}`).catch(() => ({ data: [] })),
+      api.get(`/yjrl/stats/overview?season=${seasonConfig.season}`).catch(() => ({ data: {} }))
     ]).then(([nRes, fRes, tRes, sRes]) => {
       if (Array.isArray(nRes.data)) setNews(nRes.data);
       if (Array.isArray(fRes.data)) setFixtures(fRes.data);
@@ -72,7 +73,7 @@ const YJRLHome = () => {
         <div className="yjrl-hero-content">
           <div>
             <div className="yjrl-hero-badge">
-              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> 2026 Season — Go Seagulls!
+              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> {seasonConfig.season} Season — Go Seagulls!
             </div>
             <h1>
               Yeppoon<br />
@@ -146,9 +147,9 @@ const YJRLHome = () => {
                 borderRadius: '16px', padding: '2.5rem', textAlign: 'center'
               }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Season 2026 Underway</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Getting ready for {seasonConfig.season}</div>
                 <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Check the full fixture schedule and follow your team all season long.
+                  Fixtures will appear here when the club publishes the season draw.
                 </div>
                 <Link to="/fixtures" className="yjrl-btn yjrl-btn-primary">View All Fixtures</Link>
               </div>
@@ -249,7 +250,7 @@ const YJRLHome = () => {
       <section className="yjrl-section" style={{ background: 'white' }}>
         <div className="yjrl-section-inner">
           <div className="yjrl-section-header">
-            <div className="yjrl-section-label">2026 Season</div>
+            <div className="yjrl-section-label">{seasonConfig.season} Season</div>
             <h2 className="yjrl-section-title">Our Teams</h2>
             <p className="yjrl-section-desc">From Mini Mod to Seniors — there's a place for every player at Yeppoon JRL.</p>
           </div>
@@ -286,15 +287,11 @@ const YJRLHome = () => {
           <div className="yjrl-section-header">
             <div className="yjrl-section-label">Digital Club Hub</div>
             <h2 className="yjrl-section-title">Your Portal Awaits</h2>
-            <p className="yjrl-section-desc">Every member of our club community has a personalised digital home — stats, schedules, badges, and more.</p>
+            <p className="yjrl-section-desc">Adult accounts keep families connected. Parents and guardians manage children’s profiles, registrations and team information.</p>
           </div>
 
-          <div className="yjrl-grid-4">
+          <div className="yjrl-grid-3">
             {[
-              {
-                icon: '⚡', title: 'Player Portal', desc: 'Track your stats, earn achievement badges, view your training attendance streak, and follow your pathway to rep football.',
-                to: '/portal/player', color: '#60a5fa', badge: 'Players'
-              },
               {
                 icon: '💛', title: 'Parent Portal', desc: "Stay connected with your child's team. RSVP to events, view training schedules, communicate with coaches, and manage registrations.",
                 to: '/portal/parent', color: '#c084fc', badge: 'Parents'
@@ -352,7 +349,7 @@ const YJRLHome = () => {
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">
-              Register Now <ArrowRight size={18} />
+              {seasonConfig.season} Sign-up Details <ArrowRight size={18} />
             </Link>
             <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
               Contact Us

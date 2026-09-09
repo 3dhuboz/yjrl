@@ -4,6 +4,8 @@ import type { Env, Variables } from './types';
 import { hashPassword } from './lib/password';
 import { sendEmail, eventReminderEmail } from './lib/email';
 import { writeAudit } from './lib/audit';
+import { rateLimit, cleanupRateLimits } from './middleware/rateLimit';
+import { memberAccessOpen } from './lib/launch';
 
 import authRoutes from './routes/auth';
 import teamsRoutes from './routes/teams';
@@ -18,36 +20,13 @@ import registerRoutes from './routes/register';
 import uploadRoutes from './routes/upload';
 import safetyRoutes from './routes/safety';
 import adminRoutes from './routes/admin';
+import mediaRoutes from './routes/media';
+import shopRoutes from './routes/shop';
+import mapsRoutes from './routes/maps';
+import stockRoutes from './routes/stock';
+import checklistRoutes from './routes/checklist';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
-
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function clientKey(c: any, scope: string) {
-  const ip = c.req.header('CF-Connecting-IP')
-    || c.req.header('x-forwarded-for')
-    || c.req.header('x-real-ip')
-    || 'unknown';
-  return `${scope}:${ip}`;
-}
-
-function rateLimit(scope: string, max: number, windowSeconds: number) {
-  return async (c: any, next: any) => {
-    const now = Date.now();
-    const key = clientKey(c, scope);
-    const existing = rateBuckets.get(key);
-    if (!existing || existing.resetAt <= now) {
-      rateBuckets.set(key, { count: 1, resetAt: now + windowSeconds * 1000 });
-      await next();
-      return;
-    }
-    existing.count += 1;
-    if (existing.count > max) {
-      return c.json({ error: 'Too many requests. Please wait and try again.' }, 429);
-    }
-    await next();
-  };
-}
 
 function allowedOrigin(origin: string | undefined, env: Env): string | undefined {
   if (!origin) return undefined;
@@ -63,13 +42,13 @@ function allowedOrigin(origin: string | undefined, env: Env): string | undefined
     .filter(Boolean);
   const exactOrigins = new Set([
     ...configured,
+    env.FRONTEND_URL,
     'https://yjrl.pages.dev',
     'https://yeppoonjrl.com.au',
     'https://www.yeppoonjrl.com.au',
   ]);
 
-  if (host === 'localhost' || host === '127.0.0.1') return origin;
-  if (host === 'yjrl.pages.dev' || host.endsWith('.yjrl.pages.dev')) return origin;
+  if (env.ENVIRONMENT === 'development' && (host === 'localhost' || host === '127.0.0.1')) return origin;
   return exactOrigins.has(origin) ? origin : undefined;
 }
 
@@ -77,7 +56,8 @@ function allowedOrigin(origin: string | undefined, env: Env): string | undefined
 app.use('*', cors({
   origin: (origin, c) => allowedOrigin(origin, c.env),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Checklist-Token'],
+  exposeHeaders: ['Retry-After'],
   maxAge: 86400,
 }));
 
@@ -113,33 +93,16 @@ app.use('*', async (c, next) => {
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// Public media is served only after the upload review gate approves it.
-app.get('/api/media', async (c) => {
-  const key = c.req.query('key');
-  if (!key) return c.json({ error: 'Media key required' }, 400);
+app.route('/api/media', mediaRoutes);
 
-  const record = await c.env.DB.prepare(
-    'SELECT key, status, mime_type, byte_size FROM upload_records WHERE key = ? AND status = ?'
-  ).bind(key, 'approved').first();
-  if (!record) return c.json({ error: 'Media not found' }, 404);
-
-  const object = await c.env.UPLOADS.get(key);
-  if (!object) return c.json({ error: 'Media not found' }, 404);
-
-  const headers = new Headers();
-  headers.set('Content-Type', (record.mime_type as string) || object.httpMetadata?.contentType || 'application/octet-stream');
-  headers.set('Cache-Control', 'public, max-age=3600');
-  headers.set('Content-Disposition', 'inline');
-  headers.set('X-Content-Type-Options', 'nosniff');
-  if (record.byte_size) headers.set('Content-Length', String(record.byte_size));
-  return new Response(object.body, { headers });
-});
-
-// Abuse-sensitive route limits. These are isolate-local guardrails; durable blocking can be added later.
+// Shared durable limits apply before authentication/password work and sensitive mutations.
 app.use('/api/auth/login', rateLimit('auth-login', 10, 15 * 60));
 app.use('/api/auth/register', rateLimit('auth-register', 5, 60 * 60));
 app.use('/api/register-player', rateLimit('player-register', 5, 60 * 60));
-app.use('/api/yjrl/chat', rateLimit('chat', 120, 60));
+app.use('/api/register-player/:id/resume', rateLimit('registration-checkout', 30, 15 * 60));
+app.use('/api/register-player/:id/capture', rateLimit('registration-checkout', 30, 15 * 60));
+app.use('/api/yjrl/chat/*', rateLimit('chat-actions', 120, 60, ['POST', 'PUT', 'DELETE']));
+app.use('/api/yjrl/chat', rateLimit('chat', 120, 60, ['GET', 'POST']));
 app.use('/api/upload', rateLimit('upload', 20, 60 * 60));
 app.use('/api/yjrl/safety/reports', rateLimit('safety-report', 30, 60 * 60));
 
@@ -167,6 +130,14 @@ app.route('/api/yjrl/fixtures', fixturesRoutes);
 app.get('/api/yjrl/ladder', async (c) => {
   return fixturesRoutes.fetch(new Request(new URL(`/ladder?${new URL(c.req.url).searchParams}`, c.req.url), c.req.raw), c.env);
 });
+app.use('/api/yjrl/shop/orders', rateLimit('shop-order', 20, 15 * 60));
+app.use('/api/yjrl/shop/orders/:id/pay', rateLimit('shop-payment', 30, 15 * 60));
+app.use('/api/yjrl/shop/orders/:id/capture', rateLimit('shop-payment', 30, 15 * 60));
+app.route('/api/yjrl/shop', shopRoutes);
+app.route('/api/yjrl/maps', mapsRoutes);
+app.route('/api/yjrl/stock', stockRoutes);
+app.use('/api/yjrl/checklist/*', rateLimit('checklist-write', 60, 3600, ['POST', 'PUT', 'DELETE']));
+app.route('/api/yjrl/checklist', checklistRoutes);
 app.route('/api/yjrl/news', newsRoutes);
 app.route('/api/yjrl/events', eventsRoutes);
 app.route('/api/yjrl/achievements', achievementsRoutes);
@@ -182,7 +153,12 @@ export default {
 
   // Cron trigger: daily event reminders
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    if (!env.RESEND_API_KEY) return;
+    try {
+      await cleanupRateLimits(env);
+    } catch {
+      console.error('Rate-limit cleanup failed');
+    }
+    if (event.cron !== '0 22 * * *' || !memberAccessOpen(env) || !env.RESEND_API_KEY) return;
     try {
       // Find events in the next 48 hours
       const now = new Date();

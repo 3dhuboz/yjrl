@@ -1,3 +1,4 @@
+import VenueMap from '../../components/VenueMap';
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import api from '../../api';
@@ -82,6 +83,7 @@ const YJRLEvents = () => {
                           {event.type || 'event'}
                         </span>
                       </div>
+                      <VenueMap venue={event.venue} url={event.mapsUrl} embedUrl={event.mapsEmbedUrl} />
                       {event.description && <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.6, margin: '0 0 0.85rem', fontSize: '0.9rem' }}>{event.description}</p>}
                       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', color: 'var(--yjrl-muted)', fontSize: '0.84rem' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Calendar size={13} />{new Date(event.date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</span>

@@ -5,6 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
+REGISTRATIONS_OPEN = "false"
+MEMBER_ACCESS_OPEN = "false"
+SEASON_DETAILS_CONFIRMED = ""
 FROM_EMAIL = "noreply@yeppoonjrl.com.au"
 ALLOWED_ORIGINS = "https://yeppoonjrl.com.au,https://www.yeppoonjrl.com.au"
 UPLOADS_PUBLIC_URL = "https://uploads.yeppoonjrl.com.au"
@@ -16,15 +19,21 @@ API_PUBLIC_URL = "https://yjrl-api.steve-700.workers.dev/api"
 binding = "DB"
 database_name = "yjrl-db"
 database_id = "690424d2-5985-4576-9d4c-62e643ae5ed3"
+# Existing baseline predates the migration journal. Never replay the legacy seed.
+migrations_dir = ".wrangler/production-migrations"
 
 # R2 Storage
 [[r2_buckets]]
 binding = "UPLOADS"
 bucket_name = "yjrl-uploads"
 
+# Re-encode uploads before storing them; no originals are published.
+[images]
+binding = "IMAGES"
+
 # Cron trigger for daily email reminders (8am AEST = 10pm UTC previous day)
 [triggers]
-crons = ["0 22 * * *"]
+crons = ["0 22 * * *", "0 0-21,23 * * *"]
 
 # Secrets (set via `wrangler secret put`):
 # JWT_SECRET
@@ -37,3 +46,5 @@ crons = ["0 22 * * *"]
 # CHILD_SAFETY_SIGNOFF (set to approved only after club launch sign-off)
 # CLICKSEND_USERNAME / CLICKSEND_API_KEY if SMS is required
 # OPENROUTER_API_KEY if AI features are required
+# GOOGLE_PLACES_API_KEY: server key restricted to Places API (New).
+# GOOGLE_MAPS_EMBED_KEY: separate public key restricted to Maps Embed API and the club website referrers.

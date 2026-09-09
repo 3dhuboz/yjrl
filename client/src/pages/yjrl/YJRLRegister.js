@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronRight, ArrowLeft, User, Users, MapPin, Calendar } from 'lucide-react';
 import YJRLLayout from './YJRLLayout';
@@ -6,8 +6,12 @@ import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './yjrl.css';
+import seasonConfig from '../../../../shared/season.json';
+import adultAccount from '../../../../shared/adultAccount.json';
+import { validateRegistrationFees, registrationFee } from '../../registrationFees.mjs';
+import { validateRegistration } from '../../../../shared/registration';
+import { checkoutFromSearch, confirmationEmailMessage } from '../../registrationCheckout.mjs';
 
-const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
 const POSITIONS = ['Not Sure Yet', 'Fullback', 'Wing', 'Centre', 'Five-Eighth', 'Halfback', 'Hooker', 'Prop', 'Lock', 'Second-Row'];
 
 const STEPS = [
@@ -17,127 +21,138 @@ const STEPS = [
   { id: 4, label: 'Confirmation' },
 ];
 
-const EARLY_BIRD_DISCOUNT = 20;
-
 const YJRLRegister = () => {
   const { setSession } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     firstName: '', lastName: '', dateOfBirth: '', ageGroup: '', position: 'Not Sure Yet',
-    guardianName: '', guardianPhone: '', guardianEmail: '',
+    guardianName: '', guardianPhone: '', guardianEmail: '', adultConfirmed: false,
     password: '', confirmPassword: '',
     emergencyName: '', emergencyPhone: '', emergencyRelationship: '',
     medicalNotes: '', agreeToTerms: false, agreeToPhotoPolicy: false
   });
-  const [submitted, setSubmitted] = useState(false);
   const [successDetails, setSuccessDetails] = useState(null);
-  const [fees, setFees] = useState({});
-  const [earlyBirdActive, setEarlyBirdActive] = useState(false);
+  const [checkout, setCheckout] = useState(() => checkoutFromSearch(window.location.search));
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const checkoutStarted = useRef(false);
+  const submitInFlight = useRef(false);
+  const [registrationDetails, setRegistrationDetails] = useState(null);
+  const [feesLoading, setFeesLoading] = useState(true);
+  const [feesError, setFeesError] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('offline');
   const [paypalAvailable, setPaypalAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Load registration fees from API
-  useEffect(() => {
-    api.get('/registration-fees').then(res => {
-      setFees(res.data.fees);
-      setEarlyBirdActive(res.data.earlyBirdActive);
-      const paypalEnabled = !!res.data.paymentOptions?.paypal;
+  const loadFees = useCallback(async () => {
+    setFeesLoading(true);
+    setFeesError('');
+    setRegistrationDetails(null);
+    try {
+      const res = await api.get('/registration-fees');
+      const details = validateRegistrationFees(res.data, seasonConfig.season);
+      setRegistrationDetails(details);
+      const paypalEnabled = details.paymentOptions.paypal;
       setPaypalAvailable(paypalEnabled);
       setSelectedPaymentMethod(paypalEnabled ? 'paypal' : 'offline');
-    }).catch(() => {});
-  }, []);
-
-  // Handle PayPal return
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const regId = params.get('reg');
-    const state = params.get('state');
-    const success = params.get('success');
-    if (success === 'true' && regId) {
-      api.post(`/register-player/${regId}/capture`, { state }).then(res => {
-        if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
-        setSuccessDetails({
-          user: res.data.user,
-          paymentMethod: res.data.paymentMethod || 'paypal',
-          paymentStatus: res.data.paymentStatus || 'paid',
-          amount: res.data.amount,
-          ageGroup: res.data.ageGroup,
-          playerName: res.data.playerName
-        });
-        setStep(5); // success
-        toast.success('Payment confirmed! Welcome to the Seagulls!');
-      }).catch(() => toast.error('Payment capture failed. Please contact the club.'));
+    } catch (error) {
+      setFeesError(error.isAxiosError ? 'Registration fees could not be loaded. Please try again.' : error.message || 'Registration fees could not be loaded. Please try again.');
+    } finally {
+      setFeesLoading(false);
     }
+  }, []);
+  useEffect(() => { loadFees(); }, [loadFees]);
+
+  const showReceipt = useCallback(data => {
+    if (data.token && data.user) setSession(data.token, data.user);
+    setSuccessDetails(data);
+    setStep(5);
+    setCheckout(null);
+    window.history.replaceState(null, '', window.location.pathname);
   }, [setSession]);
 
-  const isEarlyBird = earlyBirdActive;
-  const fee = form.ageGroup ? fees[form.ageGroup] || 140 : null;
-  const finalFee = fee && isEarlyBird ? fee - EARLY_BIRD_DISCOUNT : fee;
+  const recoverCheckout = useCallback(async () => {
+    if (!checkout?.registrationId || !checkout?.state) return;
+    setCheckoutBusy(true);
+    setCheckoutError('');
+    try {
+      const options = { skipAuthRedirect: true, timeout: 30000 };
+      const path = `/register-player/${encodeURIComponent(checkout.registrationId)}`;
+      let res = await api.post(`${path}/${checkout.action}`, { state: checkout.state }, options);
+      if (res.data.approvalUrl) { window.location.assign(res.data.approvalUrl); return; }
+      if (res.data.captureRequired) res = await api.post(`${path}/capture`, { state: checkout.state }, options);
+      if (res.data.paymentStatus !== 'paid') throw new Error('Payment has not been confirmed. Please contact the club with your reference.');
+      showReceipt(res.data);
+    } catch (error) {
+      setCheckoutError(error.response?.data?.error || 'We could not confirm payment. Your registration is saved. Try again before starting another payment.');
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }, [checkout, showReceipt]);
+
+  useEffect(() => {
+    if (checkout?.action === 'capture' && !checkoutStarted.current) {
+      checkoutStarted.current = true;
+      recoverCheckout();
+    }
+  }, [checkout, recoverCheckout]);
+
+  const isEarlyBird = registrationDetails?.earlyBirdActive === true;
+  const earlyBirdDiscount = registrationDetails?.earlyBirdDiscount ?? 0;
+  const fees = registrationDetails?.fees || {};
+  const ageGroups = Object.keys(fees);
+  const fee = Object.hasOwn(fees, form.ageGroup) ? fees[form.ageGroup] : null;
+  const finalFee = registrationFee(registrationDetails, form.ageGroup);
+  const feesReady = !feesLoading && !feesError && finalFee !== null;
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
+  const formPayload = () => ({
+    ...form, season: registrationDetails?.season, email: form.guardianEmail,
+    emergencyContact: { name: form.emergencyName, phone: form.emergencyPhone, relationship: form.emergencyRelationship },
+    paymentMethod: selectedPaymentMethod,
+    quotedAmount: finalFee,
+  });
+
   const nextStep = () => {
-    if (step === 1 && (!form.firstName || !form.lastName || !form.dateOfBirth || !form.ageGroup)) {
-      toast.error('Please complete all required fields'); return;
-    }
-    if (step === 2 && (!form.guardianName || !form.guardianPhone || !form.guardianEmail)) {
-      toast.error('Please complete all guardian details'); return;
-    }
+    if (!feesReady) { toast.error('Please load the registration fees and select an age group.'); return; }
+    const validation = validateRegistration(formPayload(), seasonConfig.season, ageGroups, step);
+    if (validation.error) { toast.error(validation.error); return; }
     if (step === 2 && (form.password.length < 8 || form.password !== form.confirmPassword)) {
       toast.error('Please enter a matching password of at least 8 characters'); return;
-    }
-    if (step === 3 && (!form.emergencyName || !form.emergencyPhone)) {
-      toast.error('Please provide emergency contact details'); return;
     }
     setStep(prev => prev + 1);
   };
 
   const handleSubmit = async () => {
-    if (!form.agreeToTerms) { toast.error('Please agree to the terms and conditions'); return; }
+    if (!feesReady || submitInFlight.current) return;
+    const validation = validateRegistration(formPayload(), seasonConfig.season, ageGroups);
+    if (validation.error) { setStep(validation.step); toast.error(validation.error); return; }
+    submitInFlight.current = true;
     setSubmitting(true);
     try {
-      const res = await api.post('/register-player', {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.guardianEmail,
-        password: form.password,
-        dateOfBirth: form.dateOfBirth,
-        ageGroup: form.ageGroup,
-        position: form.position,
-        guardianName: form.guardianName,
-        guardianPhone: form.guardianPhone,
-        guardianEmail: form.guardianEmail,
-        emergencyContact: {
-          name: form.emergencyName,
-          phone: form.emergencyPhone,
-          relationship: form.emergencyRelationship
-        },
-        medicalNotes: form.medicalNotes,
-        agreeToTerms: form.agreeToTerms,
-        agreeToPhotoPolicy: form.agreeToPhotoPolicy,
-        paymentMethod: selectedPaymentMethod
-      });
+      const res = await api.post('/register-player', validation.data, { skipAuthRedirect: true, timeout: 30000 });
       if (res.data.approvalUrl) {
         // Redirect to PayPal
         window.location.href = res.data.approvalUrl;
       } else {
         // Offline payment - show success
-        if (res.data.token && res.data.user) setSession(res.data.token, res.data.user);
-        setSuccessDetails({
-          user: res.data.user,
-          paymentMethod: res.data.paymentMethod || 'offline',
-          paymentStatus: res.data.paymentStatus || 'offline',
-          amount: res.data.amount || finalFee,
-          ageGroup: res.data.ageGroup || form.ageGroup,
-          playerName: res.data.playerName || `${form.firstName} ${form.lastName}`.trim()
-        });
-        setStep(5); // success step
+        showReceipt(res.data);
         toast.success('Registration submitted!');
       }
     } catch (err) {
+      if (err.response?.data?.code === 'fees_changed') { setStep(1); loadFees(); }
+      if (err.response?.data?.registration) { showReceipt(err.response.data.registration); return; }
+      if (err.response?.data?.checkoutState) {
+        setCheckout({ registrationId: err.response.data.registrationId, state: err.response.data.checkoutState, action: 'resume' });
+        return;
+      }
+      if (err.response?.data?.step) setStep(err.response.data.step);
+      if (err.response?.status === 401) setStep(2);
       toast.error(err.response?.data?.error || 'Registration failed');
     } finally {
+      submitInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -152,26 +167,48 @@ const YJRLRegister = () => {
     'Complete PlayHQ registration if the club has not already matched it',
     'Watch the parent portal for team, training, and uniform updates'
   ] : [
-    'Our registrar will review your application within 48 hours',
+    'Our registrar will review your application',
     'Payment is still required before registration is finalised',
     Number.isFinite(Number(successAmount)) ? `Complete payment of $${Number(successAmount).toFixed(2)} to finalise your registration` : 'The club will confirm the amount due',
     'Your child will be assigned to a team after club review',
-    'Welcome pack including uniform details will be sent to you'
+    'Check the parent portal for team, training and uniform updates'
   ];
 
-  if (submitted || step === 5) return (
+  if (checkout && step !== 5) return (
+    <YJRLLayout>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '3rem 1.5rem' }}>
+        <h1>{checkout.action === 'resume' ? 'Complete your payment' : 'Confirming your payment'}</h1>
+        <p style={{ lineHeight: 1.7 }}>Your registration details are saved. Payment still needs confirmation before the registrar can finalise your application.</p>
+        {checkout.registrationId && <p style={{ overflowWrap: 'anywhere' }}>Registration reference: <strong>{checkout.registrationId}</strong></p>}
+        {checkoutBusy && <p role="status">Checking with PayPal…</p>}
+        {checkoutError && <p role="alert">{checkoutError}</p>}
+        {(!checkout.state || !checkout.registrationId) && <p role="alert">This checkout link is incomplete. Contact the club for help finding your registration.</p>}
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button className="yjrl-btn yjrl-btn-primary" disabled={checkoutBusy || !checkout.state || !checkout.registrationId} onClick={recoverCheckout}>
+            {checkout.action === 'resume' ? 'Continue with PayPal' : 'Retry confirmation'}
+          </button>
+          <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-secondary">Contact Club</a>
+          <Link to="/portal/parent" className="yjrl-btn yjrl-btn-secondary">Parent Portal</Link>
+        </div>
+      </div>
+    </YJRLLayout>
+  );
+
+  if (step === 5) return (
     <YJRLLayout>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '5rem 1.5rem', textAlign: 'center' }}>
         <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '2px solid rgba(74,222,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#4ade80' }}>
           <CheckCircle size={36} />
         </div>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.75rem', color: '#4ade80' }}>
-          {successIsPaid ? 'Payment Confirmed!' : 'Registration Submitted!'}
+          {successDetails?.alreadyReceived ? 'Registration Already Received' : successIsPaid ? 'Payment Confirmed!' : 'Registration Submitted!'}
         </h1>
         <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
           Welcome to the Yeppoon Seagulls. <strong style={{ color: 'var(--yjrl-text)' }}>{successPlayerName}</strong>'s registration has been received.
-          {successIsPaid ? ' Payment has been confirmed.' : ' Payment is still required before final approval.'} A confirmation email will be sent to <strong style={{ color: 'var(--yjrl-text)' }}>{successEmail}</strong>.
+          {successIsPaid ? ' Payment has been confirmed.' : ' Payment is still required before final approval.'}
         </p>
+        <p>{confirmationEmailMessage(successDetails?.emailStatus, successEmail)}</p>
+        <p style={{ overflowWrap: 'anywhere' }}>Registration reference: <strong>{successDetails?.registrationId}</strong></p>
         <div style={{ background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.2)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left' }}>
           <h3 style={{ color: 'var(--yjrl-gold)', fontWeight: 800, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Next Steps</h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -191,6 +228,20 @@ const YJRLRegister = () => {
     </YJRLLayout>
   );
 
+  if (registrationDetails?.registrationOpen === false) return (
+    <YJRLLayout>
+      <section className="yjrl-section">
+        <div className="yjrl-section-inner" style={{ maxWidth: 720 }}>
+          <h1>{seasonConfig.season} sign-ups are being prepared</h1>
+          <p role="status">{registrationDetails.message}</p>
+          <p>Parents and guardians will register children using their own adult accounts.</p>
+          <button type="button" className="yjrl-btn yjrl-btn-secondary" onClick={loadFees}>Check for updates</button>
+          <Link to="/" className="yjrl-btn yjrl-btn-primary" style={{ marginLeft: '1rem' }}>Back to home</Link>
+        </div>
+      </section>
+    </YJRLLayout>
+  );
+
   return (
     <YJRLLayout>
       {/* Header */}
@@ -203,18 +254,25 @@ const YJRLRegister = () => {
             Join the Club
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', margin: 0 }}>
-            Register for the {new Date().getFullYear()} Yeppoon Junior Rugby League season.
+            Register for the {seasonConfig.season} Yeppoon Junior Rugby League season.
           </p>
 
           {isEarlyBird && (
             <div style={{ marginTop: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(240,165,0,0.12)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem', color: 'var(--yjrl-gold)', fontWeight: 600 }}>
-              🎉 Early Bird Discount Active — Save ${EARLY_BIRD_DISCOUNT} on registration!
+              🎉 Early Bird Discount Active — Save ${earlyBirdDiscount} on registration!
             </div>
           )}
         </div>
       </div>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+        {feesLoading && <p role="status">Loading registration fees…</p>}
+        {feesError && (
+          <div role="alert" className="yjrl-card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <p style={{ margin: '0 0 1rem' }}>{feesError}</p>
+            <button type="button" className="yjrl-btn yjrl-btn-secondary" onClick={loadFees}>Try again</button>
+          </div>
+        )}
         {/* Step Indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '2.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
           {STEPS.map((s, i) => (
@@ -242,13 +300,13 @@ const YJRLRegister = () => {
         <div className="yjrl-card">
           <div className="yjrl-card-header">
             <div className="yjrl-card-title">Step {step}: {STEPS[step - 1].label}</div>
-            {form.ageGroup && fee && (
+            {fee !== null && (
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--yjrl-gold)' }}>
                   ${finalFee}
                 </div>
                 {isEarlyBird && (
-                  <div style={{ fontSize: '0.7rem', color: '#4ade80', textDecoration: 'line-through' }}>${fee} (${EARLY_BIRD_DISCOUNT} off)</div>
+                  <div style={{ fontSize: '0.7rem', color: '#4ade80', textDecoration: 'line-through' }}>${fee} (${earlyBirdDiscount} off)</div>
                 )}
               </div>
             )}
@@ -270,13 +328,13 @@ const YJRLRegister = () => {
                 </div>
                 <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                   <label className="yjrl-label">Age Group <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
-                  <select className="yjrl-input" value={form.ageGroup} onChange={e => update('ageGroup', e.target.value)}>
+                  <select className="yjrl-input" value={form.ageGroup} disabled={!registrationDetails} onChange={e => update('ageGroup', e.target.value)}>
                     <option value="">— Select Age Group —</option>
-                    {AGE_GROUPS.map(ag => <option key={ag} value={ag}>{ag}</option>)}
+                    {ageGroups.map(ag => <option key={ag} value={ag}>{ag}</option>)}
                   </select>
-                  {form.ageGroup && fee && (
+                  {fee !== null && (
                     <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: '0.4rem' }}>
-                      Registration fee: ${isEarlyBird ? finalFee : fee} {isEarlyBird && `(early bird -$${EARLY_BIRD_DISCOUNT})`}
+                      Registration fee: ${finalFee} {isEarlyBird && `(early bird -$${earlyBirdDiscount})`}
                     </div>
                   )}
                 </div>
@@ -292,6 +350,10 @@ const YJRLRegister = () => {
             {/* ── Step 2: Guardian ── */}
             {step === 2 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <label style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked={form.adultConfirmed} onChange={e => update('adultConfirmed', e.target.checked)} />
+                  <span>{adultAccount.statement}</span>
+                </label>
                 <div className="yjrl-form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
                   <label className="yjrl-label">Guardian / Parent Name <span style={{ color: 'var(--yjrl-red)' }}>*</span></label>
                   <input type="text" className="yjrl-input" value={form.guardianName} onChange={e => update('guardianName', e.target.value)} placeholder="Full name" />
@@ -371,11 +433,11 @@ const YJRLRegister = () => {
                   </div>
                 </div>
 
-                {form.ageGroup && (
+                {finalFee !== null && (
                   <div style={{ background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 700 }}>Registration Fee — {form.ageGroup}</div>
-                      {isEarlyBird && <div style={{ fontSize: '0.8rem', color: '#4ade80' }}>Early bird discount applied (-${EARLY_BIRD_DISCOUNT})</div>}
+                      {isEarlyBird && <div style={{ fontSize: '0.8rem', color: '#4ade80' }}>Early bird discount applied (-${earlyBirdDiscount})</div>}
                     </div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--yjrl-gold)' }}>${finalFee}</div>
                   </div>
@@ -438,11 +500,11 @@ const YJRLRegister = () => {
               </button>
             ) : <div />}
             {step < 4 ? (
-              <button className="yjrl-btn yjrl-btn-primary" onClick={nextStep}>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={nextStep} disabled={!feesReady}>
                 Next <ChevronRight size={15} />
               </button>
             ) : (
-              <button className="yjrl-btn yjrl-btn-primary" onClick={handleSubmit} disabled={!form.agreeToTerms || submitting}>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={handleSubmit} disabled={!feesReady || !form.agreeToTerms || submitting}>
                 <CheckCircle size={15} /> {submitting ? 'Submitting...' : 'Submit Registration'}
               </button>
             )}

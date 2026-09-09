@@ -1,5 +1,29 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import type { AuthUser } from '../types';
+import type { AuthUser, Env } from '../types';
+
+export function isApprovedCoach(user: AuthUser) {
+  return user.role === 'coach' && user.coachApproved === true;
+}
+
+export async function hasCurrentAdultApproval(env: Env, userId: string, role: 'coach' | 'admin' | 'dev') {
+  const today = new Date().toISOString().split('T')[0];
+  const row = await env.DB.prepare(
+    `SELECT ara.user_id
+     FROM adult_role_approvals ara
+     JOIN users u ON ara.user_id = u.id
+     WHERE ara.user_id = ?
+       AND ara.requested_role = ?
+       AND ara.status = 'approved'
+       AND ara.blue_card_status = 'verified'
+       AND ara.blue_card_expiry IS NOT NULL
+       AND ara.blue_card_expiry >= ?
+       AND ara.identity_checked = 1
+       AND ara.safeguarding_training_completed = 1
+       AND u.is_active = 1
+       AND u.role = ?`
+  ).bind(userId, role, today, role).first();
+  return !!row;
+}
 
 export function isAdultRole(role: string) {
   return role === 'coach' || role === 'admin' || role === 'dev';
@@ -9,11 +33,16 @@ export function isAdminRole(role: string) {
   return role === 'admin' || role === 'dev';
 }
 
+export function canBeGuardian(role: string) {
+  return role === 'parent' || isAdultRole(role);
+}
+
 export async function hasVerifiedParentLink(
   db: D1Database,
   user: AuthUser,
   player: Record<string, unknown>,
 ) {
+  if (!canBeGuardian(user.role)) return false;
   if (player.user_id === user.id) return true;
   const link = await db.prepare(
     'SELECT id FROM parent_child_links WHERE parent_user_id = ? AND player_id = ? AND status = ?'
@@ -26,6 +55,7 @@ export async function hasVerifiedParentForTeam(
   user: AuthUser,
   teamId: string,
 ) {
+  if (!canBeGuardian(user.role)) return false;
   const direct = await db.prepare(
     'SELECT id FROM players WHERE user_id = ? AND team_id = ? AND is_active = 1'
   ).bind(user.id, teamId).first();
@@ -42,7 +72,7 @@ export async function hasVerifiedParentForTeam(
 
 export async function coachOwnsPlayer(db: D1Database, user: AuthUser, playerId: string) {
   if (isAdminRole(user.role)) return true;
-  if (user.role !== 'coach') return false;
+  if (!isApprovedCoach(user)) return false;
   const player = await db.prepare(
     `SELECT p.id
      FROM players p

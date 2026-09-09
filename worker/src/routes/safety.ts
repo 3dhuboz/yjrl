@@ -3,6 +3,7 @@ import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { parseJson, writeAudit } from '../lib/audit';
 import { hashPassword } from '../lib/password';
+import { allPlayersConsent, isPublicMedia, mediaPlayerIds, MEDIA_PROCESSING_VERSION, playerIdsFrom, reviewedMediaUrl } from '../lib/media';
 
 const safety = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -33,14 +34,22 @@ function formatApproval(row: Record<string, unknown>) {
   };
 }
 
-function formatUpload(row: Record<string, unknown>) {
+async function formatUpload(env: Env, row: Record<string, unknown>) {
+  const ids = await mediaPlayerIds(env, String(row.key));
   return {
-    ...row,
+    key: row.key, category: row.category, status: row.status,
+    url: await isPublicMedia(env, row) ? row.url : null,
+    created_at: row.created_at, sha256: row.sha256,
+    processingVersion: row.processing_version,
+    containsChildren: row.contains_children === null ? null : row.contains_children === 1,
+    playerIds: ids, reviewVersion: row.review_version,
+    cleanupPending: row.storage_cleanup_pending === 1,
+    reviewedByUserId: row.reviewed_by_user_id, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes,
     uploaderName: [row.uploader_first_name, row.uploader_last_name].filter(Boolean).join(' '),
     playerName: [row.player_first_name, row.player_last_name].filter(Boolean).join(' '),
     playerId: row.player_id,
     consentRequired: !!row.consent_required,
-    consentGranted: !!row.consent_granted,
+    consentGranted: ids.length > 0 && await allPlayersConsent(env, ids),
     byteSize: row.byte_size,
     mimeType: row.mime_type,
   };
@@ -55,11 +64,6 @@ function isFutureDate(value: unknown) {
 function randomTemporaryPassword() {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
   return `YJRL-${[...bytes].map(byte => byte.toString(36).padStart(2, '0')).join('').slice(0, 18)}!`;
-}
-
-function reviewedMediaUrl(requestUrl: string, key: string) {
-  const url = new URL(requestUrl);
-  return `${url.origin}/api/media?key=${encodeURIComponent(key)}`;
 }
 
 // POST /yjrl/safety/reports
@@ -186,7 +190,7 @@ safety.get('/uploads', authMiddleware, async (c) => {
   }
   sql += ' ORDER BY CASE ur.status WHEN "pending_review" THEN 1 WHEN "approved" THEN 2 ELSE 3 END, ur.created_at DESC LIMIT 100';
   const result = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json((result.results || []).map(formatUpload));
+  return c.json(await Promise.all((result.results || []).map(row => formatUpload(c.env, row))));
 });
 
 // PUT /yjrl/safety/uploads/review
@@ -204,32 +208,48 @@ safety.put('/uploads/review', authMiddleware, async (c) => {
 
   const existing = await c.env.DB.prepare('SELECT * FROM upload_records WHERE key = ?').bind(key).first();
   if (!existing) return c.json({ error: 'Upload record not found' }, 404);
-
+  if (body.reviewVersion !== existing.review_version) return c.json({ error: 'This review has changed. Refresh the review list.' }, 409);
+  if (existing.status === 'rejected' && status === 'approved') return c.json({ error: 'Rejected images must be uploaded again' }, 409);
+  const existingIds = await mediaPlayerIds(c.env, key);
+  let ids = existingIds;
   const reviewNotes = String(body.reviewNotes || body.review_notes || '').trim();
-  if (status === 'approved' && existing.player_id) {
-    if (reviewNotes.length < 10) {
-      return c.json({ error: 'Reviewer notes are required before approving child-related media' }, 400);
-    }
-    const consent = await c.env.DB.prepare(
-      'SELECT media_consent FROM player_consents WHERE player_id = ?'
-    ).bind(existing.player_id).first();
-    if (!consent?.media_consent) {
-      return c.json({ error: 'Current media consent is not recorded for this player' }, 400);
-    }
+  if (reviewNotes.length > 2000) return c.json({ error: 'Reviewer notes must be 2,000 characters or fewer' }, 400);
+  if (status === 'approved') {
+    if (existing.processing_version !== MEDIA_PROCESSING_VERSION) return c.json({ error: 'Re-upload this image so it can be processed before review' }, 409);
+    if (body.expectedSha256 !== existing.sha256) return c.json({ error: 'The image has changed. Preview it again before approval.' }, 409);
+    const preview = await c.env.DB.prepare("SELECT id FROM child_access_log WHERE actor_user_id = ? AND action = 'media_preview' AND media_key = ? AND media_sha256 = ? LIMIT 1")
+      .bind(admin.id, key, existing.sha256).first();
+    if (!preview) return c.json({ error: 'Preview this image before approving it' }, 400);
+    const selected = playerIdsFrom(body.playerIds);
+    if (typeof body.containsChildren !== 'boolean' || !selected || reviewNotes.length < 10) return c.json({ error: 'Confirm who is shown and add reviewer notes before approval' }, 400);
+    ids = [...new Set([...existingIds, ...selected])];
+    if (ids.length > 60 || (!body.containsChildren && ids.length)) return c.json({ error: 'All linked players must remain identified in the review' }, 400);
+    if (body.containsChildren && (body.allChildrenIdentified !== true || !(await allPlayersConsent(c.env, ids)))) return c.json({ error: 'Identify every child and confirm current media consent before approval' }, 400);
+    const object = await c.env.UPLOADS.head(key);
+    if (!object || object.customMetadata?.sha256 !== existing.sha256) return c.json({ error: 'The image is unavailable or has changed. Upload it again.' }, 409);
   }
 
   const approvedUrl = status === 'approved' ? reviewedMediaUrl(c.req.url, key) : null;
+  const update = await c.env.DB.prepare(
+    `UPDATE upload_records SET status = ?, url = ?, player_ids = ?, contains_children = ?,
+     reviewed_by_user_id = ?, reviewed_at = datetime('now'), reviewed_sha256 = ?, review_notes = ?,
+     storage_cleanup_pending = ?, review_version = review_version + 1, updated_at = datetime('now') WHERE key = ? AND review_version = ?`
+  ).bind(status, approvedUrl, JSON.stringify(ids), status === 'approved' ? (body.containsChildren ? 1 : 0) : existing.contains_children,
+    admin.id, existing.sha256, reviewNotes, status === 'rejected' ? 1 : 0, key, existing.review_version).run();
+  if (!update.meta.changes) return c.json({ error: 'This review has changed. Refresh the review list.' }, 409);
+  // Withdraw public access before storage cleanup, including when cleanup fails.
   if (status === 'rejected') {
-    await c.env.UPLOADS.delete(key);
+    try {
+      await c.env.UPLOADS.delete(key);
+      await c.env.DB.prepare('UPDATE upload_records SET storage_cleanup_pending = 0 WHERE key = ? AND status = ?').bind(key, 'rejected').run();
+    } catch { console.error('Rejected photo remains private; storage cleanup is pending'); }
   }
-  await c.env.DB.prepare(
-    'UPDATE upload_records SET status = ?, url = ?, updated_at = datetime(\'now\') WHERE key = ?'
-  ).bind(status, approvedUrl, key).run();
   await writeAudit(c.env, admin, 'upload_reviewed', 'upload', key, {
     status,
     previousStatus: existing.status,
     category: existing.category,
-    playerId: existing.player_id || null,
+    playerIds: ids,
+    sha256: existing.sha256,
     reviewNotes,
   });
 
@@ -241,7 +261,7 @@ safety.put('/uploads/review', authMiddleware, async (c) => {
      LEFT JOIN players p ON ur.player_id = p.id
      WHERE ur.key = ?`
   ).bind(key).first();
-  return c.json(formatUpload(row!));
+  return c.json(await formatUpload(c.env, row!));
 });
 
 // POST /yjrl/safety/adult-approvals/invite

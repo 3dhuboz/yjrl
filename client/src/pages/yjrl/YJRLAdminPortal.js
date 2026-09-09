@@ -1,3 +1,14 @@
+import WebsiteChecklist from '../../components/WebsiteChecklist';
+import CommunicationHub from '../../components/CommunicationHub';
+import AdminShop from '../../components/AdminShop';
+import AdminStocktake from '../../components/AdminStocktake';
+import AdminAddPlayer from '../../components/AdminAddPlayer';
+import ArticlePhotoUpload from '../../components/ArticlePhotoUpload';
+import { fixtureError } from '../../../../shared/fixture';
+import { locationFields } from '../../../../shared/maps';
+import MapLocationFields from '../../components/MapLocationFields';
+import AdminEvents from '../../components/AdminEvents';
+import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users, Trophy, Calendar, Newspaper, Plus, Edit, Trash2, Save,
@@ -8,9 +19,10 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import YJRLLayout from './YJRLLayout';
+import MediaReviewPreview from '../../components/MediaReviewPreview';
 import './yjrl.css';
 
-const SEASON = new Date().getFullYear().toString();
+const SEASON = seasonConfig.season;
 
 const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens', 'Mens'];
 const STATUS_OPTIONS = ['pending', 'active', 'inactive', 'transferred'];
@@ -25,7 +37,7 @@ const EMPTY_TEAM = {
   managerName: '',
   trainingDay: '',
   trainingTime: '',
-  trainingVenue: 'Nev Skuse Oval'
+  trainingVenue: 'Nev Skuse Oval', trainingMapsUrl: '', trainingMapsEmbedUrl: ''
 };
 
 const EMPTY_FIXTURE = {
@@ -36,7 +48,7 @@ const EMPTY_FIXTURE = {
   awayTeamName: '',
   date: '',
   time: '',
-  venue: 'Nev Skuse Oval',
+  venue: 'Nev Skuse Oval', mapsUrl: '', mapsEmbedUrl: '',
   status: 'scheduled',
   isHomeGame: true,
   season: SEASON
@@ -46,6 +58,7 @@ const EMPTY_NEWS = {
   title: '',
   content: '',
   excerpt: '',
+  image: '',
   category: 'news',
   published: false,
   featured: false
@@ -99,11 +112,14 @@ const YJRLAdminPortal = () => {
   const isAdmin = user && (user.role === 'admin' || user.role === 'dev');
 
   const [tab, setTab] = useState('overview');
+  const [stockProduct, setStockProduct] = useState('');
   const [stats, setStats] = useState({ teamCount: 0, playerCount: 0, fixtureCount: 0, upcomingCount: 0 });
   const [teams, setTeams] = useState([]);
   const [fixtures, setFixtures] = useState([]);
   const [players, setPlayers] = useState([]);
   const [news, setNews] = useState([]);
+  const [roomSort, setRoomSort] = useState('age');
+  const [roomSearch, setRoomSearch] = useState('');
   const [rooms, setRooms] = useState([]);
   const [safetyReports, setSafetyReports] = useState([]);
   const [adultApprovals, setAdultApprovals] = useState([]);
@@ -111,18 +127,25 @@ const YJRLAdminPortal = () => {
   const [adultInviteForm, setAdultInviteForm] = useState(EMPTY_ADULT_INVITE);
   const [lastInvite, setLastInvite] = useState(null);
   const [uploadRecords, setUploadRecords] = useState([]);
-  const [auditLog, setAuditLog] = useState([]);
   const [readiness, setReadiness] = useState(null);
   const [readinessError, setReadinessError] = useState('');
   const [safetyActionNotes, setSafetyActionNotes] = useState({});
   const [uploadReviewNotes, setUploadReviewNotes] = useState({});
+  const [uploadReviewSubjects, setUploadReviewSubjects] = useState({});
+  const [viewedUploads, setViewedUploads] = useState({});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [teamModal, setTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
   const [fixtureModal, setFixtureModal] = useState(false);
+  const [editingFixture, setEditingFixture] = useState(null);
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [fixtureErrorMessage, setFixtureErrorMessage] = useState('');
+  const [savingFixture, setSavingFixture] = useState(false);
   const [fixtureForm, setFixtureForm] = useState(EMPTY_FIXTURE);
   const [newsModal, setNewsModal] = useState(false);
   const [newsForm, setNewsForm] = useState(EMPTY_NEWS);
+  const [articlePhotoBusy, setArticlePhotoBusy] = useState(false);
   const [editingNews, setEditingNews] = useState(null);
 
   const fixtureTeamOptions = useMemo(() => teams.map(team => ({
@@ -139,6 +162,11 @@ const YJRLAdminPortal = () => {
     }))
     .filter(coach => coach.id), [adultApprovals]);
 
+  const visibleRooms = [...rooms].filter(room => `${room.name || ''} ${room.type || ''} ${room.age_group || room.ageGroup || ''}`.toLowerCase().includes(roomSearch.trim().toLowerCase())).sort((a, b) => {
+    const value = room => roomSort === 'age' ? (room.age_group || room.ageGroup || 'ZZ') : roomSort === 'type' ? room.type || '' : room.name || '';
+    return value(a).localeCompare(value(b), 'en', { numeric: true }) || (a.name || '').localeCompare(b.name || '', 'en', { numeric: true });
+  });
+
   useEffect(() => {
     if (!isAdmin) return;
     let alive = true;
@@ -154,9 +182,8 @@ const YJRLAdminPortal = () => {
       api.get('/yjrl/safety/reports').catch(() => ({ data: [] })),
       api.get('/yjrl/safety/adult-approvals').catch(() => ({ data: [] })),
       api.get('/yjrl/safety/uploads').catch(() => ({ data: [] })),
-      api.get('/yjrl/safety/audit-log?limit=50').catch(() => ({ data: [] })),
       api.get('/admin/readiness').catch(error => ({ data: null, error }))
-    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes, aaRes, uRes, aRes, readyRes]) => {
+    ]).then(([sRes, tRes, fRes, pRes, nRes, rRes, srRes, aaRes, uRes, readyRes]) => {
       if (!alive) return;
       if (sRes.data && typeof sRes.data === 'object' && !Array.isArray(sRes.data)) setStats(sRes.data);
       setTeams(Array.isArray(tRes.data) ? tRes.data : []);
@@ -167,7 +194,6 @@ const YJRLAdminPortal = () => {
       setSafetyReports(Array.isArray(srRes.data) ? srRes.data : []);
       setAdultApprovals(Array.isArray(aaRes.data) ? aaRes.data : []);
       setUploadRecords(Array.isArray(uRes.data) ? uRes.data : []);
-      setAuditLog(Array.isArray(aRes.data) ? aRes.data : []);
       setReadiness(readyRes.data || null);
       setReadinessError(readyRes.error ? 'Launch readiness check could not be loaded.' : '');
     }).finally(() => {
@@ -181,20 +207,23 @@ const YJRLAdminPortal = () => {
 
   const saveTeam = async () => {
     try {
+      locationFields(teamForm, {}, true);
       const selectedCoach = approvedCoaches.find(coach => coach.id === teamForm.coachId);
       const payload = {
-        ...teamForm,
+        ...Object.fromEntries(Object.keys(EMPTY_TEAM).map(key => [key, teamForm[key]])),
         coachName: teamForm.coachName || selectedCoach?.label || '',
-        coachId: teamForm.coachId || null
+        ...(editingTeam ? {} : { coachId: teamForm.coachId || null })
       };
-      const res = await api.post('/yjrl/teams', payload);
-      setTeams(prev => [...prev, res.data]);
-      setStats(prev => ({ ...prev, teamCount: (prev.teamCount || 0) + 1 }));
+      if (editingTeam && payload.coachId === '__unchanged') delete payload.coachId;
+      const res = editingTeam ? await api.put(`/yjrl/teams/${editingTeam}`, payload) : await api.post('/yjrl/teams', payload);
+      setTeams(prev => editingTeam ? prev.map(t => t._id === editingTeam ? res.data : t) : [...prev, res.data]);
+      setStats(prev => ({ ...prev, teamCount: (prev.teamCount || 0) + (editingTeam ? 0 : 1) }));
       setTeamModal(false);
       setTeamForm(EMPTY_TEAM);
-      toast.success('Team created');
+      setEditingTeam(null);
+      toast.success(editingTeam ? 'Team updated' : 'Team created');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create team');
+      toast.error(error.response?.data?.error || error.message || 'Failed to save team');
     }
   };
 
@@ -226,17 +255,22 @@ const YJRLAdminPortal = () => {
   };
 
   const saveFixture = async () => {
+    const validation = fixtureError(fixtureForm);
+    if (validation) { setFixtureErrorMessage(validation); return; }
+    setSavingFixture(true); setFixtureErrorMessage('');
     try {
-      const payload = { ...fixtureForm, round: Number(fixtureForm.round) || 1 };
-      const res = await api.post('/yjrl/fixtures', payload);
-      setFixtures(prev => [res.data, ...prev]);
-      setStats(prev => ({ ...prev, fixtureCount: (prev.fixtureCount || 0) + 1 }));
-      setFixtureModal(false);
-      setFixtureForm(EMPTY_FIXTURE);
-      toast.success('Fixture created');
+      locationFields(fixtureForm);
+      const payload = { ...Object.fromEntries(Object.keys(EMPTY_FIXTURE).map(key => [key, fixtureForm[key]])), round: Number(fixtureForm.round) };
+      if (editingFixture) { delete payload.status; delete payload.teamId; }
+      // Team assignment is fixed once results exist; other fixture details remain editable.
+      const res = editingFixture ? await api.put(`/yjrl/fixtures/${editingFixture}`, payload) : await api.post('/yjrl/fixtures', payload);
+      setFixtures(prev => editingFixture ? prev.map(f => f._id === editingFixture ? res.data : f) : [res.data, ...prev]);
+      setStats(prev => ({ ...prev, fixtureCount: (prev.fixtureCount || 0) + (editingFixture ? 0 : 1) }));
+      setFixtureModal(false); setFixtureForm(EMPTY_FIXTURE); setEditingFixture(null);
+      toast.success(editingFixture ? 'Fixture updated' : 'Fixture created');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create fixture');
-    }
+      setFixtureErrorMessage(error.response?.data?.error || error.message || 'Failed to save fixture');
+    } finally { setSavingFixture(false); }
   };
 
   const deleteFixture = async (id) => {
@@ -283,11 +317,11 @@ const YJRLAdminPortal = () => {
       if (editingNews) {
         const res = await api.put(`/yjrl/news/${editingNews}`, newsForm);
         setNews(prev => prev.map(article => (article._id === editingNews ? res.data : article)));
-        toast.success('Article updated');
+        toast.success(newsForm.published ? 'Article published on the website' : 'Draft saved — visible in admin only');
       } else {
         const res = await api.post('/yjrl/news', newsForm);
         setNews(prev => [res.data, ...prev]);
-        toast.success('Article created');
+        toast.success(newsForm.published ? 'Article published on the website' : 'Draft saved — visible in admin only');
       }
       setNewsModal(false);
       setNewsForm(EMPTY_NEWS);
@@ -314,6 +348,7 @@ const YJRLAdminPortal = () => {
       title: article.title || '',
       content: article.content || '',
       excerpt: article.excerpt || '',
+      image: article.image || '',
       category: article.category || 'news',
       published: !!article.published,
       featured: !!article.featured
@@ -343,17 +378,41 @@ const YJRLAdminPortal = () => {
     }
   };
 
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Choose a photo smaller than 5MB'); return; }
+    setUploadingPhoto(true);
+    try {
+      const data = new FormData();
+      data.set('file', file);
+      data.set('category', 'general');
+      await api.post('/upload', data, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 30000 });
+      toast.success('Photo saved for private review');
+      try {
+        const response = await api.get('/yjrl/safety/uploads');
+        setUploadRecords(response.data);
+      } catch { toast.error('Refresh the review list to see the saved photo'); }
+    } catch (error) { toast.error(error.response?.data?.error || 'The upload could not be confirmed. Refresh the list before retrying.'); }
+    finally { setUploadingPhoto(false); }
+  };
+
   const reviewUpload = async (record, status) => {
     try {
       const note = (uploadReviewNotes[record.key] || '').trim();
-      if (status === 'approved' && (record.playerId || record.player_id) && note.length < 10) {
-        toast.error('Add reviewer notes before approving child media');
+      const subjects = uploadReviewSubjects[record.key] || {};
+      if (status === 'approved' && (note.length < 10 || !subjects.classification || viewedUploads[record.key] !== record.sha256)) {
+        toast.error('Preview the image, confirm who is shown and add reviewer notes');
         return;
       }
-      const res = await api.put('/yjrl/safety/uploads/review', { key: record.key, status, reviewNotes: note });
+      const res = await api.put('/yjrl/safety/uploads/review', {
+        key: record.key, status, reviewNotes: note, reviewVersion: record.reviewVersion,
+        expectedSha256: record.sha256, containsChildren: subjects.classification === 'children',
+        playerIds: [...new Set([...(record.playerIds || []), ...(subjects.playerIds || [])])],
+        allChildrenIdentified: subjects.confirmed === true
+      });
       setUploadRecords(prev => prev.map(item => (item.key === record.key ? res.data : item)));
       setUploadReviewNotes(prev => ({ ...prev, [record.key]: '' }));
-      toast.success(`Upload ${status.replace('_', ' ')}`);
+      toast.success(res.data.cleanupPending ? 'Upload rejected. Storage cleanup is pending.' : `Upload ${status.replace('_', ' ')}`);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to review upload');
     }
@@ -431,11 +490,16 @@ const YJRLAdminPortal = () => {
               ['overview', 'Overview'],
               ['teams', 'Teams'],
               ['fixtures', 'Fixtures'],
+              ['events', 'Events'],
+              ['shop', 'Shop'],
+              ['stocktake', 'Stocktake'],
               ['news', 'News'],
               ['players', 'Players'],
+              ['checklist', 'Website checklist'],
+              ['communication', 'Messages'],
               ['moderation', 'Chat Safety']
             ].map(([key, label]) => (
-              <button key={key} className={`yjrl-tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>
+              <button key={key} className={`yjrl-tab ${tab === key ? 'active' : ''}`} onClick={() => { if (key === 'stocktake') setStockProduct(''); setTab(key); }}>{label}</button>
             ))}
           </div>
         </div>
@@ -544,7 +608,7 @@ const YJRLAdminPortal = () => {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase' }}>Teams ({teams.length})</h2>
-              <button className="yjrl-btn yjrl-btn-primary" onClick={() => setTeamModal(true)}>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={() => { setTeamForm(EMPTY_TEAM); setEditingTeam(null); setTeamModal(true); }}>
                 <Plus size={15} /> Add Team
               </button>
             </div>
@@ -562,6 +626,7 @@ const YJRLAdminPortal = () => {
                         <div style={{ fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>{team.ageGroup}</div>
                       </div>
                     </div>
+                    <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setTeamForm({ ...EMPTY_TEAM, ...team, coachId: '__unchanged' }); setEditingTeam(team._id); setTeamModal(true); }} aria-label={`Edit ${team.name}`}><Edit size={14} /> Edit</button>
                     <button onClick={() => deleteTeam(team._id || team.id)} aria-label={`Deactivate ${team.name}`} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0.25rem' }}>
                       <Trash2 size={14} />
                     </button>
@@ -602,7 +667,7 @@ const YJRLAdminPortal = () => {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase' }}>Fixtures ({fixtures.length})</h2>
-              <button className="yjrl-btn yjrl-btn-primary" onClick={() => setFixtureModal(true)}>
+              <button className="yjrl-btn yjrl-btn-primary" onClick={() => { setFixtureForm(EMPTY_FIXTURE); setEditingFixture(null); setFixtureErrorMessage(''); setFixtureModal(true); }}>
                 <Plus size={15} /> Add Fixture
               </button>
             </div>
@@ -626,6 +691,7 @@ const YJRLAdminPortal = () => {
                           </span>
                         </td>
                         <td>
+                          <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => { setFixtureForm({ ...EMPTY_FIXTURE, ...fixture, date: fixture.date?.slice(0, 10) || '' }); setEditingFixture(id); setFixtureErrorMessage(''); setFixtureModal(true); }} aria-label="Edit fixture"><Edit size={12} /> Edit</button>
                           <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => deleteFixture(id)} aria-label="Remove fixture">
                             <Trash2 size={12} />
                           </button>
@@ -640,6 +706,9 @@ const YJRLAdminPortal = () => {
           </div>
         )}
 
+        {tab === 'events' && <AdminEvents />}
+        {tab === 'shop' && <AdminShop players={players} onStocktake={id => { setStockProduct(id || ''); setTab('stocktake'); }} />}
+        {tab === 'stocktake' && <AdminStocktake productId={stockProduct} onShop={() => setTab('shop')} />}
         {tab === 'news' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -667,6 +736,10 @@ const YJRLAdminPortal = () => {
                       <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(article.publishDate)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          {!article.published && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={async () => {
+                            try { const res = await api.put(`/yjrl/news/${article._id}`, { published: true }); setNews(prev => prev.map(n => n._id === article._id ? res.data : n)); toast.success('Article published on the website'); }
+                            catch (error) { toast.error(error.response?.data?.error || 'Could not publish article'); }
+                          }}>Publish</button>}
                           <button className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm" onClick={() => openEditNews(article)} aria-label={`Edit ${article.title}`}>
                             <Edit size={12} />
                           </button>
@@ -688,7 +761,7 @@ const YJRLAdminPortal = () => {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase' }}>Players ({players.length})</h2>
-              <span style={{ color: 'var(--yjrl-muted)', fontSize: '0.85rem' }}>Registrations are created from the public form.</span>
+              <AdminAddPlayer teams={teams} onCreated={player => setPlayers(prev => [...prev, player])} />
             </div>
             <div className="yjrl-card">
               <table className="yjrl-table">
@@ -728,6 +801,8 @@ const YJRLAdminPortal = () => {
           </div>
         )}
 
+        {tab === 'checklist' && <WebsiteChecklist />}
+        {tab === 'communication' && <CommunicationHub />}
         {tab === 'moderation' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="yjrl-card">
@@ -854,6 +929,10 @@ const YJRLAdminPortal = () => {
             <div className="yjrl-card">
               <div className="yjrl-card-header">
                 <div className="yjrl-card-title"><Newspaper size={16} /> Upload Review ({uploadRecords.filter(record => record.status === 'pending_review').length})</div>
+                <label style={{ fontSize: '0.85rem' }}>
+                  {uploadingPhoto ? 'Uploading photo…' : 'Upload a photo for private review'}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingPhoto} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadPhoto(file); }} />
+                </label>
               </div>
               <table className="yjrl-table">
                 <thead>
@@ -865,8 +944,9 @@ const YJRLAdminPortal = () => {
                       <td style={{ maxWidth: 260, wordBreak: 'break-word' }}>
                         {record.url ? <a href={record.url} target="_blank" rel="noreferrer" style={{ color: 'var(--yjrl-blue)' }}>{record.key}</a> : record.key}
                         <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{record.mimeType || record.mime_type} · {Math.round((record.byteSize || record.byte_size || 0) / 1024)} KB</div>
+                        <MediaReviewPreview record={record} onViewed={(key, sha) => setViewedUploads(prev => ({ ...prev, [key]: sha }))} />
                       </td>
-                      <td>{record.playerName || record.player_id || '-'}</td>
+                      <td>{(record.playerIds || []).map(id => { const player = players.find(p => (p.id || p._id) === id); return player ? `${player.firstName} ${player.lastName}` : id; }).join(', ') || 'No players identified'}</td>
                       <td style={{ textTransform: 'capitalize' }}>{record.category}</td>
                       <td>{record.consentGranted || record.consent_granted ? 'Granted' : record.consentRequired || record.consent_required ? 'Required' : 'Not required'}</td>
                       <td style={{ textTransform: 'capitalize', fontWeight: 700 }}>{String(record.status || '').replace('_', ' ')}</td>
@@ -876,13 +956,27 @@ const YJRLAdminPortal = () => {
                           <input
                             className="yjrl-input"
                             value={uploadReviewNotes[record.key] || ''}
-                            placeholder="Reviewer note for child media"
+                            aria-label="Photo review notes"
+                            placeholder="Reviewer notes"
                             onChange={event => setUploadReviewNotes(prev => ({ ...prev, [record.key]: event.target.value }))}
                             style={{ fontSize: '0.78rem' }}
                           />
+                          <select className="yjrl-input" aria-label="Who is shown in the photo" value={uploadReviewSubjects[record.key]?.classification || ''} onChange={event => setUploadReviewSubjects(prev => ({ ...prev, [record.key]: { ...prev[record.key], classification: event.target.value, confirmed: false } }))}>
+                            <option value="">Who is shown?</option>
+                            <option value="children">Children are shown</option>
+                            <option value="no-children">No children are shown</option>
+                          </select>
+                          {uploadReviewSubjects[record.key]?.classification === 'children' && <>
+                            <label>Add any other players shown
+                              <select multiple className="yjrl-input" value={uploadReviewSubjects[record.key]?.playerIds || []} onChange={event => setUploadReviewSubjects(prev => ({ ...prev, [record.key]: { ...prev[record.key], playerIds: Array.from(event.target.selectedOptions, option => option.value), confirmed: false } }))}>
+                                {players.map(player => <option key={player.id || player._id} value={player.id || player._id}>{player.firstName} {player.lastName} ({player.ageGroup})</option>)}
+                              </select>
+                            </label>
+                            <label><input type="checkbox" checked={uploadReviewSubjects[record.key]?.confirmed === true} onChange={event => setUploadReviewSubjects(prev => ({ ...prev, [record.key]: { ...prev[record.key], confirmed: event.target.checked } }))} /> Every child shown is identified above. Reject the image if anyone cannot be identified.</label>
+                          </>}
                           <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            {record.status !== 'approved' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
-                            {record.status !== 'rejected' && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>Reject</button>}
+                            {record.status === 'pending_review' && <button className="yjrl-btn yjrl-btn-primary yjrl-btn-sm" disabled={viewedUploads[record.key] !== record.sha256} onClick={() => reviewUpload(record, 'approved')}>Approve</button>}
+                            {(record.status !== 'rejected' || record.cleanupPending) && <button className="yjrl-btn yjrl-btn-danger yjrl-btn-sm" onClick={() => reviewUpload(record, 'rejected')}>{record.cleanupPending ? 'Retry removal' : 'Reject'}</button>}
                           </div>
                         </div>
                       </td>
@@ -895,14 +989,16 @@ const YJRLAdminPortal = () => {
 
             <div className="yjrl-card">
               <div className="yjrl-card-header">
-                <div className="yjrl-card-title"><Shield size={16} /> Active Chat Rooms ({rooms.length})</div>
+                <div className="yjrl-card-title"><Shield size={16} /> Active Chat Rooms ({visibleRooms.length})</div>
+                <div className="admin-toolbar"><input aria-label="Search chat rooms" className="yjrl-input" placeholder="Search team or room" value={roomSearch} onChange={e => setRoomSearch(e.target.value)} />
+                  <label>Sort by <select className="yjrl-input" value={roomSort} onChange={e => setRoomSort(e.target.value)}><option value="age">Age group</option><option value="name">Room name</option><option value="type">Room type</option></select></label></div>
               </div>
               <table className="yjrl-table">
                 <thead>
                   <tr><th>Room</th><th>Type</th><th>Age Group</th><th>Status</th></tr>
                 </thead>
                 <tbody>
-                  {rooms.map(room => (
+                  {visibleRooms.map(room => (
                     <tr key={room.id || room.room_id || room.name}>
                       <td style={{ fontWeight: 700 }}>{room.name || room.room_id || room.id}</td>
                       <td style={{ textTransform: 'capitalize' }}>{room.type || '-'}</td>
@@ -914,48 +1010,11 @@ const YJRLAdminPortal = () => {
                       </td>
                     </tr>
                   ))}
-                  {rooms.length === 0 && !loading && emptyTable(4, <Shield size={34} />, 'No active chat rooms', 'Create teams to seed team and parent communication rooms.')}
+                  {visibleRooms.length === 0 && !loading && emptyTable(4, <Shield size={34} />, 'No matching chat rooms', 'Try another search or add a team.')}
                 </tbody>
               </table>
             </div>
 
-            <div className="yjrl-card">
-              <div className="yjrl-card-header">
-                <div className="yjrl-card-title"><CheckCircle size={16} /> Safeguarding Audit Log</div>
-              </div>
-              <table className="yjrl-table">
-                <thead>
-                  <tr><th>Action</th><th>Entity</th><th>User</th><th>Details</th><th>Time</th></tr>
-                </thead>
-                <tbody>
-                  {auditLog.map(entry => (
-                    <tr key={entry.id}>
-                      <td style={{ fontWeight: 700 }}>{entry.action}</td>
-                      <td>{entry.entity_type}{entry.entity_id ? `:${entry.entity_id}` : ''}</td>
-                      <td>{entry.user_name || entry.user_id}</td>
-                      <td style={{ maxWidth: 360, wordBreak: 'break-word', color: 'var(--yjrl-muted)', fontSize: '0.75rem' }}>{JSON.stringify(entry.details || {})}</td>
-                      <td style={{ color: 'var(--yjrl-muted)', fontSize: '0.8rem' }}>{formatDate(entry.created_at)}</td>
-                    </tr>
-                  ))}
-                  {auditLog.length === 0 && !loading && emptyTable(5, <CheckCircle size={34} />, 'No audit events yet', 'Safeguarding actions will be recorded here.')}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="yjrl-grid-3">
-              {[
-                ['Adult boundaries', 'Coaches use parent/team-adult rooms and cannot post in junior player rooms.'],
-                ['Player hours', 'Player rooms accept messages from 7am to 8pm AEST.'],
-                ['Launch gate', 'Reports, adult approvals, media review, and audit history are live. Formal incident escalation still needs club sign-off before customer launch.']
-              ].map(([title, detail]) => (
-                <div key={title} className="yjrl-card" style={{ padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-                    <CheckCircle size={16} style={{ color: '#16a34a' }} /> {title}
-                  </div>
-                  <div style={{ color: 'var(--yjrl-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>{detail}</div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>
@@ -964,7 +1023,7 @@ const YJRLAdminPortal = () => {
         <div className="yjrl-modal-overlay" onClick={() => setTeamModal(false)}>
           <div className="yjrl-modal" onClick={event => event.stopPropagation()}>
             <div className="yjrl-modal-header">
-              <div className="yjrl-modal-title">Add Team</div>
+              <div className="yjrl-modal-title">{editingTeam ? 'Edit Team' : 'Add Team'}</div>
               <button onClick={() => setTeamModal(false)} aria-label="Close team form" style={{ background: 'none', border: 'none', color: 'var(--yjrl-muted)', cursor: 'pointer' }}><X size={18} /></button>
             </div>
             <div className="yjrl-modal-body">
@@ -986,6 +1045,7 @@ const YJRLAdminPortal = () => {
                     setTeamForm(prev => ({ ...prev, coachId: event.target.value, coachName: selected?.label || prev.coachName }));
                   }}>
                     <option value="">Unassigned</option>
+                    {editingTeam && <option value="__unchanged">Keep current coach</option>}
                     {approvedCoaches.map(coach => <option key={coach.id} value={coach.id}>{coach.label}{coach.email ? ` - ${coach.email}` : ''}</option>)}
                   </select>
                 </div>
@@ -1003,11 +1063,12 @@ const YJRLAdminPortal = () => {
                   </div>
                 ))}
               </div>
+              <MapLocationFields form={teamForm} setForm={setTeamForm} training />
             </div>
             <div className="yjrl-modal-footer">
               <button className="yjrl-btn yjrl-btn-secondary" onClick={() => setTeamModal(false)}>Cancel</button>
               <button className="yjrl-btn yjrl-btn-primary" onClick={saveTeam} disabled={!teamForm.name}>
-                <Save size={15} /> Create Team
+                <Save size={15} /> {editingTeam ? 'Save Team' : 'Create Team'}
               </button>
             </div>
           </div>
@@ -1018,14 +1079,16 @@ const YJRLAdminPortal = () => {
         <div className="yjrl-modal-overlay" onClick={() => setFixtureModal(false)}>
           <div className="yjrl-modal" onClick={event => event.stopPropagation()}>
             <div className="yjrl-modal-header">
-              <div className="yjrl-modal-title">Add Fixture</div>
+              <div className="yjrl-modal-title">{editingFixture ? 'Edit Fixture' : 'Add Fixture'}</div>
               <button onClick={() => setFixtureModal(false)} aria-label="Close fixture form" style={{ background: 'none', border: 'none', color: 'var(--yjrl-muted)', cursor: 'pointer' }}><X size={18} /></button>
             </div>
             <div className="yjrl-modal-body">
+              <p>Enter both teams and the date. Use TBC for an unconfirmed opponent.</p>
+              {fixtureErrorMessage && <p role="alert" className="yjrl-form-error">{fixtureErrorMessage}</p>}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                 <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                   <label className="yjrl-label">Team</label>
-                  <select className="yjrl-input" value={fixtureForm.teamId} onChange={event => setFixtureForm(prev => ({ ...prev, teamId: event.target.value }))}>
+                  <select disabled={!!editingFixture} className="yjrl-input" value={fixtureForm.teamId || ''} onChange={event => setFixtureForm(prev => ({ ...prev, teamId: event.target.value }))}>
                     <option value="">Unassigned</option>
                     {fixtureTeamOptions.map(team => <option key={team.id} value={team.id}>{team.label}</option>)}
                   </select>
@@ -1059,11 +1122,13 @@ const YJRLAdminPortal = () => {
                   </div>
                 ))}
               </div>
+              <label className="admin-check"><input type="checkbox" checked={fixtureForm.isHomeGame} onChange={event => setFixtureForm(prev => ({ ...prev, isHomeGame: event.target.checked }))} />Yeppoon is the home team</label>
+              <MapLocationFields form={fixtureForm} setForm={setFixtureForm} />
             </div>
             <div className="yjrl-modal-footer">
               <button className="yjrl-btn yjrl-btn-secondary" onClick={() => setFixtureModal(false)}>Cancel</button>
-              <button className="yjrl-btn yjrl-btn-primary" onClick={saveFixture} disabled={!fixtureForm.awayTeamName || !fixtureForm.date}>
-                <Save size={15} /> Create Fixture
+              <button className="yjrl-btn yjrl-btn-primary" onClick={saveFixture} disabled={savingFixture}>
+                <Save size={15} /> {savingFixture ? 'Saving…' : editingFixture ? 'Save Fixture' : 'Create Fixture'}
               </button>
             </div>
           </div>
@@ -1096,13 +1161,23 @@ const YJRLAdminPortal = () => {
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--yjrl-muted)' }}>
                     <input type="checkbox" checked={newsForm.featured} onChange={event => setNewsForm(prev => ({ ...prev, featured: event.target.checked }))} />
-                    Feature on homepage
+                    Feature on homepage when published
                   </label>
                 </div>
               </div>
+              <p role="status" style={{ margin: 0 }}>{newsForm.published ? 'Saving will publish this article on the public News page.' : 'This is a draft. Tick Publish immediately to show it on the website.'}</p>
               <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                 <label className="yjrl-label">Excerpt</label>
                 <input type="text" className="yjrl-input" value={newsForm.excerpt} onChange={event => setNewsForm(prev => ({ ...prev, excerpt: event.target.value }))} />
+              </div>
+              <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
+                <label className="yjrl-label" htmlFor="news-reviewed-image">Reviewed photo (optional)</label>
+                <select id="news-reviewed-image" className="yjrl-input" value={newsForm.image || ''} onChange={event => setNewsForm(prev => ({ ...prev, image: event.target.value }))}>
+                  <option value="">No photo</option>
+                  {uploadRecords.filter(record => record.status === 'approved' && record.url).map(record => <option key={record.key} value={record.url}>{record.reviewNotes || record.key}</option>)}
+                </select>
+                {newsForm.image && <img src={newsForm.image} alt="Selected article" style={{ display: 'block', maxWidth: '100%', maxHeight: 200, marginTop: 12 }} />}
+                <ArticlePhotoUpload players={players} onRecords={setUploadRecords} onBusy={setArticlePhotoBusy} onApproved={record => { setNewsForm(prev => ({ ...prev, image: record.url })); setUploadRecords(prev => prev.map(item => item.key === record.key ? record : item)); toast.success('Photo added to article'); }} />
               </div>
               <div className="yjrl-form-group" style={{ marginBottom: 0 }}>
                 <label className="yjrl-label">Content</label>
@@ -1111,8 +1186,8 @@ const YJRLAdminPortal = () => {
             </div>
             <div className="yjrl-modal-footer">
               <button className="yjrl-btn yjrl-btn-secondary" onClick={() => setNewsModal(false)}>Cancel</button>
-              <button className="yjrl-btn yjrl-btn-primary" onClick={saveNews} disabled={!newsForm.title || !newsForm.content}>
-                <Save size={15} /> {editingNews ? 'Update Article' : 'Publish Article'}
+              <button className="yjrl-btn yjrl-btn-primary" onClick={saveNews} disabled={articlePhotoBusy || !newsForm.title.trim() || !newsForm.content.trim()}>
+                <Save size={15} /> {newsForm.published ? 'Publish Article' : 'Save Draft'}
               </button>
             </div>
           </div>

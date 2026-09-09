@@ -1,3 +1,5 @@
+import VenueMap from '../../components/VenueMap';
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -8,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import YJRLLayout from './YJRLLayout';
-import YJRLChat from './YJRLChat';
+import CommunicationHub from '../../components/CommunicationHub';
 import './yjrl.css';
 
 
@@ -53,8 +55,8 @@ const YJRLParentPortal = () => {
   }, [user]);
 
   const child = children[selectedChild] || children[0];
-  const season = new Date().getFullYear().toString();
-  const childStats = child?.stats?.find(s => s.season === season) || child?.stats?.[0] || {};
+  const season = seasonConfig.season;
+  const childStats = child?.stats?.find(s => s.season === season) || {};
   const attendance = child?.attendanceRecords || [];
   const attendRate = attendance.length ? Math.round(attendance.filter(r => r.attended).length / attendance.length * 100) : 100;
 
@@ -146,7 +148,7 @@ const YJRLParentPortal = () => {
                 <div className="yjrl-card-title"><Users size={16} /> {child.firstName}'s Profile</div>
                 {child.registrationStatus === 'active' && (
                   <span style={{ fontSize: '0.7rem', background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', padding: '0.2rem 0.6rem', borderRadius: '100px', fontWeight: 700 }}>
-                    Registered 2026
+                    Registered {child.registrationYear}
                   </span>
                 )}
               </div>
@@ -185,7 +187,7 @@ const YJRLParentPortal = () => {
                 {[
                   { icon: Calendar, label: 'Training Days', value: child.teamId?.trainingDay || 'TBC' },
                   { icon: Clock, label: 'Training Time', value: child.teamId?.trainingTime || 'TBC' },
-                  { icon: MapPin, label: 'Venue', value: child.teamId?.trainingVenue || 'Nev Skuse Oval' },
+                  { icon: MapPin, label: 'Venue', value: <VenueMap compact venue={child.teamId?.trainingVenue} url={child.teamId?.trainingMapsUrl} /> },
                   { icon: Shield, label: 'Head Coach', value: child.teamId?.coachName || 'TBC' },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -219,7 +221,7 @@ const YJRLParentPortal = () => {
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem' }}>{f.homeTeamName} vs {f.awayTeamName}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--yjrl-muted)', display: 'flex', gap: '0.75rem' }}>
                         <span><Clock size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} />{f.time}</span>
-                        <span><MapPin size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} />{f.venue}</span>
+                        <VenueMap compact venue={f.venue} url={f.mapsUrl} />
                       </div>
                     </div>
                   </div>
@@ -288,7 +290,7 @@ const YJRLParentPortal = () => {
                     <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Round {f.round}: {f.homeTeamName} vs {f.awayTeamName}</div>
                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--yjrl-muted)' }}>
                       <span><Clock size={11} style={{ marginRight: 3 }} />{f.time}</span>
-                      <span><MapPin size={11} style={{ marginRight: 3 }} />{f.venue}</span>
+                      <VenueMap compact venue={f.venue} url={f.mapsUrl} />
                     </div>
                   </div>
                 </div>
@@ -411,20 +413,13 @@ const YJRLParentPortal = () => {
         )}
         {/* ── PARENTS CHAT ── */}
         {user && tab === 'chat' && (
-          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div>
             <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
               <div style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                 👨‍👩‍👧‍👦 Connect with other {child?.teamId?.name || 'team'} parents
               </div>
             </div>
-            <YJRLChat
-              theme="parent"
-              roomId={parentRoomId}
-              roomName="Parents Group"
-              teamName={child?.teamId?.name || 'Yeppoon Seagulls'}
-              userName={user?.firstName || 'Parent'}
-              onlineCount={6}
-            />
+            <CommunicationHub initialRoomId={parentRoomId} />
           </div>
         )}
       </div>

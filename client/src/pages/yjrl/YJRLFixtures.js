@@ -1,11 +1,13 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Clock, Filter, ChevronUp, ChevronDown, TrendingUp } from 'lucide-react';
+import { Calendar, Clock, Filter, ChevronUp, ChevronDown, TrendingUp } from 'lucide-react';
 import api from '../../api';
+import VenueMap from '../../components/VenueMap';
 import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
 
 const AGE_GROUPS = ['All', 'U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'Womens'];
-const SEASON = new Date().getFullYear().toString();
+const SEASON = seasonConfig.season;
 
 const ResultBadge = ({ fixture }) => {
   if (fixture.status !== 'completed') return null;
@@ -39,9 +41,9 @@ const YJRLFixtures = () => {
     }).finally(() => setLoading(false));
   }, []);
 
-  const now = new Date();
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' });
   const upcoming = fixtures
-    .filter(f => f.status === 'scheduled' && new Date(f.date) >= now)
+    .filter(f => f.status === 'scheduled' && String(f.date || '').slice(0, 10) >= today)
     .filter(f => ageFilter === 'All' || f.ageGroup === ageFilter)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -66,7 +68,7 @@ const YJRLFixtures = () => {
   };
 
   const FixtureCard = ({ fixture }) => (
-    <div className="yjrl-fixture-card">
+    <div className="yjrl-fixture-card" style={{ flexWrap: 'wrap' }}>
       <div style={{ textAlign: 'center', minWidth: 60 }}>
         <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--yjrl-gold)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Rnd {fixture.round}
@@ -89,10 +91,7 @@ const YJRLFixtures = () => {
             <Clock size={11} />
             {fixture.time || 'TBC'}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--yjrl-muted)' }}>
-            <MapPin size={11} />
-            {fixture.venue}
-          </div>
+
         </div>
       </div>
 
@@ -108,6 +107,7 @@ const YJRLFixtures = () => {
           </span>
         )}
       </div>
+      <div style={{ flexBasis: '100%' }}><VenueMap venue={fixture.venue} url={fixture.mapsUrl} embedUrl={fixture.mapsEmbedUrl} /></div>
     </div>
   );
 

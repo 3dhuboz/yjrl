@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { Shield, FileText, HeartHandshake } from 'lucide-react';
 import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
+import chatAgreement from '../../../../shared/chatAgreement.json';
 
 const PAGES = {
+  communication: { icon: Shield, title: chatAgreement.title, intro: chatAgreement.statement, sections: chatAgreement.sections },
   privacy: {
     icon: Shield,
     title: 'Privacy Policy',
@@ -21,9 +23,10 @@ const PAGES = {
     title: 'Terms of Use',
     intro: 'The expectations for using the Yeppoon Junior Rugby League website and member portals.',
     sections: [
-      ['Accounts', 'Portal access is for registered players, parents, coaches, and authorised club administrators. Keep login details secure and notify the club if access should be removed.'],
+      ['Accounts', 'Accounts are for adults aged 18 or older. Parents and authorised guardians manage children’s player information through their own accounts. Coaches and administrators require club-authorised access. Keep login details secure and notify the club if access should be removed.'],
       ['Registration', 'Registration details must be accurate and kept current. Player participation remains subject to club review, competition requirements, and payment completion.'],
       ['Payments', 'Online payments are processed by third-party payment providers. Offline payment instructions are issued by the club after registration review.'],
+      ...chatAgreement.sections,
       ['Acceptable use', 'Members must not misuse club systems, attempt unauthorised access, upload harmful content, or use communication tools for bullying, abuse, or harassment.']
     ]
   },
@@ -73,6 +76,11 @@ const YJRLLegal = () => {
               </article>
             ))}
           </div>
+
+          {(page === 'privacy' || page === 'terms') && <article className="yjrl-card" style={{ padding: '1.5rem', marginTop: '1rem' }}>
+            <h2 style={{ fontSize: '1rem' }}>Google Maps</h2>
+            <p>Venue searches and embedded maps use Google Maps. Google receives the search or map request when you use these features. Use of Google Maps is subject to the <a href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noopener noreferrer">Google Maps terms</a> and <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.</p>
+          </article>}
 
           <div style={{ marginTop: '2rem', padding: '1.25rem', background: '#f8fafc', border: '1px solid var(--yjrl-border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ color: 'var(--yjrl-muted)' }}>Questions or corrections?</span>

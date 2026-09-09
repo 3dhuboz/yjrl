@@ -1,7 +1,10 @@
+import { locationFields } from '../../../shared/maps';
+import seasonConfig from '../../../shared/season.json';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { writeAudit } from '../lib/audit';
+import { hasCurrentAdultApproval } from '../lib/safeguarding';
 
 const teams = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -31,6 +34,7 @@ function publicTeamDto(team: Record<string, unknown>, options: { includePrivateI
     trainingDay: team.training_day,
     trainingTime: team.training_time,
     trainingVenue: team.training_venue,
+    trainingMapsUrl: team.training_maps_url || '', trainingMapsEmbedUrl: team.training_maps_embed_url || '',
     isActive: !!team.is_active,
     colors: { primary: team.color_primary, secondary: team.color_secondary },
     ...(options.includePrivateIds ? {
@@ -41,26 +45,6 @@ function publicTeamDto(team: Record<string, unknown>, options: { includePrivateI
       updatedAt: team.updated_at,
     } : {}),
   };
-}
-
-async function hasCurrentAdultApproval(env: Env, userId: string, role: 'coach' | 'admin' | 'dev') {
-  const today = new Date().toISOString().split('T')[0];
-  const row = await env.DB.prepare(
-    `SELECT ara.user_id
-     FROM adult_role_approvals ara
-     JOIN users u ON ara.user_id = u.id
-     WHERE ara.user_id = ?
-       AND ara.requested_role = ?
-       AND ara.status = 'approved'
-       AND ara.blue_card_status = 'verified'
-       AND ara.blue_card_expiry IS NOT NULL
-       AND ara.blue_card_expiry >= ?
-       AND ara.identity_checked = 1
-       AND ara.safeguarding_training_completed = 1
-       AND u.is_active = 1
-       AND u.role = ?`
-  ).bind(userId, role, today, role).first();
-  return !!row;
 }
 
 // GET /yjrl/teams
@@ -91,16 +75,18 @@ teams.get('/:id', async (c) => {
 teams.post('/', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
   const body = await c.req.json();
+  let location;
+  try { location = locationFields(body, {}, true); } catch (error) { return c.json({ error: (error as Error).message }, 400); }
   const id = crypto.randomUUID();
   const coachId = body.coachId || body.coach || body.coach_id || null;
   if (coachId && !(await hasCurrentAdultApproval(c.env, coachId, 'coach'))) {
     return c.json({ error: 'Coach account must have a current approved adult role before team assignment' }, 400);
   }
   await c.env.DB.prepare(
-    `INSERT INTO teams (id, name, age_group, division, season, coach_id, coach_name, assistant_id, assistant_name, manager_id, manager_name, training_day, training_time, training_venue, color_primary, color_secondary, photo)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO teams (id, name, age_group, division, season, coach_id, coach_name, assistant_id, assistant_name, manager_id, manager_name, training_day, training_time, training_venue, color_primary, color_secondary, photo, training_maps_url, training_maps_embed_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    id, body.name, body.ageGroup || body.age_group || '', body.division || '', body.season || new Date().getFullYear().toString(),
+    id, body.name, body.ageGroup || body.age_group || '', body.division || '', body.season || seasonConfig.season,
     coachId, body.coachName || body.coach_name || '',
     body.assistantId || body.assistant || body.assistant_id || null, body.assistantName || body.assistant_name || '',
     body.managerId || body.manager || body.manager_id || null, body.managerName || body.manager_name || '',
@@ -108,11 +94,11 @@ teams.post('/', authMiddleware, async (c) => {
     body.trainingVenue || body.training_venue || 'Nev Skuse Oval, Yeppoon',
     body.colors?.primary || body.color_primary || '#0c1d35',
     body.colors?.secondary || body.color_secondary || '#f0a500',
-    body.photo || ''
+    body.photo || '', location.link, location.embed
   ).run();
   await writeAudit(c.env, c.get('user'), 'team_created', 'team', id, {
     ageGroup: body.ageGroup || body.age_group || '',
-    season: body.season || new Date().getFullYear().toString(),
+    season: body.season || seasonConfig.season,
     coachAssigned: !!coachId,
   });
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
@@ -126,6 +112,10 @@ teams.put('/:id', authMiddleware, async (c) => {
   const id = c.req.param('id');
   const existingTeam = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first();
   if (!existingTeam) return c.json({ error: 'Team not found' }, 404);
+  try {
+    const location = locationFields(body, existingTeam, true);
+    body.trainingMapsUrl = location.link; body.trainingMapsEmbedUrl = location.embed;
+  } catch (error) { return c.json({ error: (error as Error).message }, 400); }
   const fields: string[] = [];
   const vals: unknown[] = [];
   const coachCandidate = body.coachId ?? body.coach_id ?? body.coach;
@@ -133,6 +123,7 @@ teams.put('/:id', authMiddleware, async (c) => {
     return c.json({ error: 'Coach account must have a current approved adult role before team assignment' }, 400);
   }
   const map: Record<string, string> = {
+    trainingMapsUrl: 'training_maps_url', trainingMapsEmbedUrl: 'training_maps_embed_url',
     name: 'name', ageGroup: 'age_group', age_group: 'age_group', division: 'division', season: 'season',
     coachName: 'coach_name', coach_name: 'coach_name', coachId: 'coach_id', coach_id: 'coach_id',
     assistantName: 'assistant_name', assistant_name: 'assistant_name', assistantId: 'assistant_id', assistant_id: 'assistant_id',
@@ -148,7 +139,7 @@ teams.put('/:id', authMiddleware, async (c) => {
   for (const [k, v] of Object.entries(body)) {
     if (map[k]) {
       fields.push(`${map[k]} = ?`);
-      vals.push(map[k].endsWith('_id') ? (v || null) : v);
+      vals.push(map[k].endsWith('_id') ? (v || null) : typeof v === 'boolean' ? Number(v) : v);
     }
   }
   if (body.colors) {
