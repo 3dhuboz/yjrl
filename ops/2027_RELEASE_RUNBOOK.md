@@ -1,6 +1,8 @@
-## Latest incremental release — 9 September 2026, 05:48 UTC
+## Latest incremental release — 9 September 2026, 06:35 UTC
 
-Source `ac429d0ec94593d04a2a01546fe5819593389180`; production Worker `2bec87d8-78ca-448d-9b9c-e895fde16b67`; Pages https://e2e1b887.yjrl.pages.dev, bundle `index-DjTEnEi0.js`. Review `56194d26-090d-4b6c-95df-666e2cb60e55` runs the same application with its protected gateway and same-origin build. Migrations 0004–0013 are journaled in production.
+Source `6b244ca7d84dc78c6e39a04006c71978d7d407ae`; production Worker `6d87bfb9-7267-4688-8b26-42e02a86abe3`; Pages https://399e98cc.yjrl.pages.dev, bundle `index-CujK88dE.js`. Review `4c9a951c-0282-43ef-b772-719ba44f1e81` runs the same application with its protected gateway and same-origin build. Migrations 0004–0014 are journaled in production.
+
+Pre-0014 recovery bookmark: `000000e5-00000000-000050e1-14db8f86ac1fd1b24e39df86d3482a0c` (`hs-20260909062333-2188670-83bb1978`). 103 API/SQLite tests, typecheck, build and checklist Chrome acceptance passed; production private link and cross-origin access verified in `hs-20260909063420-2211653-5625fe08`. No production content was submitted during testing. Admin Website checklist manages 90-day revocable private links; only hashes are stored in D1. The operator copy for Nathan is a restricted file outside Git, never a repository/PR attachment. Checklist uploads are private and require the normal media review before publication. Retain additive checklist/history tables and objects during rollback.
 
 Pre-0013 recovery bookmark: `000000e0-00000000-000050e1-d0b718703477cf46f426b2506d7382f5` (`hs-20260909054401-2098841-1ea58dfd`). Pre-0012 bookmark: `000000dc-00000000-000050e1-5dc0575c2d9af147cf0341f71f5fefc4`. Retain additive schema/history on rollback. Stock guards reserve all placed orders and deduct physical counts only once at paid collection; unpaid orders do not expire automatically. Do not double-deduct reservations.
 
@@ -18,14 +20,14 @@ Steve authorised ongoing deployment and the exact YJRL host workspace addition. 
 | Production | API | https://yjrl-api.steve-700.workers.dev |
 | Production | D1 `yjrl-db` | `690424d2-5985-4576-9d4c-62e643ae5ed3` |
 | Production | Private R2 | `yjrl-uploads` |
-| Production | Worker version | `2bec87d8-78ca-448d-9b9c-e895fde16b67` |
-| Production | Pages deployment | https://e2e1b887.yjrl.pages.dev |
+| Production | Worker version | `6d87bfb9-7267-4688-8b26-42e02a86abe3` |
+| Production | Pages deployment | https://399e98cc.yjrl.pages.dev |
 | Review | Password-protected app/API | https://yjrl-review.steve-700.workers.dev |
 | Review | D1 `yjrl-review-db` | `bf4d3aa4-b8c7-4dda-810e-e58070b1a6db` |
 | Review | Private R2 | `yjrl-review-uploads` |
-| Review | Worker version after secrets | `56194d26-090d-4b6c-95df-666e2cb60e55` |
+| Review | Worker version after secrets | `4c9a951c-0282-43ef-b772-719ba44f1e81` |
 
-Production source is `ac429d0ec94593d04a2a01546fe5819593389180`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
+Production source is `6b244ca7d84dc78c6e39a04006c71978d7d407ae`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
 
 Before 0004–0008 were applied, the production D1 recovery bookmark was `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` at 03:57 UTC on 7 September (`hs-20260907035723-3308785-7c9a8a70`). Refresh recovery evidence before every subsequent production migration.
 

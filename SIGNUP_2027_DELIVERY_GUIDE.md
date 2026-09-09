@@ -44,7 +44,7 @@ These requests take priority over the remaining launch work above. Deploy throug
 | Remove audit-log/technical status panels from admin | **Deployed:** backend activity history retained |
 | Search/sort chat rooms by age group, name or type | **Deployed:** numeric age ordering |
 | Uniforms and merchandise shop: online payment and pay on collection | **Deployed:** catalogue, basket, collection orders, PayPal checkout/resume/capture and admin fulfilment. Orders closed; catalogue/provider/fulfilment details and real payment acceptance pending from Nathan |
-| Nathan handover and test checklist | **Complete:** `NATHAN_TESTING_HANDOVER.md` contains the requested information list, test sequence and remaining acceptance checks |
+| Nathan handover and test checklist | **Deployed:** eight-item private checklist with saved notes/photos; `NATHAN_TESTING_HANDOVER.md` is the short guide and `ops/ADMIN_TESTING_REFERENCE.md` contains detailed acceptance checks |
 
 ## What is already implemented
 
@@ -111,8 +111,8 @@ Final validation for this delivery: 99 API/SQLite tests, Worker typecheck, produ
 - [x] Checklist notes, save-for-later/submission status and per-item private photo uploads; admin photo-review handover.
 - [x] Private 90-day link with no admin/player access, hashed server storage and immediate revocation.
 - [x] Protected-review Chrome acceptance: save/reload, real processed private photo upload, admin review handover, mobile layout and immediate link revocation (`hs-20260909063101-2203664-fba27f7f`). All 103 API/SQLite tests and Worker typecheck pass.
-- [ ] Production deployment; hand one private link to Steve for Nathan.
+- [x] Production migration 0014, Worker and Pages deployed from `6b244ca7d84dc78c6e39a04006c71978d7d407ae`. One Nathan invite provisioned, expiring 8 December 2026. Live Chrome/API checks pass (`hs-20260909063420-2211653-5625fe08`); private link supplied to Steve outside the repository.
 
 The private link is not stored in this repository. Club admins can create/turn off links under **Website checklist**. Website content stays private until the usual admin publication/review steps.
 
-Checkpoint, 9 September 06:32 UTC: checklist implementation ready for promotion on `codex/2027-signup-readiness` (base `fa5f756`). Changed files cover the shared eight-item list, private checklist route/component, admin entry, scoped API, migration 0014, acceptance tests and handover docs. Review Worker `4c9a951c-0282-43ef-b772-719ba44f1e81` passed browser acceptance. Production pre-0014 recovery bookmark is `000000e5-00000000-000050e1-14db8f86ac1fd1b24e39df86d3482a0c`; only 0014 is pending. Next: push the validated source, apply 0014, deploy matching Worker/Pages, provision the hashed Nathan invite and verify the live private link. Existing season-opening dependencies remain unchanged.
+Checkpoint, 9 September 06:35 UTC: checklist deployed on `codex/2027-signup-readiness`, application source `6b244ca7d84dc78c6e39a04006c71978d7d407ae`. Changed files cover the shared eight-item list, private checklist route/component, admin entry, scoped API, migration 0014, acceptance tests and handover docs. Review Worker `4c9a951c-0282-43ef-b772-719ba44f1e81` passed browser acceptance. Production Worker `6d87bfb9-7267-4688-8b26-42e02a86abe3`, Pages https://399e98cc.yjrl.pages.dev, bundle `index-CujK88dE.js`; public alias verified. Pre-0014 recovery bookmark: `000000e5-00000000-000050e1-14db8f86ac1fd1b24e39df86d3482a0c`. Nathan can supply information and photos; admins review in Website checklist. Next engineering item remains independent guardian verification/account recovery, with provider/club details and legal approval still required before opening.
