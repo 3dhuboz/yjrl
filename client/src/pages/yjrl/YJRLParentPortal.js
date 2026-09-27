@@ -240,7 +240,7 @@ const YJRLParentPortal = () => {
                   { label: 'View Full Fixtures', to: '/fixtures', icon: Calendar },
                   { label: 'Club Events & RSVP', onClick: () => setTab('events'), icon: Heart },
                   { label: 'Register Another Child', to: '/register', icon: Users },
-                  { label: 'Contact the Club', href: 'mailto:yeppoonjrl@outlook.com', icon: MessageSquare },
+                  { label: 'Contact the Club', href: 'mailto:admin@yeppoonjrl.com.au', icon: MessageSquare },
                 ].map((item, i) => (
                   item.to ? (
                     <Link key={i} to={item.to} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--yjrl-text)', textDecoration: 'none', transition: 'all 0.15s' }}>

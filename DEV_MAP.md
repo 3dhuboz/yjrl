@@ -2,6 +2,9 @@
 
 ## Active 2027 sign-up work
 
+- `shared/club.json`, `YJRLSignupDetails`, `YJRLContact`: Nathan-confirmed public contacts/history, official Play Rugby League registration guidance, team groups and provisional events. Local new-player registration UI is superseded; historical payment return links are retained.
+- `shared/checklistReview.json`, `ops/NATHAN_CONTENT_UPDATE_2026-09-27.md`: applied checklist content and remaining club decisions. Square requested, not yet connected. `worker/scripts/prepare-nathan-content.mjs` prepares idempotent unpublished catalogue drafts without guessed prices or stock.
+
 - `shared/websiteChecklist.json`, `WebsiteChecklist`, `/website-checklist`, `worker/src/routes/checklist.ts`, migration 0014: Nathan’s private content checklist, saved notes/photos and revocable links. Admin forwards photos to existing review; submissions never auto-publish.
 - `ops/ADMIN_TESTING_REFERENCE.md`: detailed testing instructions separated from the short Nathan guide.
 

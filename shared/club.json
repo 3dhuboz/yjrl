@@ -1,0 +1,35 @@
+{
+  "founded": 1993,
+  "tagline": "#UpTheGullies",
+  "facebookUrl": "https://www.facebook.com/YeppoonJuniorSeagulls",
+  "registrationUrl": "https://www.playrugbyleague.com/",
+  "registrationNotice": "U13–U17 registrations for the 2027 season are expected to open in December 2026. QRL sets the exact opening date; the club expects confirmation around mid-December. Opening dates for Mini Mods and girls’ registrations will be announced when confirmed.",
+  "contacts": [
+    { "id": "general", "label": "General enquiries / Secretary", "email": "admin@yeppoonjrl.com.au" },
+    { "id": "mini", "label": "U6–U12 registrations", "email": "registrarmm@yeppoonjrl.com.au" },
+    { "id": "international", "label": "U13–U17 registrations", "email": "registrarint@yeppoonjrl.com.au" },
+    { "id": "girls", "label": "All girls’ registrations", "email": "girlsrego@yeppoonjrl.com.au" },
+    { "id": "sponsorship", "label": "Sponsorship", "email": "sponsorship@yeppoonjrl.com.au" },
+    { "id": "accounts", "label": "Finance / Treasurer", "email": "accounts@yeppoonjrl.com.au" },
+    { "id": "uniforms", "label": "Uniforms and merchandise", "email": "uniforms@yeppoonjrl.com.au" }
+  ],
+  "safety": { "email": "president@yeppoonjrl.com.au", "phone": "0432 357 532", "tel": "0432357532" },
+  "teamGroups": [
+    { "name": "Gold", "ages": "U6–U17" },
+    { "name": "Blue", "ages": "U6–U17" },
+    { "name": "White", "ages": "U6–U9" },
+    { "name": "Girls", "ages": "U11, U13, U15 and U17" }
+  ],
+  "plannedEvents": [
+    { "title": "CQ girls carnival", "timing": "Late June 2027 — exact date, time and venue to be confirmed." },
+    { "title": "U8s United in League carnival", "timing": "Early August 2027 — exact date, time and venue to be confirmed." },
+    { "title": "Club presentations", "timing": "Dates will be set once the season draw and finish dates are known." }
+  ],
+  "merchandise": [
+    { "name": "Club polos", "sizes": "Kids size 4 through to adult 7XL" },
+    { "name": "Training shorts", "sizes": "Kids size 4 through to adult 3XL" },
+    { "name": "CTC trucker caps", "sizes": "Size details to be confirmed" },
+    { "name": "Bucket hats", "sizes": "Kids and adult sizes" }
+  ],
+  "exchangePolicy": "For a change-of-mind exchange, keep the tags attached and the bag the item was supplied in. Contact the uniforms team to arrange an exchange. This policy does not limit your rights under the Australian Consumer Law, including for faulty goods."
+}

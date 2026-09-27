@@ -10,6 +10,7 @@ import YJRLNews from './pages/yjrl/YJRLNews';
 import YJRLEvents from './pages/yjrl/YJRLEvents';
 import YJRLLegal from './pages/yjrl/YJRLLegal';
 import YJRLRegister from './pages/yjrl/YJRLRegister';
+import YJRLContact from './pages/yjrl/YJRLContact';
 import adultAccount from '../../shared/adultAccount.json';
 import YJRLCoachPortal from './pages/yjrl/YJRLCoachPortal';
 import YJRLParentPortal from './pages/yjrl/YJRLParentPortal';
@@ -181,6 +182,7 @@ const AppRoutes = () => (
     <Route path="/events" element={<YJRLEvents />} />
     <Route path="/legal/:page" element={<YJRLLegal />} />
     <Route path="/register" element={<YJRLRegister />} />
+    <Route path="/contact" element={<YJRLContact />} />
     <Route path="/login" element={<Login />} />
 
     {/* Portals */}

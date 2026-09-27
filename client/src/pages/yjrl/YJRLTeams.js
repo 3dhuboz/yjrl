@@ -1,3 +1,4 @@
+import club from '../../../../shared/club.json';
 import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useState } from 'react';
 import { Calendar, Shield, Users } from 'lucide-react';
@@ -37,6 +38,7 @@ const YJRLTeams = () => {
       </div>
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <section style={{ marginBottom: 28 }} aria-label="2027 team groups"><h2>{seasonConfig.season} team groups</h2><div className="club-contact-grid">{club.teamGroups.map(group => <article key={group.name} className="yjrl-card club-info-card"><h3>{group.name}</h3><p>{group.ages}</p></article>)}</div><p>Coaches, team allocations, training times and venues will be added as the club confirms them.</p></section>
         {loading && <div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading teams...</span></div>}
         {error && !loading && (
           <div className="yjrl-card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}>{error}</div>

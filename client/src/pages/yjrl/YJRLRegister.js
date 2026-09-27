@@ -6,6 +6,7 @@ import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './yjrl.css';
+import YJRLSignupDetails from './YJRLSignupDetails';
 import seasonConfig from '../../../../shared/season.json';
 import adultAccount from '../../../../shared/adultAccount.json';
 import { validateRegistrationFees, registrationFee } from '../../registrationFees.mjs';
@@ -21,7 +22,7 @@ const STEPS = [
   { id: 4, label: 'Confirmation' },
 ];
 
-const YJRLRegister = () => {
+const LegacyRegistrationCheckout = () => {
   const { setSession } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -164,7 +165,7 @@ const YJRLRegister = () => {
   const nextSteps = successIsPaid ? [
     'Payment has been received and recorded',
     'Our registrar will complete the club review and team allocation',
-    'Complete PlayHQ registration if the club has not already matched it',
+    'Complete Play Rugby League registration if the club has not already matched it',
     'Watch the parent portal for team, training, and uniform updates'
   ] : [
     'Our registrar will review your application',
@@ -187,7 +188,7 @@ const YJRLRegister = () => {
           <button className="yjrl-btn yjrl-btn-primary" disabled={checkoutBusy || !checkout.state || !checkout.registrationId} onClick={recoverCheckout}>
             {checkout.action === 'resume' ? 'Continue with PayPal' : 'Retry confirmation'}
           </button>
-          <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-secondary">Contact Club</a>
+          <a href="mailto:admin@yeppoonjrl.com.au" className="yjrl-btn yjrl-btn-secondary">Contact Club</a>
           <Link to="/portal/parent" className="yjrl-btn yjrl-btn-secondary">Parent Portal</Link>
         </div>
       </div>
@@ -511,17 +512,20 @@ const YJRLRegister = () => {
           </div>
         </div>
 
-        {/* PlayHQ CTA */}
+        {/* Play Rugby League CTA */}
         <div style={{ marginTop: '1.5rem', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: '10px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.25rem', color: '#60a5fa' }}>Already registered via PlayHQ?</div>
-            <div style={{ fontSize: '0.825rem', color: 'var(--yjrl-muted)' }}>If you've already completed your registration through PlayHQ, you don't need to fill this form. Contact the club to get your player portal activated.</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.25rem', color: '#60a5fa' }}>Already registered via Play Rugby League?</div>
+            <div style={{ fontSize: '0.825rem', color: 'var(--yjrl-muted)' }}>If you've already completed your registration through Play Rugby League, you don't need to fill this form. Contact the club to get your player portal activated.</div>
           </div>
-          <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm">Contact Club</a>
+          <a href="mailto:admin@yeppoonjrl.com.au" className="yjrl-btn yjrl-btn-secondary yjrl-btn-sm">Contact Club</a>
         </div>
       </div>
     </YJRLLayout>
   );
 };
 
-export default YJRLRegister;
+// Preserve existing payment return links while directing all new registrations to the official provider.
+export default function YJRLRegister() {
+  return checkoutFromSearch(window.location.search) ? <LegacyRegistrationCheckout /> : <YJRLSignupDetails />;
+}

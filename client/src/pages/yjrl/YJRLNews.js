@@ -1,3 +1,4 @@
+import club from '../../../../shared/club.json';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Clock, ArrowLeft, Eye, ChevronRight } from 'lucide-react';
@@ -101,6 +102,7 @@ const YJRLNews = () => {
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', margin: 0 }}>
             Results, events, player news, and everything happening at Yeppoon JRL.
           </p>
+          <a className="yjrl-btn yjrl-btn-secondary" style={{ marginTop: 16 }} href={club.facebookUrl} target="_blank" rel="noopener noreferrer">Club updates on Facebook</a>
         </div>
       </div>
 

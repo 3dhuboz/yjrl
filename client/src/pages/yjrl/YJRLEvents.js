@@ -1,3 +1,4 @@
+import club from '../../../../shared/club.json';
 import VenueMap from '../../components/VenueMap';
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
@@ -56,6 +57,7 @@ const YJRLEvents = () => {
       </div>
 
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <section aria-label="Dates to be confirmed" style={{ marginBottom: 28 }}><h2>On the horizon for 2027</h2><p>These events are being planned. Please wait for confirmed dates before making arrangements.</p><div className="club-contact-grid">{club.plannedEvents.map(event => <article key={event.title} className="yjrl-card club-info-card"><h3>{event.title}</h3><p>{event.timing}</p></article>)}</div></section>
         {loading && <div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading events...</span></div>}
         {error && !loading && (
           <div className="yjrl-card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}>{error}</div>

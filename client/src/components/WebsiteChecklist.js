@@ -3,6 +3,7 @@ import axios from 'axios';
 import { CheckCircle, ChevronDown, Upload, ClipboardList, Link as LinkIcon, Copy, X } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
+import checklistReview from '../../../shared/checklistReview.json';
 const labels = { gathering: 'Still coming', submitted: 'Ready for review', complete: 'Added to website' };
 const errorText = e => e.response?.data?.error || 'Something went wrong. Please try again.';
 function Photo({ photo, http, onRemove, onReview, canManage }) {
@@ -23,6 +24,7 @@ function ChecklistItem({ section, http, canManage, onSaved, onPhotos }) {
   const [notes, setNotes] = useState(section.notes), [version, setVersion] = useState(section.version), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [caption, setCaption] = useState(''), [permission, setPermission] = useState(false), [file, setFile] = useState(null), [fileKey, setFileKey] = useState(0);
   const dirty = notes !== section.notes;
+  const reviewNote = checklistReview.items[section.id];
   useEffect(() => {
     const warn = e => { e.preventDefault(); e.returnValue = ''; };
     if (dirty || file || caption) window.addEventListener('beforeunload', warn);
@@ -54,7 +56,9 @@ function ChecklistItem({ section, http, canManage, onSaved, onPhotos }) {
   const review = async photo => { try { await http.post(`/yjrl/checklist/photos/${photo.id}/review`); onPhotos(section.id, section.photos.map(p => p.id === photo.id ? { ...p, inPhotoReview: true } : p)); toast.success('Photo sent to Chat Safety → Upload Review.'); } catch (e) { setError(errorText(e)); } };
   return <details className="website-checklist-item">
     <summary><span className={`checklist-step ${section.status === 'complete' ? 'is-done' : ''}`}>{section.status === 'complete' ? <CheckCircle size={21} /> : section.number}</span><span className="checklist-item-title"><strong>{section.title}</strong><small>{section.hint}</small></span><span className={`checklist-status ${section.status}`}>{labels[section.status]}</span><ChevronDown className="checklist-chevron" size={18} /></summary>
-    <div className="checklist-item-body"><ul>{section.prompts.map(p => <li key={p}>{p}</li>)}</ul>
+    <div className="checklist-item-body">
+      {reviewNote && <aside className="checklist-review-note"><strong>Website update · {checklistReview.date}</strong><p>{reviewNote.added}</p><p><strong>Still needed:</strong> {reviewNote.needed}</p></aside>}
+      <ul>{section.prompts.map(p => <li key={p}>{p}</li>)}</ul>
       <label htmlFor={`notes-${section.id}`}>Your notes</label><textarea id={`notes-${section.id}`} className="yjrl-input" rows={5} value={notes} maxLength={10000} placeholder="Type what you know, paste a list or add a useful link…" onChange={e => setNotes(e.target.value)} />
       {error && <p role="alert" className="yjrl-form-error">{error} <button type="button" onClick={reload} disabled={busy}>Reload this item</button></p>}
       <div className="checklist-save-buttons"><button className="yjrl-btn yjrl-btn-secondary" type="button" disabled={busy || version < 0} onClick={() => save('gathering')}>Save for later</button><button className="yjrl-btn yjrl-btn-primary" type="button" disabled={busy || version < 0} onClick={() => save('submitted')}>Ready for review</button>{canManage && <button className="yjrl-btn yjrl-btn-secondary" type="button" disabled={busy || version < 0} onClick={() => save('complete')}>Mark added to website</button>}{dirty && <span>Unsaved notes</span>}{busy && <span role="status">Saving…</span>}</div>

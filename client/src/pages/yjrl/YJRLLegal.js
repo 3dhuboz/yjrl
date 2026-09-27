@@ -1,3 +1,4 @@
+import club from '../../../../shared/club.json';
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Shield, FileText, HeartHandshake } from 'lucide-react';
@@ -25,7 +26,7 @@ const PAGES = {
     sections: [
       ['Accounts', 'Accounts are for adults aged 18 or older. Parents and authorised guardians manage children’s player information through their own accounts. Coaches and administrators require club-authorised access. Keep login details secure and notify the club if access should be removed.'],
       ['Registration', 'Registration details must be accurate and kept current. Player participation remains subject to club review, competition requirements, and payment completion.'],
-      ['Payments', 'Online payments are processed by third-party payment providers. Offline payment instructions are issued by the club after registration review.'],
+      ['Payments', 'Player registration fees are collected through Play Rugby League (MySideline). Merchandise payment and collection arrangements are confirmed separately by the club.'],
       ...chatAgreement.sections,
       ['Acceptable use', 'Members must not misuse club systems, attempt unauthorised access, upload harmful content, or use communication tools for bullying, abuse, or harassment.']
     ]
@@ -82,9 +83,11 @@ const YJRLLegal = () => {
             <p>Venue searches and embedded maps use Google Maps. Google receives the search or map request when you use these features. Use of Google Maps is subject to the <a href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noopener noreferrer">Google Maps terms</a> and <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.</p>
           </article>}
 
+          {page === 'child-safety' && <article className="yjrl-card club-info-card" style={{ marginTop: 20 }}><h2>Club safety contacts</h2><p>Secretary: <a href="mailto:admin@yeppoonjrl.com.au">admin@yeppoonjrl.com.au</a></p><p>President: <a href={`mailto:${club.safety.email}`}>{club.safety.email}</a> · <a href={`tel:${club.safety.tel}`}>{club.safety.phone}</a></p></article>}
+
           <div style={{ marginTop: '2rem', padding: '1.25rem', background: '#f8fafc', border: '1px solid var(--yjrl-border)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ color: 'var(--yjrl-muted)' }}>Questions or corrections?</span>
-            <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-primary">Contact the Club</a>
+            <a href="mailto:admin@yeppoonjrl.com.au" className="yjrl-btn yjrl-btn-primary">Contact the Club</a>
           </div>
         </div>
       </section>
