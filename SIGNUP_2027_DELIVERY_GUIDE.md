@@ -1,5 +1,7 @@
 # YJRL 2027 sign-up delivery guide
 
+**27 September update:** Nathan's 15 September answers have been applied and deployed from `ec77ce7370fd3ad70a2744aa4ad6af823b8883b4`. The club handles official registrations/payment through Play Rugby League; the new-player website form is superseded by guidance and the official link. Contacts, 1993/#UpTheGullies, team groups, provisional events, Facebook links, catalogue previews/drafts and exchange guidance are live. Square is requested but not connected; do not open PayPal or duplicate registration collection. See `ops/NATHAN_CONTENT_UPDATE_2026-09-27.md` for acceptance, data changes and remaining requests. Steve will send Nathan the response through Messenger.
+
 Updated 7 September 2026 after the first production release. Steve authorised completing the work sequentially and deploying verified milestones. Adult-only accounts are confirmed; opening date, fees/payment options and registrar details are still awaited from the club.
 
 ## Current public version

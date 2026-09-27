@@ -1,4 +1,8 @@
-## Latest incremental release — 9 September 2026, 06:35 UTC
+## Latest incremental release — 27 September 2026, 02:58 UTC
+
+Frontend source `ec77ce7370fd3ad70a2744aa4ad6af823b8883b4`, Pages https://cce60284.yjrl.pages.dev, bundle `index-DwLIG0IG.js`. Production Worker remains `6d87bfb9-7267-4688-8b26-42e02a86abe3`; no API/schema change. Four unpublished catalogue drafts and exchange guidance applied with audit entries. Recovery bookmark `000002f5-00000000-000050f3-86829a76cbbd05b827b0eef455ac0e4e`. Build and live browser checks on eight public routes at three viewport widths pass. See `NATHAN_CONTENT_UPDATE_2026-09-27.md` for exact receipts and pending provider/club details. Registrations are now directed to Play Rugby League; do not reopen the legacy website form or payment collection. Square connection remains pending, shop orders remain closed.
+
+## Previous incremental release — 9 September 2026, 06:35 UTC
 
 Source `6b244ca7d84dc78c6e39a04006c71978d7d407ae`; production Worker `6d87bfb9-7267-4688-8b26-42e02a86abe3`; Pages https://399e98cc.yjrl.pages.dev, bundle `index-CujK88dE.js`. Review `4c9a951c-0282-43ef-b772-719ba44f1e81` runs the same application with its protected gateway and same-origin build. Migrations 0004–0014 are journaled in production.
 
@@ -21,13 +25,13 @@ Steve authorised ongoing deployment and the exact YJRL host workspace addition. 
 | Production | D1 `yjrl-db` | `690424d2-5985-4576-9d4c-62e643ae5ed3` |
 | Production | Private R2 | `yjrl-uploads` |
 | Production | Worker version | `6d87bfb9-7267-4688-8b26-42e02a86abe3` |
-| Production | Pages deployment | https://399e98cc.yjrl.pages.dev |
+| Production | Pages deployment | https://cce60284.yjrl.pages.dev |
 | Review | Password-protected app/API | https://yjrl-review.steve-700.workers.dev |
 | Review | D1 `yjrl-review-db` | `bf4d3aa4-b8c7-4dda-810e-e58070b1a6db` |
 | Review | Private R2 | `yjrl-review-uploads` |
-| Review | Worker version after secrets | `4c9a951c-0282-43ef-b772-719ba44f1e81` |
+| Review | Worker version after secrets | `f9a77d01-4beb-44ee-a54c-89a8ba52907b` |
 
-Production source is `6b244ca7d84dc78c6e39a04006c71978d7d407ae`. The Worker and matching Pages build are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
+Production frontend source is `ec77ce7370fd3ad70a2744aa4ad6af823b8883b4`; Worker code remains from `6b244ca7d84dc78c6e39a04006c71978d7d407ae`. Both are live. Review ran the same application source, with a review-only gateway and same-origin client build. Keep source in the current task branch and PR; Pages production promotion does not merge Git `master`.
 
 Before 0004–0008 were applied, the production D1 recovery bookmark was `00000082-00000000-000050df-c9f424892144a98ff21c9008244a39eb` at 03:57 UTC on 7 September (`hs-20260907035723-3308785-7c9a8a70`). Refresh recovery evidence before every subsequent production migration.
 
