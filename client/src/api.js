@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { handleUnauthorized } from './apiErrors.mjs';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://yjrl-api.steve-700.workers.dev/api' : '/api'),
@@ -17,12 +18,7 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('yjrl_token');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
+    handleUnauthorized(error, localStorage, window.location);
     return Promise.reject(error);
   }
 );

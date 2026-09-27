@@ -1,6 +1,9 @@
+import club from '../../../../shared/club.json';
+import seasonConfig from '../../../../shared/season.json';
 import React, { useEffect, useState } from 'react';
-import { Calendar, MapPin, Shield, Users } from 'lucide-react';
+import { Calendar, Shield, Users } from 'lucide-react';
 import api from '../../api';
+import VenueMap from '../../components/VenueMap';
 import YJRLLayout from './YJRLLayout';
 import './yjrl.css';
 
@@ -10,7 +13,7 @@ const YJRLTeams = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/yjrl/teams')
+    api.get(`/yjrl/teams?season=${seasonConfig.season}`)
       .then(res => {
         if (Array.isArray(res.data)) setTeams(res.data);
       })
@@ -23,7 +26,7 @@ const YJRLTeams = () => {
       <div style={{ background: 'linear-gradient(135deg, #172554, #1d4ed8)', color: 'white', padding: '3.5rem 1.5rem 2rem', borderBottom: '1px solid var(--yjrl-border)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem' }}>
-            2026 Season
+            {seasonConfig.season} Season
           </div>
           <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 0.5rem', color: 'white' }}>
             Teams
@@ -35,6 +38,7 @@ const YJRLTeams = () => {
       </div>
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <section style={{ marginBottom: 28 }} aria-label="2027 team groups"><h2>{seasonConfig.season} team groups</h2><div className="club-contact-grid">{club.teamGroups.map(group => <article key={group.name} className="yjrl-card club-info-card"><h3>{group.name}</h3><p>{group.ages}</p></article>)}</div><p>Coaches, team allocations, training times and venues will be added as the club confirms them.</p></section>
         {loading && <div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading teams...</span></div>}
         {error && !loading && (
           <div className="yjrl-card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}>{error}</div>
@@ -77,10 +81,7 @@ const YJRLTeams = () => {
                     <Calendar size={15} style={{ color: 'var(--yjrl-gold)' }} />
                     <span>{team.trainingDay || 'Training TBC'}{team.trainingTime ? ` at ${team.trainingTime}` : ''}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--yjrl-muted)', fontSize: '0.86rem' }}>
-                    <MapPin size={15} style={{ color: 'var(--yjrl-gold)' }} />
-                    <span>{team.trainingVenue || 'Nev Skuse Oval, Yeppoon'}</span>
-                  </div>
+                  <VenueMap venue={team.trainingVenue} url={team.trainingMapsUrl} embedUrl={team.trainingMapsEmbedUrl} />
                 </div>
               </div>
             ))}

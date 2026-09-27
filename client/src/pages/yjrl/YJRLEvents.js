@@ -1,3 +1,5 @@
+import club from '../../../../shared/club.json';
+import VenueMap from '../../components/VenueMap';
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import api from '../../api';
@@ -55,6 +57,7 @@ const YJRLEvents = () => {
       </div>
 
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <section aria-label="Dates to be confirmed" style={{ marginBottom: 28 }}><h2>On the horizon for 2027</h2><p>These events are being planned. Please wait for confirmed dates before making arrangements.</p><div className="club-contact-grid">{club.plannedEvents.map(event => <article key={event.title} className="yjrl-card club-info-card"><h3>{event.title}</h3><p>{event.timing}</p></article>)}</div></section>
         {loading && <div className="yjrl-loading"><div className="yjrl-spinner" /><span>Loading events...</span></div>}
         {error && !loading && (
           <div className="yjrl-card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}>{error}</div>
@@ -82,6 +85,7 @@ const YJRLEvents = () => {
                           {event.type || 'event'}
                         </span>
                       </div>
+                      <VenueMap venue={event.venue} url={event.mapsUrl} embedUrl={event.mapsEmbedUrl} />
                       {event.description && <p style={{ color: 'var(--yjrl-muted)', lineHeight: 1.6, margin: '0 0 0.85rem', fontSize: '0.9rem' }}>{event.description}</p>}
                       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', color: 'var(--yjrl-muted)', fontSize: '0.84rem' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Calendar size={13} />{new Date(event.date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</span>

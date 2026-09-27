@@ -1,3 +1,4 @@
+import seasonConfig from '../../../shared/season.json';
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 
@@ -9,7 +10,7 @@ function safeJuniorLabel(ageGroup: unknown) {
 
 // GET /yjrl/stats/overview
 stats.get('/overview', async (c) => {
-  const season = c.req.query('season') || new Date().getFullYear().toString();
+  const season = c.req.query('season') || seasonConfig.season;
   const [teamCount, playerCount, fixtureCount, upcomingCount] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) as cnt FROM teams WHERE is_active = 1 AND season = ?').bind(season).first(),
     c.env.DB.prepare('SELECT COUNT(*) as cnt FROM players WHERE is_active = 1 AND registration_status = ? AND registration_year = ?').bind('active', season).first(),
@@ -45,7 +46,7 @@ stats.get('/overview', async (c) => {
 
 // GET /yjrl/stats/leaderboard
 stats.get('/leaderboard', async (c) => {
-  const season = c.req.query('season') || new Date().getFullYear().toString();
+  const season = c.req.query('season') || seasonConfig.season;
   const ageGroup = c.req.query('ageGroup');
   const stat = c.req.query('stat') || 'tries';
   const validStats = ['tries', 'goals', 'tackles', 'run_metres', 'games_played'];

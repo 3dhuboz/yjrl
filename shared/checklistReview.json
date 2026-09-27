@@ -1,0 +1,13 @@
+{
+  "date": "27 September 2026",
+  "items": {
+    "season": { "added": "Registration guidance now points families to Play Rugby League, with the expected December opening for U13–U17 and QRL confirmation still pending.", "needed": "Exact opening dates, fees/inclusions and the direct 2027 club registration link when available." },
+    "contacts": { "added": "All seven enquiry addresses are on the contact page. Secretary and President safety contacts are also displayed.", "needed": "Who manages the club domain and Google Maps project, and who will help test the website." },
+    "teams": { "added": "Gold and Blue U6–U17, White U6–U9, and U11/U13/U15/U17 Girls are listed on the Teams page.", "needed": "Coaches, training days/times, ground locations and the fixture draw when confirmed." },
+    "news": { "added": "News and footer links open the existing club Facebook page. Carnival timing is listed as provisional; presentation dates remain unconfirmed.", "needed": "Please check that the Facebook link opens the right page. Send exact event dates, times, locations and any news/photos when ready." },
+    "shop": { "added": "The supplied product range is shown as a preview. Editable drafts for polos, training shorts, CTC trucker caps and bucket hats are prepared in Admin → Shop.", "needed": "Prices, photos, exact size lists/colours, stock quantities and the Square Online shop link or nominated Square account operator." },
+    "collection": { "added": "The exchange guidance has been added, preserving Australian Consumer Law rights. Registration fees are directed to Play Rugby League. Square is recorded as the requested merchandise provider.", "needed": "Collection location/times and the Square connection. Square checkout and stock synchronisation are not connected yet." },
+    "photos": { "added": "The private photo uploader is ready; no photos have been supplied yet.", "needed": "Club/product photos, sponsor names, logos and website links, with captions and permission for review." },
+    "approval": { "added": "1993, Mini Mods to U17 boys and girls, and #UpTheGullies are on the website. The Secretary, President and Treasurer are recorded as the intended executive admins.", "needed": "Named adult account holders and completed access checks for the three executive accounts; club review of account-use wording and the safety response process before member access opens." }
+  }
+}

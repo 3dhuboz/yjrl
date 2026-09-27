@@ -1,3 +1,5 @@
+import club from '../../../../shared/club.json';
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -49,9 +51,9 @@ const YJRLHome = () => {
     setLoading(true);
     Promise.all([
       api.get('/yjrl/news?limit=3&published=true').catch(() => ({ data: [] })),
-      api.get('/yjrl/fixtures?upcoming=true&limit=3').catch(() => ({ data: [] })),
-      api.get('/yjrl/teams').catch(() => ({ data: [] })),
-      api.get('/yjrl/stats/overview').catch(() => ({ data: {} }))
+      api.get(`/yjrl/fixtures?season=${seasonConfig.season}&upcoming=true&limit=3`).catch(() => ({ data: [] })),
+      api.get(`/yjrl/teams?season=${seasonConfig.season}`).catch(() => ({ data: [] })),
+      api.get(`/yjrl/stats/overview?season=${seasonConfig.season}`).catch(() => ({ data: {} }))
     ]).then(([nRes, fRes, tRes, sRes]) => {
       if (Array.isArray(nRes.data)) setNews(nRes.data);
       if (Array.isArray(fRes.data)) setFixtures(fRes.data);
@@ -72,7 +74,7 @@ const YJRLHome = () => {
         <div className="yjrl-hero-content">
           <div>
             <div className="yjrl-hero-badge">
-              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> 2026 Season — Go Seagulls!
+              <img src="/images/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> Season {seasonConfig.season} {club.tagline}
             </div>
             <h1>
               Yeppoon<br />
@@ -80,7 +82,7 @@ const YJRLHome = () => {
               Junior Rugby League
             </h1>
             <p>
-              Where Capricorn Coast champions are made. From Mini Mod to Opens — join the Seagulls family that builds players,
+              Where Capricorn Coast champions are made. From Mini Mods to U17 boys and girls — join the Seagulls family that builds players,
               leaders, and lifelong mates on and off the field.
             </p>
             <div className="yjrl-hero-actions">
@@ -101,8 +103,8 @@ const YJRLHome = () => {
                 <span className="yjrl-hero-stat-label">Players</span>
               </div>
               <div className="yjrl-hero-stat">
-                <span className="yjrl-hero-stat-value">60+</span>
-                <span className="yjrl-hero-stat-label">Years of History</span>
+                <span className="yjrl-hero-stat-value">{club.founded}</span>
+                <span className="yjrl-hero-stat-label">Established</span>
               </div>
               <div className="yjrl-hero-stat">
                 <span className="yjrl-hero-stat-value">12</span>
@@ -146,9 +148,9 @@ const YJRLHome = () => {
                 borderRadius: '16px', padding: '2.5rem', textAlign: 'center'
               }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Season 2026 Underway</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>Getting ready for {seasonConfig.season}</div>
                 <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Check the full fixture schedule and follow your team all season long.
+                  Fixtures will appear here when the club publishes the season draw.
                 </div>
                 <Link to="/fixtures" className="yjrl-btn yjrl-btn-primary">View All Fixtures</Link>
               </div>
@@ -191,7 +193,7 @@ const YJRLHome = () => {
               { icon: Users, value: `${stats.teamCount}+`, label: 'Active Teams', color: '#0ea5e9' },
               { icon: Zap, value: `${stats.playerCount}+`, label: 'Registered Players', color: '#1d4ed8' },
               { icon: Trophy, value: '12', label: 'Premierships', color: '#ca8a04' },
-              { icon: Heart, value: '60+', label: 'Years of Community', color: '#0ea5e9' },
+              { icon: Heart, value: club.founded, label: 'Established', color: '#0ea5e9' },
             ].map((item, i) => (
               <div key={i} className="yjrl-stat-card">
                 <div className="yjrl-stat-icon" style={{ color: item.color }}>
@@ -249,9 +251,9 @@ const YJRLHome = () => {
       <section className="yjrl-section" style={{ background: 'white' }}>
         <div className="yjrl-section-inner">
           <div className="yjrl-section-header">
-            <div className="yjrl-section-label">2026 Season</div>
+            <div className="yjrl-section-label">{seasonConfig.season} Season</div>
             <h2 className="yjrl-section-title">Our Teams</h2>
-            <p className="yjrl-section-desc">From Mini Mod to Seniors — there's a place for every player at Yeppoon JRL.</p>
+            <p className="yjrl-section-desc">From Mini Mods to U17 boys and girls — there's a place for every player at Yeppoon JRL.</p>
           </div>
 
           <div className="yjrl-grid-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
@@ -286,15 +288,11 @@ const YJRLHome = () => {
           <div className="yjrl-section-header">
             <div className="yjrl-section-label">Digital Club Hub</div>
             <h2 className="yjrl-section-title">Your Portal Awaits</h2>
-            <p className="yjrl-section-desc">Every member of our club community has a personalised digital home — stats, schedules, badges, and more.</p>
+            <p className="yjrl-section-desc">Adult accounts keep families connected. Parents and guardians manage children’s profiles, registrations and team information.</p>
           </div>
 
-          <div className="yjrl-grid-4">
+          <div className="yjrl-grid-3">
             {[
-              {
-                icon: '⚡', title: 'Player Portal', desc: 'Track your stats, earn achievement badges, view your training attendance streak, and follow your pathway to rep football.',
-                to: '/portal/player', color: '#60a5fa', badge: 'Players'
-              },
               {
                 icon: '💛', title: 'Parent Portal', desc: "Stay connected with your child's team. RSVP to events, view training schedules, communicate with coaches, and manage registrations.",
                 to: '/portal/parent', color: '#c084fc', badge: 'Parents'
@@ -348,21 +346,21 @@ const YJRLHome = () => {
             Ready to <span style={{ color: '#fbbf24' }}>Play?</span>
           </h2>
           <p style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, margin: '0 0 2.5rem', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-            Join the Yeppoon Seagulls family. All ages and skill levels welcome — from your first game of Mini Mod to chasing a QRL premiership.
+            Join the Yeppoon Seagulls family. From Mini Mods to U17 boys and girls, there’s a place to learn, play and belong.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/register" className="yjrl-btn yjrl-btn-primary yjrl-btn-lg">
-              Register Now <ArrowRight size={18} />
+              {seasonConfig.season} Sign-up Details <ArrowRight size={18} />
             </Link>
-            <a href="mailto:yeppoonjrl@outlook.com" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
+            <Link to="/contact" className="yjrl-btn yjrl-btn-lg" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
               Contact Us
-            </a>
+            </Link>
           </div>
           <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2.5rem', flexWrap: 'wrap' }}>
             {[
               ['📍', 'Nev Skuse Oval, Yeppoon QLD'],
               ['📞', '0432 357 532'],
-              ['✉️', 'yeppoonjrl@outlook.com']
+              ['✉️', 'admin@yeppoonjrl.com.au']
             ].map(([icon, text]) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.65)' }}>
                 <span>{icon}</span> {text}

@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env, Variables } from '../types';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
+import { registrationOpen, memberAccessOpen } from '../lib/launch';
+import season from '../../../shared/season.json';
 
 const admin = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -41,6 +43,25 @@ admin.get('/readiness', authMiddleware, async (c) => {
   if (!requireAdmin(c)) return c.json({ error: 'Admin only' }, 403);
 
   const checks: ReadinessCheck[] = [];
+  checks.push(check('opening_controls', 'Opening controls', 'pass',
+    `Registration ${registrationOpen(c.env) ? 'open' : 'closed'}; member access ${memberAccessOpen(c.env) ? 'open' : 'closed'}.`, false));
+  checks.push(c.env.SEASON_DETAILS_CONFIRMED === season.season
+    ? check('season_details', 'Confirmed season details', 'pass', `Club details are marked confirmed for ${season.season}.`)
+    : check('season_details', 'Confirmed season details', 'fail', `Keep registration closed until the club confirms the ${season.season} opening date, fees and operating details.`));
+
+  try {
+    await c.env.DB.prepare('SELECT adult_attested_at, adult_attestation_version FROM users LIMIT 1').first();
+    checks.push(check('adult_accounts', 'Adult account declaration', 'pass', 'Adult declaration records are installed. Independent identity and guardian verification still require club onboarding.'));
+  } catch {
+    checks.push(check('adult_accounts', 'Adult account declaration', 'fail', 'Apply migration 0008 before releasing adult-only login.'));
+  }
+
+  try {
+    await c.env.DB.prepare('SELECT bucket_key, request_count, reset_at FROM rate_limit_buckets LIMIT 1').first();
+    checks.push(check('durable_rate_limits', 'Shared abuse protection', 'pass', 'Durable request counters are installed; hourly cleanup is configured in the Worker.'));
+  } catch {
+    checks.push(check('durable_rate_limits', 'Shared abuse protection', 'fail', 'Apply migration 0007 before release. Sensitive requests fail closed without these counters.'));
+  }
 
   try {
     await c.env.DB.prepare('SELECT 1 AS ok').first();
@@ -55,6 +76,34 @@ admin.get('/readiness', authMiddleware, async (c) => {
   } catch {
     checks.push(check('r2', 'R2 uploads bucket', 'fail', 'Uploads bucket probe failed.'));
   }
+
+  try {
+    await c.env.DB.prepare('SELECT 1 FROM registration_claims LIMIT 1').first();
+    checks.push(check('registration_duplicates', 'Duplicate registration protection', 'pass', 'Registration duplicate protection is available.'));
+  } catch {
+    checks.push(check('registration_duplicates', 'Duplicate registration protection', 'fail', 'Apply the registration claims migration before opening sign-ups.'));
+  }
+
+  try {
+    await c.env.DB.prepare('SELECT actor_user_id, actor_role, action, player_ids, data_scope, created_at, media_key, media_sha256 FROM child_access_log LIMIT 1').first();
+    const guards = await c.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'child_access_log' AND name IN ('child_access_log_no_update', 'child_access_log_no_delete', 'child_access_log_no_replace')"
+    ).first<{ count: number }>();
+    if (guards?.count !== 3) throw new Error('Missing access log guards');
+    checks.push(check('child_access_log', 'Player access recording', 'pass', 'Player access log and append-only guards are installed.'));
+  } catch {
+    checks.push(check('child_access_log', 'Player access recording', 'fail', 'Apply the child access log migration before releasing player portal access.'));
+  }
+
+  try {
+    await c.env.DB.prepare('SELECT processing_version, contains_children, reviewed_sha256, player_ids, review_version FROM upload_records LIMIT 1').first();
+    checks.push(check('media_review_schema', 'Photo review records', 'pass', 'Photo processing and review records are available.'));
+  } catch {
+    checks.push(check('media_review_schema', 'Photo review records', 'fail', 'Apply the reviewed media migration before release.'));
+  }
+  checks.push(c.env.IMAGES
+    ? check('image_processing', 'Photo processing', 'pass', 'Images binding is configured; verify a real processed test image before launch.')
+    : check('image_processing', 'Photo processing', 'fail', 'Configure the Images binding before accepting photo uploads.'));
 
   checks.push(paypalReady(c.env)
     ? check('paypal', 'PayPal live payments', 'pass', 'Live PayPal credentials are configured.')

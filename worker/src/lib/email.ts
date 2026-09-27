@@ -6,7 +6,7 @@ interface EmailOptions {
   html: string;
 }
 
-export async function sendEmail(apiKey: string, from: string, options: EmailOptions): Promise<boolean> {
+export async function sendEmail(apiKey: string, from: string, options: EmailOptions, idempotencyKey?: string): Promise<boolean> {
   if (!apiKey) return false;
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -14,6 +14,7 @@ export async function sendEmail(apiKey: string, from: string, options: EmailOpti
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from,
@@ -21,6 +22,7 @@ export async function sendEmail(apiKey: string, from: string, options: EmailOpti
         subject: options.subject,
         html: options.html,
       }),
+      signal: AbortSignal.timeout(5000),
     });
     return res.ok;
   } catch {
@@ -53,23 +55,26 @@ function registrationEmailShell(title: string, subtitle: string, body: string) {
   `;
 }
 
-export function registrationPaidEmail(playerName: string, ageGroup: string, amount: number): { subject: string; html: string } {
-  const safeName = escapeHtml(playerName);
-  const safeAgeGroup = escapeHtml(ageGroup);
+type RegistrationNotice = { registrationId: string; season: string; amount: number };
+
+export function registrationPaidEmail({ registrationId, season, amount }: RegistrationNotice): { subject: string; html: string } {
+  const reference = escapeHtml(registrationId);
+  const safeSeason = escapeHtml(season);
   return {
-    subject: `Registration paid - ${safeName} | Yeppoon Seagulls JRL`,
+    subject: 'Registration payment received | Yeppoon Seagulls JRL',
     html: registrationEmailShell(
       'Payment received',
       'Registration Payment Confirmation',
       `
-        <p>Great news - payment has been received for <strong>${safeName}</strong>'s <strong>${safeAgeGroup}</strong> registration.</p>
+        <p>Payment has been received for your <strong>${safeSeason}</strong> club registration.</p>
+        <p><strong>Registration reference:</strong> ${reference}</p>
         <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 16px 0;">
           <p style="margin: 0;"><strong>Payment:</strong> $${amount.toFixed(2)} AUD - Paid</p>
         </div>
         <h3 style="color: #1d4ed8;">Next steps</h3>
         <ul style="line-height: 1.8;">
           <li>The registrar will complete the club review and team allocation.</li>
-          <li>Complete PlayHQ registration if the club has not already matched it.</li>
+          <li>The club will confirm any remaining competition registration requirements.</li>
           <li>Watch the parent portal for team, training, and uniform updates.</li>
         </ul>
       `,
@@ -77,16 +82,17 @@ export function registrationPaidEmail(playerName: string, ageGroup: string, amou
   };
 }
 
-export function registrationOfflineEmail(playerName: string, ageGroup: string, amount: number): { subject: string; html: string } {
-  const safeName = escapeHtml(playerName);
-  const safeAgeGroup = escapeHtml(ageGroup);
+export function registrationOfflineEmail({ registrationId, season, amount }: RegistrationNotice): { subject: string; html: string } {
+  const reference = escapeHtml(registrationId);
+  const safeSeason = escapeHtml(season);
   return {
-    subject: `Registration received - payment required | ${safeName}`,
+    subject: 'Registration received - payment required | Yeppoon Seagulls JRL',
     html: registrationEmailShell(
       'Registration received',
       'Awaiting Payment and Club Review',
       `
-        <p><strong>${safeName}</strong>'s <strong>${safeAgeGroup}</strong> registration has been received by Yeppoon Seagulls JRL.</p>
+        <p>Your <strong>${safeSeason}</strong> club registration has been received by Yeppoon Seagulls JRL.</p>
+        <p><strong>Registration reference:</strong> ${reference}</p>
         <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 16px 0;">
           <p style="margin: 0;"><strong>Amount due:</strong> $${amount.toFixed(2)} AUD - Awaiting payment</p>
         </div>
@@ -99,10 +105,6 @@ export function registrationOfflineEmail(playerName: string, ageGroup: string, a
       `,
     ),
   };
-}
-
-export function registrationConfirmationEmail(playerName: string, ageGroup: string, amount: number): { subject: string; html: string } {
-  return registrationPaidEmail(playerName, ageGroup, amount);
 }
 
 export function eventReminderEmail(eventTitle: string, eventDate: string, eventVenue: string): { subject: string; html: string } {
@@ -131,19 +133,17 @@ export function eventReminderEmail(eventTitle: string, eventDate: string, eventV
   };
 }
 
-export function adminRegistrationNotification(playerName: string, ageGroup: string, guardianName: string, paymentStatus = 'received'): { subject: string; html: string } {
-  const safeName = escapeHtml(playerName);
-  const safeAgeGroup = escapeHtml(ageGroup);
-  const safeGuardian = escapeHtml(guardianName);
+export function adminRegistrationNotification(registrationId: string, season: string, paymentStatus: string): { subject: string; html: string } {
+  const reference = escapeHtml(registrationId);
+  const safeSeason = escapeHtml(season);
   const safeStatus = escapeHtml(paymentStatus);
   return {
-    subject: `New Registration: ${safeName} (${safeAgeGroup})`,
+    subject: 'Registration update | Yeppoon Seagulls JRL',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2>New Player Registration</h2>
-        <p><strong>Player:</strong> ${safeName}</p>
-        <p><strong>Age Group:</strong> ${safeAgeGroup}</p>
-        <p><strong>Guardian:</strong> ${safeGuardian}</p>
+        <p><strong>Registration reference:</strong> ${reference}</p>
+        <p><strong>Season:</strong> ${safeSeason}</p>
         <p><strong>Payment Status:</strong> ${safeStatus}</p>
         <p>Log into the Admin Portal to view full details and manage the registration.</p>
       </div>

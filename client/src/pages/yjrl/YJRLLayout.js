@@ -1,9 +1,10 @@
+import club from '../../../../shared/club.json';
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Home, Calendar, Trophy, Newspaper, Users, LogIn, LogOut,
-  Menu, X, ChevronDown, User, Shield, Heart, Zap, Mail
+  Menu, X, ChevronDown, User, Shield, Heart, Mail, ShoppingBag
 } from 'lucide-react';
 import './yjrl.css';
 
@@ -13,10 +14,12 @@ const NAV_ITEMS = [
   { to: '/teams', label: 'Teams', icon: Users },
   { to: '/news', label: 'News', icon: Newspaper },
   { to: '/events', label: 'Events', icon: Heart },
+  { to: '/shop', label: 'Shop', icon: ShoppingBag },
+  { to: '/contact', label: 'Contact', icon: Mail },
 ];
 
 const PORTAL_ITEMS = [
-  { to: '/portal/player', label: 'Player Portal', icon: Zap, roles: ['all'] },
+  { to: '/portal/messages', label: 'Team Messages', icon: Heart, roles: ['all'] },
   { to: '/portal/parent', label: 'Parent Portal', icon: Heart, roles: ['all'] },
   { to: '/portal/coach', label: 'Coach Portal', icon: Shield, roles: ['all'] },
   { to: '/portal/admin', label: 'Club Admin', icon: Trophy, roles: ['admin', 'dev'] },
@@ -34,7 +37,7 @@ const YJRLLayout = ({ children }) => {
     if (role === 'admin' || role === 'dev') return '/portal/admin';
     if (role === 'coach') return '/portal/coach';
     if (role === 'parent') return '/portal/parent';
-    return '/portal/player';
+    return '/login';
   };
 
   const handleLogout = async () => {
@@ -150,7 +153,7 @@ const YJRLLayout = ({ children }) => {
           </ul>
 
           {/* Mobile toggle */}
-          <button className="yjrl-mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
+          <button className="yjrl-mobile-menu-btn" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -252,21 +255,10 @@ const YJRLLayout = ({ children }) => {
                 </div>
               </Link>
               <p style={{ marginTop: '1rem' }}>
-                Building champions on and off the field. Proudly serving the Capricorn Coast community since 1965.
+                Building champions on and off the field. Proudly serving the Capricorn Coast community since {club.founded}.
                 Home of the mighty Yeppoon Seagulls.
               </p>
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-                {['facebook', 'instagram', 'youtube'].map(s => (
-                  <div key={s} style={{
-                    width: 36, height: 36, borderRadius: 8,
-                    background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--yjrl-gold)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700
-                  }}>
-                    {s[0].toUpperCase()}
-                  </div>
-                ))}
-              </div>
+              <p><a href={club.facebookUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24' }}>Follow us on Facebook</a></p>
             </div>
 
             <div className="yjrl-footer-col">
@@ -276,7 +268,7 @@ const YJRLLayout = ({ children }) => {
                 <li><Link to="/news">History</Link></li>
                 <li><Link to="/teams">Teams</Link></li>
                 <li><Link to="/teams">Coaches</Link></li>
-                <li><a href="mailto:yeppoonjrl@outlook.com?subject=Sponsorship%20enquiry">Sponsors</a></li>
+                <li><a href="mailto:sponsorship@yeppoonjrl.com.au?subject=Sponsorship%20enquiry">Sponsors</a></li>
               </ul>
             </div>
 
@@ -294,9 +286,10 @@ const YJRLLayout = ({ children }) => {
               <ul>
                 <li><Link to="/register">Join the Club</Link></li>
                 <li><Link to="/events">Events</Link></li>
-                <li><a href="mailto:yeppoonjrl@outlook.com?subject=Volunteer%20enquiry">Volunteer</a></li>
-                <li><a href="mailto:yeppoonjrl@outlook.com?subject=Sponsorship%20enquiry">Sponsors</a></li>
-                <li><a href="mailto:yeppoonjrl@outlook.com">Contact Us</a></li>
+                <li><Link to="/shop">Uniforms & Merchandise</Link></li>
+                <li><a href="mailto:admin@yeppoonjrl.com.au?subject=Volunteer%20enquiry">Volunteer</a></li>
+                <li><a href="mailto:sponsorship@yeppoonjrl.com.au?subject=Sponsorship%20enquiry">Sponsors</a></li>
+                <li><Link to="/contact">Contact Us</Link></li>
               </ul>
             </div>
           </div>

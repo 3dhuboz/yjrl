@@ -4,6 +4,7 @@
   "description": "Yeppoon Junior Rugby League digital club hub with player portals, fixtures, gamification, and more",
   "private": true,
   "scripts": {
+    "test": "npm --prefix worker test",
     "dev": "concurrently \"npm run worker:dev\" \"npm run client\"",
     "dev:legacy": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",

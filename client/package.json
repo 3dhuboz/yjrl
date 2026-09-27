@@ -20,10 +20,10 @@
     "vite": "^7.3.3"
   },
   "scripts": {
-    "start": "vite --host 0.0.0.0 --port 3000",
+    "start": "vite --host 127.0.0.1 --port 3000",
     "build": "vite build",
     "test": "node -e \"console.log('No client tests configured')\"",
-    "preview": "vite preview --host 0.0.0.0 --port 4173"
+    "preview": "vite preview --host 127.0.0.1 --port 4173"
   },
   "browserslist": {
     "production": [">0.2%", "not dead", "not op_mini all"],

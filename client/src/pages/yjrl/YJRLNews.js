@@ -1,3 +1,4 @@
+import club from '../../../../shared/club.json';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Clock, ArrowLeft, Eye, ChevronRight } from 'lucide-react';
@@ -12,8 +13,10 @@ const CATEGORIES = ['All', 'news', 'results', 'events', 'club', 'pathways', 'com
 const ArticleDetail = ({ id }) => {
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [photoFailed, setPhotoFailed] = useState(false);
 
   useEffect(() => {
+    setPhotoFailed(false);
     api.get(`/yjrl/news/${id}`).then(res => setArticle(res.data)).catch(() => {
       setArticle(null);
     }).finally(() => setLoading(false));
@@ -49,6 +52,7 @@ const ArticleDetail = ({ id }) => {
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Eye size={13} /> {article.views || 0} views</span>
       </div>
       <div style={{ borderTop: '1px solid var(--yjrl-border)', paddingTop: '2rem' }}>
+        {article.image && !photoFailed && <img src={article.image} alt={`Club photo accompanying ${article.title}`} onError={() => setPhotoFailed(true)} style={{ display: 'block', width: '100%', maxHeight: 600, objectFit: 'contain', borderRadius: 12, marginBottom: '1.5rem' }} />}
         {article.content.split('\n').map((para, i) => {
           if (!para.trim()) return <br key={i} />;
           if (para.startsWith('**') && para.endsWith('**')) {
@@ -98,6 +102,7 @@ const YJRLNews = () => {
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', margin: 0 }}>
             Results, events, player news, and everything happening at Yeppoon JRL.
           </p>
+          <a className="yjrl-btn yjrl-btn-secondary" style={{ marginTop: 16 }} href={club.facebookUrl} target="_blank" rel="noopener noreferrer">Club updates on Facebook</a>
         </div>
       </div>
 

@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('yjrl_token');
     if (token) {
-      api.get('/auth/me')
+      api.get('/auth/me', { skipAuthRedirect: window.location.pathname === '/website-checklist' })
         .then(res => setUser(res.data))
         .catch(() => localStorage.removeItem('yjrl_token'))
         .finally(() => setLoading(false));
@@ -26,8 +26,8 @@ export const AuthProvider = ({ children }) => {
     if (userData) setUser(userData);
   }, []);
 
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+  const login = async (email, password, adultConfirmed) => {
+    const res = await api.post('/auth/login', { email, password, adultConfirmed });
     setSession(res.data.token, res.data.user);
     return res.data;
   };

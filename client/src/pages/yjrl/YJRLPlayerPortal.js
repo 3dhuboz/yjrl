@@ -1,3 +1,4 @@
+import seasonConfig from '../../../../shared/season.json';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -82,8 +83,8 @@ const YJRLPlayerPortal = () => {
   if (user && !player) return <YJRLLayout><div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--yjrl-muted)' }}><p>No player profile found. Contact your club admin to be registered.</p></div></YJRLLayout>;
 
   const p = player || {};
-  const season = new Date().getFullYear().toString();
-  const stats = p.stats?.find(s => s.season === season) || p.stats?.[0] || {};
+  const season = seasonConfig.season;
+  const stats = p.stats?.find(s => s.season === season) || {};
   const earnedIds = new Set((p.achievementDates || []).map(a => a.achievement?._id || a.achievement));
   const xp = (p.achievementDates || []).reduce((sum, a) => sum + (a.achievement?.xpValue || 0), 0);
   const attendanceRate = p.attendanceRecords?.length
@@ -193,7 +194,7 @@ const YJRLPlayerPortal = () => {
               {/* Season Stats */}
               <div className="yjrl-card">
                 <div className="yjrl-card-header">
-                  <div className="yjrl-card-title"><BarChart3 size={16} /> 2026 Season Stats</div>
+                  <div className="yjrl-card-title"><BarChart3 size={16} /> {seasonConfig.season} Season Stats</div>
                 </div>
                 <div className="yjrl-card-body">
                   <div className="yjrl-grid-4" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
